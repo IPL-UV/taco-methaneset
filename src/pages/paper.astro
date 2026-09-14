@@ -1,0 +1,70 @@
+---
+import Base from "../layouts/Base.astro";
+
+const bibtex = `@article{aybar2026methaneset,
+  title   = {MethaneSET: Unified Multi-Sensor Datasets for
+             Satellite-Based Methane Plume Detection},
+  author  = {Aybar, Cesar and Contreras, Julio and Montero, David
+             and Mahecha, Miguel D. and G{'}omez-Chova, Luis},
+  journal = {Scientific Data},
+  year    = {2026}
+}`;
+---
+
+<Base
+  title="Paper · MethaneSET"
+  description="MethaneSET: unified multi-sensor datasets for satellite-based methane plume detection."
+>
+  <section class="section">
+    <div class="container prose">
+      <p class="eyebrow">Paper</p>
+      <h2>MethaneSET: unified multi-sensor datasets for satellite-based methane plume detection</h2>
+      <p style="color: var(--muted);">
+        Cesar Aybar · Julio Contreras · David Montero · Miguel D. Mahecha · Luis Gómez-Chova
+        <br />
+        <span style="font-family: var(--font-mono); font-size: 0.8rem;">Scientific Data · under review</span>
+      </p>
+
+      <h3>Summary</h3>
+      <p>
+        Methane is the second-largest driver of anthropogenic warming, and a
+        disproportionate share of emissions comes from a small number of super-emitters
+        detectable by satellite. MethaneSET provides analysis-ready datasets for methane
+        plume detection spanning three sensors, with expert-verified segmentation masks
+        from two independent monitoring systems (IMEO MARS and Carbon Mapper).
+      </p>
+      <p>
+        For multispectral sensors (Sentinel-2, Landsat-8/9), labeled scenes with plume
+        masks and confirmed plume-free references are provided for change-detection
+        workflows. For the EMIT imaging spectrometer, calibrated radiance cubes and
+        precomputed matched-filter products support both end-to-end and retrieval-based
+        detection. A synthetic plume bank of 238,545 projected WRF-LES enhancements, plus
+        the 1,647 raw simulation cubes it is built from, enables physics-based data
+        augmentation. All datasets follow the TACO specification and are distributed as
+        Parquet catalogs with Cloud-Optimized GeoTIFFs.
+      </p>
+
+      <h3>Citation</h3>
+      <pre class="code" set:html={bibtex}></pre>
+
+      <h3>Resources</h3>
+      <ul>
+        <li>
+          <a href="https://huggingface.co/datasets/tacofoundation/methaneset" target="_blank" rel="noopener">
+            Dataset on Hugging Face
+          </a>
+        </li>
+        <li>
+          <a href="https://huggingface.co/datasets/tacofoundation/methaneset/blob/main/README.md" target="_blank" rel="noopener">
+            Dataset card
+          </a>
+        </li>
+      </ul>
+
+      <span class="src">
+        Abstract from the published dataset card. The manuscript is being updated; figures
+        and final numbers will be added once it is stable.
+      </span>
+    </div>
+  </section>
+</Base>

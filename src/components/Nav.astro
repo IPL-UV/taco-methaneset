@@ -1,0 +1,41 @@
+---
+import { base, url } from "../lib/url";
+
+const links = [
+  { href: "data", label: "Data" },
+  { href: "taco", label: "TACO" },
+  { href: "paper", label: "Paper" },
+  { href: "code", label: "Code" },
+  { href: "project", label: "Project" },
+];
+const rel = Astro.url.pathname.replace(base, "");
+---
+
+<nav class="nav">
+  <div class="container nav__inner">
+    <a class="nav__brand" href={base}>
+      <span class="nav__dot"></span>
+      MethaneSET
+    </a>
+    <div class="nav__links">
+      {
+        links.map((l) => {
+          const active = rel.startsWith(l.href);
+          return (
+            <a href={url(`${l.href}/`)} aria-current={active ? "page" : undefined}>
+              {l.label}
+            </a>
+          );
+        })
+      }
+      <a
+        class="btn btn--primary nav__cta"
+        href="https://huggingface.co/datasets/tacofoundation/methaneset"
+        target="_blank"
+        rel="noopener"
+      >
+        Dataset
+      </a>
+    </div>
+  </div>
+</nav>

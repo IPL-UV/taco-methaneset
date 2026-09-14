@@ -1,0 +1,114 @@
+---
+interface Props {
+  scrollZoom?: boolean;
+}
+const { scrollZoom = false } = Astro.props;
+---
+
+<div id="globe" class="globe" data-scroll-zoom={scrollZoom ? "true" : "false"}></div>
+
+<style>
+  .globe {
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 60% 40%, #0b2b3a 0%, #020617 70%);
+  }
+</style>
+
+<script>
+  import maplibregl from "maplibre-gl";
+  import "maplibre-gl/dist/maplibre-gl.css";
+  import { url } from "../lib/url";
+
+  const el = document.getElementById("globe");
+  if (el) {
+    const allowZoom = el.dataset.scrollZoom === "true";
+
+    const map = new maplibregl.Map({
+      container: el,
+      style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+      center: [40, 20],
+      zoom: 1.1,
+      attributionControl: false,
+      scrollZoom: allowZoom,
+      dragRotate: false,
+    });
+
+    map.on("style.load", () => {
+      if (typeof (map as any).setProjection === "function") {
+        (map as any).setProjection({ type: "globe" });
+      }
+    });
+
+    fetch(url("data/emit.geojson"))
+      .then((r) => r.json())
+      .then((geojson) => {
+        map.on("load", () => {
+          map.addSource("emit", { type: "geojson", data: geojson });
+
+          map.addLayer({
+            id: "emit-halo",
+            type: "circle",
+            source: "emit",
+            paint: {
+              "circle-radius": 12,
+              "circle-color": "#f97316",
+              "circle-opacity": 0.12,
+              "circle-blur": 1,
+            },
+          });
+
+          map.addLayer({
+            id: "emit-points",
+            type: "circle",
+            source: "emit",
+            paint: {
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["coalesce", ["get", "flux_max"], 0],
+                0, 2.4,
+                5000, 5.5,
+                20000, 9,
+              ],
+              "circle-color": "#f97316",
+              "circle-opacity": 0.9,
+              "circle-stroke-color": "#fde047",
+              "circle-stroke-width": 0.5,
+              "circle-stroke-opacity": 0.6,
+            },
+          });
+
+          const popup = new maplibregl.Popup({
+            closeButton: false,
+            closeOnClick: false,
+            offset: 10,
+            className: "emit-popup",
+          });
+
+          map.on("mouseenter", "emit-points", (e) => {
+            map.getCanvas().style.cursor = "pointer";
+            const f = (e.features && e.features[0]) as any;
+            if (!f) return;
+            const p = f.properties;
+            const flux =
+              p.flux_max != null ? `${Math.round(p.flux_max).toLocaleString()} kg/h` : "n/a";
+            popup
+              .setLngLat(f.geometry.coordinates)
+              .setHTML(
+                `<strong>${p.country ?? "Unknown"}</strong><br>` +
+                  `IMEO plumes: ${p.n_imeo ?? "·"} · Carbon Mapper: ${p.n_cm ?? "·"}<br>` +
+                  `Max flux: ${flux}`,
+              )
+              .addTo(map);
+          });
+
+          map.on("mouseleave", "emit-points", () => {
+            map.getCanvas().style.cursor = "";
+            popup.remove();
+          });
+        });
+      })
+      .catch((err) => console.error("emit.geojson:", err));
+  }
+</script>

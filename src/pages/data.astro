@@ -1,0 +1,75 @@
+---
+import Base from "../layouts/Base.astro";
+import Globe from "../components/Globe.astro";
+import { datasets, hfUrl, totals } from "../data/datasets";
+
+const fmt = (n: number) => n.toLocaleString("en-US");
+---
+
+<Base title="Data · MethaneSET" description="The seven MethaneSET TACO datasets: Sentinel-2, Landsat 8/9, EMIT and the synthetic plume bank.">
+  <section class="section section--tight">
+    <div class="container">
+      <p class="eyebrow">Data</p>
+      <h2>Seven datasets, one schema</h2>
+      <p class="lead">
+        Every plume detected over this map is a real EMIT granule where IMEO and Carbon
+        Mapper independently verified a source. Hover a point for the annotation counts.
+        The globe reads the published TACO index directly.
+      </p>
+    </div>
+  </section>
+
+  <section style="height: 68vh; min-height: 460px; position: relative;">
+    <Globe scrollZoom={true} />
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">Catalog</p>
+      <h2>Datasets</h2>
+      <div class="prose">
+        <table>
+          <thead>
+            <tr>
+              <th>Dataset</th>
+              <th>Family</th>
+              <th>Subset</th>
+              <th style="text-align:right;">Samples</th>
+              <th style="text-align:right;">Size</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              datasets.map((d) => (
+                <tr>
+                  <td>
+                    <a href={hfUrl(d.name)} target="_blank" rel="noopener">
+                      {d.name}
+                    </a>
+                  </td>
+                  <td>{d.family}</td>
+                  <td>{d.subset}</td>
+                  <td style="text-align:right;">{fmt(d.samples)}</td>
+                  <td style="text-align:right;">{d.sizeGB} GB</td>
+                </tr>
+              ))
+            }
+            <tr>
+              <td><strong>Total</strong></td>
+              <td>{totals.datasets} datasets</td>
+              <td></td>
+              <td style="text-align:right;"><strong>{fmt(totals.samples)}</strong></td>
+              <td style="text-align:right;"><strong>~{Math.round(totals.sizeGB)} GB</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <span class="src">
+        Counts and sizes from
+        <a href="https://huggingface.co/datasets/tacofoundation/methaneset" target="_blank" rel="noopener">
+          tacofoundation/methaneset
+        </a>. EMIT index: 721 granules across 60 countries, 2022-08 to 2025-11.
+      </span>
+    </div>
+  </section>
+</Base>

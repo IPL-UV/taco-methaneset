@@ -1,0 +1,88 @@
+---
+import Base from "../layouts/Base.astro";
+
+const groups = [
+  {
+    org: "Image and Signal Processing Group (ISP)",
+    place: "Universitat de València",
+    people: "Luis Gómez-Chova (PI) · Cesar Aybar · Julio Contreras",
+  },
+  {
+    org: "Land and Atmosphere Remote Sensing (LARS)",
+    place: "Universitat Politècnica de València",
+    people: "Luis Guanter",
+  },
+  {
+    org: "Remote Sensing Centre for Earth System Research (RSC4Earth)",
+    place: "Leipzig University",
+    people: "Miguel D. Mahecha · David Montero",
+  },
+];
+---
+
+<Base
+  title="Project · MethaneSET"
+  description="Team, funding and links for the MethaneSET dataset project."
+>
+  <section class="section">
+    <div class="container prose">
+      <p class="eyebrow">Project</p>
+      <h2>About</h2>
+      <p>
+        MethaneSET is a benchmark of multi-sensor datasets for the detection and
+        quantification of methane leaks from space. It unifies Sentinel-2, Landsat-8/9 and
+        EMIT under one TACO schema, with plume annotations from two independent operational
+        systems (IMEO MARS and Carbon Mapper) and a synthetic plume bank derived from
+        WRF-LES simulations.
+      </p>
+      <p>
+        The project builds on the TACO specification to make methane data FAIR:
+        findable, accessible, interoperable and reusable, so models can be trained and
+        compared across sensors without weeks of preprocessing.
+      </p>
+
+      <h2>Team</h2>
+      <table>
+        <thead>
+          <tr><th>Group</th><th>Institution</th><th>People</th></tr>
+        </thead>
+        <tbody>
+          {
+            groups.map((g) => (
+              <tr>
+                <td>{g.org}</td>
+                <td>{g.place}</td>
+                <td>{g.people}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+
+      <h2>Funding</h2>
+      <p>
+        Funded by the Climate Change AI (CCAI) Innovation Grants program, hosted by CCAI
+        with the support of the Global Methane Hub (GMH), grant G-2025-00888. Supported
+        also by the Spanish Ministry of Science, Innovation and Universities
+        (PID2023-148485OB-C21 / C22, funded by MCIU / AEI / 10.13039 / 501100011033, ERDF,
+        EU).
+      </p>
+      <p>
+        We thank UNEP's International Methane Emissions Observatory (IMEO) for the MARS
+        plume annotations, Carbon Mapper for their public detections, and NASA LP DAAC for
+        the EMIT Level 1B radiance data.
+      </p>
+
+      <h2>Links</h2>
+      <ul>
+        <li><a href="https://github.com/IPL-UV/taco-methaneset" target="_blank" rel="noopener">This website (GitHub)</a></li>
+        <li><a href="https://huggingface.co/datasets/tacofoundation/methaneset" target="_blank" rel="noopener">Datasets on Hugging Face</a></li>
+        <li><a href="https://asterisk.coop/taco/spec" target="_blank" rel="noopener">TACO specification</a></li>
+      </ul>
+
+      <span class="src">
+        Team and funding from the project description and the manuscript acknowledgements.
+      </span>
+    </div>
+  </section>
+</Base>
