@@ -70,7 +70,8 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
           <option value="auto">Match theme</option>
           <option value="dark">Dark</option>
           <option value="light">Light</option>
-          <option value="satellite">Satellite</option>
+          <option value="satellite">Satellite · Esri (detail)</option>
+          <option value="gibs">Satellite · NASA (smooth)</option>
         </select>
 
         <p id="globe-count" class="globe-count"></p>
@@ -237,7 +238,64 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   .sample-viewer :global(.sv-error) {
     color: var(--orange);
   }
+  .sample-viewer :global(.sv-assets) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .sample-viewer :global(.sv-asset) {
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.78rem;
+  }
+  .sample-viewer :global(.sv-asset:hover) {
+    border-color: var(--teal);
+    color: var(--teal-light);
+  }
+  .sample-viewer :global(.sv-item) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 0;
+    border-top: 1px solid var(--line);
+  }
+  .sample-viewer :global(.sv-item input) {
+    accent-color: var(--teal);
+  }
+  .sample-viewer :global(.sv-item__text) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .sample-viewer :global(.sv-item__text b) {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .sample-viewer :global(.sv-item__text span) {
+    font-size: 0.7rem;
+    color: var(--slate);
+  }
+  .sample-viewer :global(.sv-remove) {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0 2px;
+  }
+  .sample-viewer :global(.sv-remove:hover) {
+    color: var(--orange);
+  }
   .sample-viewer :global(.sv-clear) {
+    margin-top: 8px;
     background: transparent;
     border: 1px solid var(--line);
     color: var(--muted);
@@ -269,7 +327,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { url } from "../lib/url";
-  import { showSample, redrawSample } from "../lib/sampleViewer";
+  import { showChooser, reAddAll } from "../lib/sampleViewer";
 
   const SENSOR_COLOR = {
     EMIT: "#f97316",
@@ -289,10 +347,40 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
             "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
           ],
           tileSize: 256,
+          maxzoom: 19,
           attribution: "Imagery © Esri, Maxar, Earthstar Geographics",
         },
       },
-      layers: [{ id: "sat", type: "raster", source: "sat" }],
+      layers: [
+        {
+          id: "sat",
+          type: "raster",
+          source: "sat",
+          paint: { "raster-fade-duration": 0, "raster-resampling": "linear" },
+        },
+      ],
+    },
+    gibs: {
+      version: 8,
+      sources: {
+        gibs: {
+          type: "raster",
+          tiles: [
+            "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg",
+          ],
+          tileSize: 256,
+          maxzoom: 9,
+          attribution: "Imagery © NASA GIBS / VIIRS",
+        },
+      },
+      layers: [
+        {
+          id: "gibs",
+          type: "raster",
+          source: "gibs",
+          paint: { "raster-fade-duration": 0, "raster-resampling": "linear" },
+        },
+      ],
     },
   };
 
@@ -427,21 +515,18 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         if (!root || !bodyEl) return;
         const p = f.properties;
         if (p.viz === "multispectral") {
-          showSample(map, p, { root, body: bodyEl });
+          showChooser(map, p, { root, body: bodyEl });
         } else {
           root.style.display = "block";
           bodyEl.innerHTML =
+            `<p class="globe-panel__title">EMIT</p>` +
             `<p class="sv-title">${p.sensor} · ${p.country ?? ""}</p>` +
             `<p class="sv-status">${p.dataset} · ${p.date || ""}</p>` +
-            `<p class="sv-status">EMIT is stored in sensor coordinates, so it cannot be drawn on the map yet. Coming next.</p>` +
-            `<button class="sv-clear" type="button">Close</button>`;
-          bodyEl.querySelector(".sv-clear")?.addEventListener("click", () => {
-            root.style.display = "none";
-          });
+            `<p class="sv-status">EMIT is stored in sensor coordinates, so it cannot be drawn on the map yet. Coming next.</p>`;
         }
       });
 
-      redrawSample(map);
+      reAddAll(map);
       applyFilters();
     };
 
