@@ -20,11 +20,44 @@ interface UiElements {
 
 let lastSample: { dataUrl: string; coordinates: [number, number][] } | null = null;
 
+function addSampleLayers(map: any, dataUrl: string, coordinates: [number, number][]): void {
+  removeSampleLayers(map);
+  map.addSource("sample", { type: "image", url: dataUrl, coordinates });
+  map.addLayer({ id: "sample", type: "raster", source: "sample", paint: { "raster-opacity": 0.95 } });
+  map.addSource("sample-outline", {
+    type: "geojson",
+    data: {
+      type: "Feature",
+      geometry: { type: "Polygon", coordinates: [[...coordinates, coordinates[0]]] },
+      properties: {},
+    },
+  });
+  map.addLayer({
+    id: "sample-outline",
+    type: "line",
+    source: "sample-outline",
+    paint: { "line-color": "#fde047", "line-width": 1.4, "line-opacity": 0.9 },
+  });
+}
+
+function removeSampleLayers(map: any): void {
+  for (const id of ["sample", "sample-outline"]) {
+    if (map.getLayer(id)) map.removeLayer(id);
+  }
+  for (const id of ["sample", "sample-outline"]) {
+    if (map.getSource(id)) map.removeSource(id);
+  }
+}
+
+export function clearSample(map: any): void {
+  lastSample = null;
+  removeSampleLayers(map);
+}
+
 export function redrawSample(map: any): void {
   if (!lastSample || map.getSource("sample")) return;
   try {
-    map.addSource("sample", { type: "image", url: lastSample.dataUrl, coordinates: lastSample.coordinates });
-    map.addLayer({ id: "sample", type: "raster", source: "sample", paint: { "raster-opacity": 0.9 } });
+    addSampleLayers(map, lastSample.dataUrl, lastSample.coordinates);
   } catch (e) {
     /* style not ready yet */
   }
@@ -188,24 +221,32 @@ export async function showSample(map: any, props: SampleProps, ui: UiElements): 
     const { dataUrl, coordinates, width, height } = await renderRgb(bytes);
     lastSample = { dataUrl, coordinates };
 
-    if (map.getLayer("sample")) map.removeLayer("sample");
-    if (map.getSource("sample")) map.removeSource("sample");
-    map.addSource("sample", { type: "image", url: dataUrl, coordinates });
-    map.addLayer({ id: "sample", type: "raster", source: "sample", paint: { "raster-opacity": 0.9 } });
+    addSampleLayers(map, dataUrl, coordinates);
+
+    const lngs = coordinates.map((c) => c[0]);
+    const lats = coordinates.map((c) => c[1]);
+    map.fitBounds(
+      [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ],
+      { padding: { top: 120, bottom: 120, left: 420, right: 340 }, duration: 900 },
+    );
 
     body.innerHTML =
       `<p class="sv-title">${props.sensor} · ${props.country}</p>` +
-      `<p class="sv-status">${props.date} · ${width}×${height} px · ${props.dataset}</p>` +
+      `<p class="sv-status">${props.date} · ${width}×${height} px<br>${props.dataset}<br>Click path: DATA/${props.id.slice(0, 8)}…/target</p>` +
       `<button class="sv-clear" type="button">Clear</button>`;
     body.querySelector(".sv-clear")?.addEventListener("click", () => {
-      if (map.getLayer("sample")) map.removeLayer("sample");
-      if (map.getSource("sample")) map.removeSource("sample");
+      clearSample(map);
       root.style.display = "none";
     });
 
     (window as any).__sampleLoaded = true;
   } catch (err) {
-    body.innerHTML = `<p class="sv-status sv-error">Could not load this sample. ${(err as Error).message}</p>`;
+    body.innerHTML =
+      `<p class="sv-title">${props.sensor} · ${props.country}</p>` +
+      `<p class="sv-status sv-error">Could not load this sample. ${(err as Error).message}</p>`;
     (window as any).__sampleError = (err as Error).message;
     console.error(err);
   }

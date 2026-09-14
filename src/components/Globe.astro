@@ -139,7 +139,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   }
   .globe-legend {
     bottom: 20px;
-    left: 20px;
+    right: 20px;
   }
   .globe-panel__title {
     font-family: var(--font-mono);
@@ -421,10 +421,24 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
 
       map.on("click", "plumes", (e) => {
         const f = (e.features && e.features[0]) as any;
-        if (!f || f.properties.viz !== "multispectral") return;
+        if (!f) return;
         const root = document.getElementById("sample-viewer");
         const bodyEl = document.getElementById("sample-viewer-body");
-        if (root && bodyEl) showSample(map, f.properties, { root, body: bodyEl });
+        if (!root || !bodyEl) return;
+        const p = f.properties;
+        if (p.viz === "multispectral") {
+          showSample(map, p, { root, body: bodyEl });
+        } else {
+          root.style.display = "block";
+          bodyEl.innerHTML =
+            `<p class="sv-title">${p.sensor} · ${p.country ?? ""}</p>` +
+            `<p class="sv-status">${p.dataset} · ${p.date || ""}</p>` +
+            `<p class="sv-status">EMIT is stored in sensor coordinates, so it cannot be drawn on the map yet. Coming next.</p>` +
+            `<button class="sv-clear" type="button">Close</button>`;
+          bodyEl.querySelector(".sv-clear")?.addEventListener("click", () => {
+            root.style.display = "none";
+          });
+        }
       });
 
       redrawSample(map);
