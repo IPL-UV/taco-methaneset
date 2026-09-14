@@ -36,6 +36,35 @@ const rel = Astro.url.pathname.replace(base, "");
       >
         Dataset
       </a>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" type="button">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+          ><circle cx="12" cy="12" r="4.2" /><path
+            d="M12 2v2.4M12 19.6V22M2 12h2.4M19.6 12H22M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M19.1 4.9l-1.7 1.7M6.6 17.4l-1.7 1.7"
+          /></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+          ><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" /></svg>
+      </button>
     </div>
   </div>
 </nav>
+
+<script>
+  const toggle = document.getElementById("theme-toggle");
+  toggle?.addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", next);
+    try {
+      localStorage.setItem("theme", next);
+    } catch (e) {
+      /* ignore */
+    }
+  });
+</script>
+
+<style>
+  [data-theme="light"] .icon-sun,
+  :root:not([data-theme="light"]) .icon-moon {
+    display: none;
+  }
+</style>

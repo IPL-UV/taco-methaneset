@@ -77,6 +77,7 @@ def multispectral_points(df: pd.DataFrame, sensor: str, dataset: str) -> list[di
         lat, lon = num(row.get("emission:lat")), num(row.get("emission:lon"))
         if lat is None or lon is None:
             continue
+        country = row.get("site:country") or ""
         features.append(
             {
                 "type": "Feature",
@@ -84,10 +85,13 @@ def multispectral_points(df: pd.DataFrame, sensor: str, dataset: str) -> list[di
                 "properties": {
                     "dataset": dataset,
                     "sensor": sensor,
-                    "country": row.get("site:country"),
+                    "country": country,
                     "date": str(row.get("stac:time_start", ""))[:10],
                     "flux": num(row.get("detection:ch4_fluxrate")),
                     "flux_kind": "ch4",
+                    "id": str(row.get("id", "")),
+                    "file": f"{dataset}_{country.replace(' ', '_')}.tacozip",
+                    "viz": "multispectral",
                 },
             }
         )

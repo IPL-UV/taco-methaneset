@@ -14,12 +14,47 @@
   --line: rgba(148, 163, 184, 0.18);
   --card: rgba(11, 43, 58, 0.42);
   --card-hover: rgba(13, 55, 74, 0.62);
+  --panel-bg: rgba(2, 6, 23, 0.82);
+  --panel-solid: rgba(2, 6, 23, 0.95);
+  --nav-bg: rgba(2, 6, 23, 0.72);
   --gradient: linear-gradient(90deg, #2dd4bf, #4ade80);
   --bg: linear-gradient(160deg, #020617, #0b2b3a);
+  --globe-bg: radial-gradient(circle at 60% 42%, #0b2b3a 0%, #020617 72%);
+  --hero-overlay: linear-gradient(
+    90deg,
+    rgba(2, 6, 23, 0.94) 0%,
+    rgba(2, 6, 23, 0.72) 42%,
+    rgba(2, 6, 23, 0.2) 100%
+  );
   --max: 1160px;
   --font-display: "Space Grotesk", system-ui, sans-serif;
   --font-body: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+[data-theme="light"] {
+  --slate: #64748b;
+  --text: #0f172a;
+  --muted: #475569;
+  --line: rgba(15, 23, 42, 0.12);
+  --card: rgba(255, 255, 255, 0.72);
+  --card-hover: #ffffff;
+  --panel-bg: rgba(255, 255, 255, 0.88);
+  --panel-solid: rgba(255, 255, 255, 0.97);
+  --nav-bg: rgba(248, 250, 252, 0.8);
+  --teal: #0d9488;
+  --teal-light: #0f766e;
+  --emerald: #16a34a;
+  --orange: #ea580c;
+  --yellow: #b45309;
+  --bg: linear-gradient(160deg, #ffffff, #e8eef4);
+  --globe-bg: radial-gradient(circle at 60% 42%, #e8eef4 0%, #ffffff 72%);
+  --hero-overlay: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(255, 255, 255, 0.72) 42%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
 }
 
 *,
@@ -44,6 +79,11 @@ body {
   font-size: 17px;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+[data-theme="light"] body {
+  background-color: #ffffff;
 }
 
 a {
@@ -134,7 +174,7 @@ p {
   top: 0;
   z-index: 50;
   backdrop-filter: blur(14px);
-  background: rgba(2, 6, 23, 0.72);
+  background: var(--nav-bg);
   border-bottom: 1px solid var(--line);
 }
 
@@ -191,6 +231,30 @@ p {
   margin-left: 6px;
 }
 
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--teal);
+}
+
+.theme-toggle svg {
+  width: 17px;
+  height: 17px;
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -221,7 +285,7 @@ p {
 .btn--ghost {
   border-color: var(--line);
   color: var(--text);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(148, 163, 184, 0.06);
 }
 
 .btn--ghost:hover {
@@ -254,7 +318,7 @@ p {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(2, 6, 23, 0.94) 0%, rgba(2, 6, 23, 0.72) 42%, rgba(2, 6, 23, 0.2) 100%);
+  background: var(--hero-overlay);
   pointer-events: none;
 }
 
@@ -418,6 +482,11 @@ p {
   overflow-x: auto;
 }
 
+[data-theme="light"] .code {
+  background: #0f172a;
+  color: #5eead4;
+}
+
 .code .tok-key {
   color: var(--emerald);
 }
@@ -428,6 +497,14 @@ p {
 
 .code .tok-com {
   color: var(--slate);
+}
+
+[data-theme="light"] .code .tok-key {
+  color: #4ade80;
+}
+
+[data-theme="light"] .code .tok-str {
+  color: #fde047;
 }
 
 /* Prose for inner pages */
@@ -470,6 +547,12 @@ p {
   color: var(--teal);
 }
 
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--teal-light);
+}
+
 /* Footer */
 .footer {
   border-top: 1px solid var(--line);
@@ -501,18 +584,18 @@ p {
 
 /* Map popups */
 .maplibregl-popup.plume-popup .maplibregl-popup-content {
-  background: rgba(2, 6, 23, 0.95);
+  background: var(--panel-solid);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 14px;
   color: var(--text);
   font-family: var(--font-body);
-  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.35);
 }
 
 .maplibregl-popup.plume-popup .maplibregl-popup-tip {
-  border-top-color: rgba(2, 6, 23, 0.95);
-  border-bottom-color: rgba(2, 6, 23, 0.95);
+  border-top-color: var(--panel-solid);
+  border-bottom-color: var(--panel-solid);
 }
 
 .pp-sensor {

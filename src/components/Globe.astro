@@ -11,6 +11,8 @@ const sensors = [
   { id: "Sentinel-2", color: "#2dd4bf", label: "Sentinel-2 · multispectral" },
   { id: "Landsat 8/9", color: "#fde047", label: "Landsat 8/9 · multispectral" },
 ];
+
+const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
 ---
 
 <div class="globe-wrap">
@@ -34,10 +36,43 @@ const sensors = [
             </label>
           ))
         }
+
         <p class="globe-panel__title" style="margin-top:14px;">Country</p>
         <select id="country-select" class="globe-select">
           <option value="">All countries</option>
         </select>
+
+        <div class="globe-row">
+          <div>
+            <p class="globe-panel__title" style="margin-top:14px;">From</p>
+            <select id="year-from" class="globe-select">
+              {years.map((y) => <option value={y}>{y}</option>)}
+            </select>
+          </div>
+          <div>
+            <p class="globe-panel__title" style="margin-top:14px;">To</p>
+            <select id="year-to" class="globe-select">
+              {years.map((y) => <option value={y} selected={y === "2025"}>{y}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <p class="globe-panel__title" style="margin-top:14px;">Min flux</p>
+        <select id="flux-min" class="globe-select">
+          <option value="0">Any</option>
+          <option value="1000">≥ 1,000 kg/h</option>
+          <option value="5000">≥ 5,000 kg/h</option>
+          <option value="10000">≥ 10,000 kg/h</option>
+        </select>
+
+        <p class="globe-panel__title" style="margin-top:14px;">Basemap</p>
+        <select id="basemap-select" class="globe-select">
+          <option value="auto">Match theme</option>
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+          <option value="satellite">Satellite</option>
+        </select>
+
         <p id="globe-count" class="globe-count"></p>
       </div>
 
@@ -58,6 +93,10 @@ const sensors = [
           <span>flux · kg/h</span>
         </div>
       </div>
+
+      <div id="sample-viewer" class="sample-viewer" style="display:none">
+        <div id="sample-viewer-body" class="sample-viewer__body"></div>
+      </div>
     </div>
   )}
 </div>
@@ -72,7 +111,7 @@ const sensors = [
   .globe {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 60% 42%, #0b2b3a 0%, #020617 72%);
+    background: var(--globe-bg);
   }
   .globe-ui {
     position: absolute;
@@ -83,7 +122,7 @@ const sensors = [
   .globe-legend {
     position: absolute;
     pointer-events: auto;
-    background: rgba(2, 6, 23, 0.82);
+    background: var(--panel-bg);
     backdrop-filter: blur(10px);
     border: 1px solid var(--line);
     border-radius: 14px;
@@ -94,7 +133,9 @@ const sensors = [
   .globe-panel {
     top: 80px;
     left: 20px;
-    min-width: 220px;
+    min-width: 230px;
+    max-height: calc(100% - 100px);
+    overflow-y: auto;
   }
   .globe-legend {
     bottom: 20px;
@@ -127,7 +168,7 @@ const sensors = [
   }
   .globe-select {
     width: 100%;
-    background: rgba(2, 6, 23, 0.9);
+    background: var(--panel-solid);
     color: var(--text);
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -135,8 +176,15 @@ const sensors = [
     font-family: var(--font-body);
     font-size: 0.85rem;
   }
+  .globe-row {
+    display: flex;
+    gap: 10px;
+  }
+  .globe-row > div {
+    flex: 1;
+  }
   .globe-count {
-    margin: 10px 0 0;
+    margin: 12px 0 0;
     font-family: var(--font-mono);
     font-size: 0.72rem;
     color: var(--teal-light);
@@ -162,6 +210,47 @@ const sensors = [
     border: 1px solid var(--orange);
     display: inline-block;
   }
+  .sample-viewer {
+    position: absolute;
+    top: 80px;
+    right: 20px;
+    width: 260px;
+    pointer-events: auto;
+    background: var(--panel-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .sample-viewer :global(.sv-title) {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    color: var(--text);
+    margin: 0 0 4px;
+  }
+  .sample-viewer :global(.sv-status) {
+    margin: 0 0 10px;
+    font-size: 0.78rem;
+  }
+  .sample-viewer :global(.sv-error) {
+    color: var(--orange);
+  }
+  .sample-viewer :global(.sv-clear) {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+  }
+  .sample-viewer :global(.sv-clear:hover) {
+    border-color: var(--teal);
+    color: var(--teal-light);
+  }
   @media (max-width: 720px) {
     .globe-legend {
       display: none;
@@ -170,6 +259,9 @@ const sensors = [
       top: 12px;
       left: 12px;
     }
+    .sample-viewer {
+      display: none !important;
+    }
   }
 </style>
 
@@ -177,11 +269,31 @@ const sensors = [
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { url } from "../lib/url";
+  import { showSample, redrawSample } from "../lib/sampleViewer";
 
   const SENSOR_COLOR = {
     EMIT: "#f97316",
     "Sentinel-2": "#2dd4bf",
     "Landsat 8/9": "#fde047",
+  };
+
+  const BASEMAPS: Record<string, any> = {
+    dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+    light: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+    satellite: {
+      version: 8,
+      sources: {
+        sat: {
+          type: "raster",
+          tiles: [
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          ],
+          tileSize: 256,
+          attribution: "Imagery © Esri, Maxar, Earthstar Geographics",
+        },
+      },
+      layers: [{ id: "sat", type: "raster", source: "sat" }],
+    },
   };
 
   const el = document.getElementById("globe");
@@ -190,9 +302,12 @@ const sensors = [
     const rotate = el.dataset.rotate === "true";
     const controls = el.dataset.controls === "true";
 
+    const theme = () => document.documentElement.getAttribute("data-theme") || "dark";
+    const autoBasemap = () => (theme() === "light" ? "light" : "dark");
+
     const map = new maplibregl.Map({
       container: el,
-      style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+      style: BASEMAPS[autoBasemap()],
       center: [30, 20],
       zoom: 0.75,
       attributionControl: false,
@@ -200,11 +315,136 @@ const sensors = [
       dragRotate: false,
     });
 
+    let plumeData: any = null;
+    let basemapChoice = "auto";
+
+    (window as any).__map = map;
+
+    const popup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 12,
+      className: "plume-popup",
+      maxWidth: "280px",
+    });
+
+    const colorExpr = [
+      "match",
+      ["get", "sensor"],
+      "EMIT", SENSOR_COLOR.EMIT,
+      "Sentinel-2", SENSOR_COLOR["Sentinel-2"],
+      "Landsat 8/9", SENSOR_COLOR["Landsat 8/9"],
+      "#94a3b8",
+    ];
+
+    const ensureLayers = () => {
+      if (!plumeData || map.getLayer("plumes")) return;
+
+      try {
+        map.addSource("plumes", { type: "geojson", data: plumeData });
+      } catch (e) {
+        return;
+      }
+
+      map.addLayer({
+        id: "plumes-halo",
+        type: "circle",
+        source: "plumes",
+        paint: {
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["coalesce", ["get", "flux"], 0],
+            0, 9,
+            5000, 14,
+            20000, 22,
+          ],
+          "circle-color": colorExpr as any,
+          "circle-opacity": 0.14,
+          "circle-blur": 1,
+        },
+      });
+
+      map.addLayer({
+        id: "plumes",
+        type: "circle",
+        source: "plumes",
+        paint: {
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["coalesce", ["get", "flux"], 0],
+            0, 2.2,
+            5000, 4.5,
+            20000, 7.5,
+          ],
+          "circle-color": colorExpr as any,
+          "circle-opacity": 0.92,
+          "circle-stroke-color": "rgba(2,6,23,0.6)",
+          "circle-stroke-width": 0.4,
+        },
+      });
+
+      const fmt = (v: number | null) => (v == null ? "n/a" : `${Math.round(v).toLocaleString()} kg/h`);
+
+      map.on("mouseenter", "plumes", (e) => {
+        map.getCanvas().style.cursor = "pointer";
+        const f = (e.features && e.features[0]) as any;
+        if (!f) return;
+        const p = f.properties;
+        const color = SENSOR_COLOR[p.sensor as keyof typeof SENSOR_COLOR] ?? "#94a3b8";
+        const extra =
+          p.n_imeo != null
+            ? `<div class="pp-row"><span>IMEO plumes</span><b>${p.n_imeo}</b></div>` +
+              `<div class="pp-row"><span>Carbon Mapper</span><b>${p.n_cm}</b></div>`
+            : "";
+        const sector = p.sector ? `<div class="pp-row"><span>Sector</span><b>${p.sector}</b></div>` : "";
+        popup
+          .setLngLat(f.geometry.coordinates)
+          .setHTML(
+            `<div class="pp"><span class="pp-sensor" style="color:${color}">${p.sensor}</span>` +
+              `<h4>${p.country ?? "Unknown"}</h4>` +
+              `<div class="pp-row"><span>Dataset</span><b>${p.dataset}</b></div>` +
+              `<div class="pp-row"><span>Date</span><b>${p.date || "n/a"}</b></div>` +
+              `<div class="pp-row"><span>Flux</span><b>${fmt(p.flux)}</b></div>` +
+              sector +
+              extra +
+              `</div>`,
+          )
+          .addTo(map);
+      });
+
+      map.on("mouseleave", "plumes", () => {
+        map.getCanvas().style.cursor = "";
+        popup.remove();
+      });
+
+      map.on("click", "plumes", (e) => {
+        const f = (e.features && e.features[0]) as any;
+        if (!f || f.properties.viz !== "multispectral") return;
+        const root = document.getElementById("sample-viewer");
+        const bodyEl = document.getElementById("sample-viewer-body");
+        if (root && bodyEl) showSample(map, f.properties, { root, body: bodyEl });
+      });
+
+      redrawSample(map);
+      applyFilters();
+    };
+
     map.on("style.load", () => {
       if (typeof (map as any).setProjection === "function") {
         (map as any).setProjection({ type: "globe" });
       }
+      ensureLayers();
     });
+
+    map.on("idle", ensureLayers);
+
+    const setBasemap = (name: string) => {
+      basemapChoice = name;
+      const resolved = name === "auto" ? autoBasemap() : name;
+      map.setStyle(BASEMAPS[resolved]);
+    };
 
     if (rotate) {
       let lng = 30;
@@ -221,150 +461,75 @@ const sensors = [
       });
     }
 
-    const popup = new maplibregl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-      offset: 12,
-      className: "plume-popup",
-      maxWidth: "280px",
-    });
+    new MutationObserver(() => {
+      if (basemapChoice === "auto") setBasemap("auto");
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+    let applyFilters = () => {};
 
     fetch(url("data/plumes.geojson"))
       .then((r) => r.json())
       .then((geojson) => {
-        map.on("load", () => {
-          map.addSource("plumes", { type: "geojson", data: geojson });
+        plumeData = geojson;
 
-          map.addLayer({
-            id: "plumes-halo",
-            type: "circle",
-            source: "plumes",
-            paint: {
-              "circle-radius": [
-                "interpolate",
-                ["linear"],
-                ["coalesce", ["get", "flux"], 0],
-                0, 9,
-                5000, 14,
-                20000, 22,
-              ],
-              "circle-color": [
-                "match",
-                ["get", "sensor"],
-                "EMIT", SENSOR_COLOR.EMIT,
-                "Sentinel-2", SENSOR_COLOR["Sentinel-2"],
-                "Landsat 8/9", SENSOR_COLOR["Landsat 8/9"],
-                "#94a3b8",
-              ],
-              "circle-opacity": 0.14,
-              "circle-blur": 1,
-            },
-          });
+        if (controls) {
+          const boxes = Array.from(document.querySelectorAll<HTMLInputElement>("[data-sensor]"));
+          const countrySel = document.getElementById("country-select") as HTMLSelectElement | null;
+          const yearFrom = document.getElementById("year-from") as HTMLSelectElement | null;
+          const yearTo = document.getElementById("year-to") as HTMLSelectElement | null;
+          const fluxMin = document.getElementById("flux-min") as HTMLSelectElement | null;
+          const basemapSel = document.getElementById("basemap-select") as HTMLSelectElement | null;
+          const count = document.getElementById("globe-count");
 
-          map.addLayer({
-            id: "plumes",
-            type: "circle",
-            source: "plumes",
-            paint: {
-              "circle-radius": [
-                "interpolate",
-                ["linear"],
-                ["coalesce", ["get", "flux"], 0],
-                0, 2.2,
-                5000, 4.5,
-                20000, 7.5,
-              ],
-              "circle-color": [
-                "match",
-                ["get", "sensor"],
-                "EMIT", SENSOR_COLOR.EMIT,
-                "Sentinel-2", SENSOR_COLOR["Sentinel-2"],
-                "Landsat 8/9", SENSOR_COLOR["Landsat 8/9"],
-                "#94a3b8",
-              ],
-              "circle-opacity": 0.92,
-              "circle-stroke-color": "#020617",
-              "circle-stroke-width": 0.4,
-            },
-          });
-
-          const fmt = (v: number | null) =>
-            v == null ? "n/a" : `${Math.round(v).toLocaleString()} kg/h`;
-
-          map.on("mouseenter", "plumes", (e) => {
-            map.getCanvas().style.cursor = "pointer";
-            const f = (e.features && e.features[0]) as any;
-            if (!f) return;
-            const p = f.properties;
-            const color = SENSOR_COLOR[p.sensor as keyof typeof SENSOR_COLOR] ?? "#94a3b8";
-            const extra =
-              p.n_imeo != null
-                ? `<div class="pp-row"><span>IMEO plumes</span><b>${p.n_imeo}</b></div>` +
-                  `<div class="pp-row"><span>Carbon Mapper</span><b>${p.n_cm}</b></div>`
-                : "";
-            const sector = p.sector ? `<div class="pp-row"><span>Sector</span><b>${p.sector}</b></div>` : "";
-            popup
-              .setLngLat(f.geometry.coordinates)
-              .setHTML(
-                `<div class="pp"><span class="pp-sensor" style="color:${color}">${p.sensor}</span>` +
-                  `<h4>${p.country ?? "Unknown"}</h4>` +
-                  `<div class="pp-row"><span>Dataset</span><b>${p.dataset}</b></div>` +
-                  `<div class="pp-row"><span>Date</span><b>${p.date || "n/a"}</b></div>` +
-                  `<div class="pp-row"><span>Flux</span><b>${fmt(p.flux)}</b></div>` +
-                  sector +
-                  extra +
-                  `</div>`,
-              )
-              .addTo(map);
-          });
-
-          map.on("mouseleave", "plumes", () => {
-            map.getCanvas().style.cursor = "";
-            popup.remove();
-          });
-
-          if (controls) {
-            const boxes = Array.from(
-              document.querySelectorAll<HTMLInputElement>("[data-sensor]"),
-            );
-            const select = document.getElementById("country-select") as HTMLSelectElement | null;
-            const count = document.getElementById("globe-count");
-
-            const countries = Array.from(
-              new Set(geojson.features.map((f: any) => f.properties.country).filter(Boolean)),
-            ).sort() as string[];
-            if (select) {
-              for (const c of countries) {
-                const opt = document.createElement("option");
-                opt.value = c;
-                opt.textContent = c;
-                select.appendChild(opt);
-              }
+          const countries = Array.from(
+            new Set(geojson.features.map((f: any) => f.properties.country).filter(Boolean)),
+          ).sort() as string[];
+          if (countrySel) {
+            for (const c of countries) {
+              const opt = document.createElement("option");
+              opt.value = c;
+              opt.textContent = c;
+              countrySel.appendChild(opt);
             }
-
-            const apply = () => {
-              const sensors = boxes.filter((b) => b.checked).map((b) => b.value);
-              const country = select?.value ?? "";
-              const filters: any[] = [["in", ["get", "sensor"], ["literal", sensors]]];
-              if (country) filters.push(["==", ["get", "country"], country]);
-              map.setFilter("plumes", ["all", ...filters]);
-              map.setFilter("plumes-halo", ["all", ...filters]);
-              const visible = geojson.features.filter(
-                (f: any) =>
-                  sensors.includes(f.properties.sensor) &&
-                  (!country || f.properties.country === country),
-              ).length;
-              if (count) count.textContent = `${visible.toLocaleString()} plumes shown`;
-            };
-
-            boxes.forEach((b) => b.addEventListener("change", apply));
-            select?.addEventListener("change", apply);
-            apply();
-          } else {
-            const controlsEl = document.querySelector(".globe-count");
-            if (controlsEl) controlsEl.textContent = "";
           }
-        });
+
+          applyFilters = () => {
+            if (!map.getLayer("plumes")) return;
+            const sensors = boxes.filter((b) => b.checked).map((b) => b.value);
+            const country = countrySel?.value ?? "";
+            const from = yearFrom?.value ?? "2018";
+            const to = yearTo?.value ?? "2025";
+            const minFlux = Number(fluxMin?.value ?? 0);
+
+            const filters: any[] = [["in", ["get", "sensor"], ["literal", sensors]]];
+            if (country) filters.push(["==", ["get", "country"], country]);
+            filters.push([">=", ["slice", ["get", "date"], 0, 4], from]);
+            filters.push(["<=", ["slice", ["get", "date"], 0, 4], to]);
+            if (minFlux > 0) filters.push([">=", ["coalesce", ["get", "flux"], 0], minFlux]);
+
+            map.setFilter("plumes", ["all", ...filters]);
+            map.setFilter("plumes-halo", ["all", ...filters]);
+
+            const visible = geojson.features.filter((f: any) => {
+              const p = f.properties;
+              const y = (p.date || "").slice(0, 4);
+              return (
+                sensors.includes(p.sensor) &&
+                (!country || p.country === country) &&
+                y >= from &&
+                y <= to &&
+                (minFlux === 0 || (p.flux ?? 0) >= minFlux)
+              );
+            }).length;
+            if (count) count.textContent = `${visible.toLocaleString()} plumes shown`;
+          };
+
+          boxes.forEach((b) => b.addEventListener("change", applyFilters));
+          [countrySel, yearFrom, yearTo, fluxMin].forEach((s) => s?.addEventListener("change", applyFilters));
+          basemapSel?.addEventListener("change", () => setBasemap(basemapSel.value));
+        }
+
+        ensureLayers();
       })
       .catch((err) => console.error("plumes.geojson:", err));
   }

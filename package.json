@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "astro": "^5",
-    "maplibre-gl": "^5"
+    "geotiff": "^3.0.5",
+    "maplibre-gl": "^5",
+    "proj4": "^2.22.0"
   }
 }
