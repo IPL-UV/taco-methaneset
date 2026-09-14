@@ -3,8 +3,9 @@ interface Props {
   scrollZoom?: boolean;
   controls?: boolean;
   rotate?: boolean;
+  focusRight?: boolean;
 }
-const { scrollZoom = false, controls = false, rotate = false } = Astro.props;
+const { scrollZoom = false, controls = false, rotate = false, focusRight = false } = Astro.props;
 
 const sensors = [
   { id: "EMIT", color: "#f97316", label: "EMIT · hyperspectral" },
@@ -21,7 +22,8 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     class="globe"
     data-scroll-zoom={scrollZoom ? "true" : "false"}
     data-rotate={rotate ? "true" : "false"}
-    data-controls={controls ? "true" : "false"}></div>
+    data-controls={controls ? "true" : "false"}
+    data-focus-right={focusRight ? "true" : "false"}></div>
 
   {controls && (
     <div class="globe-ui">
@@ -389,6 +391,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     const allowZoom = el.dataset.scrollZoom === "true";
     const rotate = el.dataset.rotate === "true";
     const controls = el.dataset.controls === "true";
+    const focusRight = el.dataset.focusRight === "true";
 
     const theme = () => document.documentElement.getAttribute("data-theme") || "dark";
     const autoBasemap = () => (theme() === "light" ? "light" : "dark");
@@ -407,6 +410,12 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     let basemapChoice = "auto";
 
     (window as any).__map = map;
+
+    if (focusRight) {
+      const applyPadding = () => map.setPadding({ left: Math.round(el.clientWidth * 0.42) });
+      map.on("load", applyPadding);
+      map.on("resize", applyPadding);
+    }
 
     const popup = new maplibregl.Popup({
       closeButton: false,

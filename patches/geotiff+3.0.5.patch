@@ -1,0 +1,14 @@
+diff --git a/node_modules/geotiff/dist-module/predictor.js b/node_modules/geotiff/dist-module/predictor.js
+index ef52987..59986f6 100644
+--- a/node_modules/geotiff/dist-module/predictor.js
++++ b/node_modules/geotiff/dist-module/predictor.js
+@@ -76,6 +76,9 @@ export function applyPredictor(block, predictor, width, height, bitsPerSample, p
+                 case 32:
+                     row = new Uint32Array(block, i * stride * width * bytesPerSample, stride * width * bytesPerSample / 4);
+                     break;
++                case 64:
++                    row = new BigInt64Array(block, i * stride * width * bytesPerSample, stride * width * bytesPerSample / 8);
++                    break;
+                 default:
+                     throw new Error(`Predictor 2 not allowed with ${bitsPerSample[0]} bits per sample.`);
+             }

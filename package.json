@@ -6,12 +6,16 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "astro": "^5",
     "geotiff": "^3.0.5",
     "maplibre-gl": "^5",
     "proj4": "^2.22.0"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1"
   }
 }

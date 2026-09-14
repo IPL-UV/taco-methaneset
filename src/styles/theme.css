@@ -308,12 +308,6 @@ p {
   z-index: 0;
 }
 
-@media (min-width: 900px) {
-  .hero__globe {
-    left: 30%;
-  }
-}
-
 .hero__globe::after {
   content: "";
   position: absolute;
