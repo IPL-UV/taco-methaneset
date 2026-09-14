@@ -169,6 +169,7 @@ p {
 
 .nav__links {
   display: flex;
+  align-items: center;
   gap: 22px;
   margin-left: auto;
   font-size: 0.94rem;
@@ -176,6 +177,9 @@ p {
 
 .nav__links a {
   color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 
 .nav__links a:hover,
@@ -493,4 +497,47 @@ p {
   .section {
     padding: 64px 0;
   }
+}
+
+/* Map popups */
+.maplibregl-popup.plume-popup .maplibregl-popup-content {
+  background: rgba(2, 6, 23, 0.95);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: var(--font-body);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
+}
+
+.maplibregl-popup.plume-popup .maplibregl-popup-tip {
+  border-top-color: rgba(2, 6, 23, 0.95);
+  border-bottom-color: rgba(2, 6, 23, 0.95);
+}
+
+.pp-sensor {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pp h4 {
+  margin: 3px 0 9px;
+  font-size: 1.02rem;
+  color: var(--text);
+}
+
+.pp-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  padding: 1px 0;
+}
+
+.pp-row b {
+  color: var(--text);
+  font-weight: 500;
 }

@@ -1,0 +1,162 @@
+---
+import { hfUrl, loadCode, type Dataset } from "../data/datasets";
+
+interface Props {
+  dataset: Dataset;
+}
+const { dataset } = Astro.props;
+
+const icons: Record<string, string> = {
+  hyper: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>`,
+  s2: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="9" width="8" height="6" rx="1"/><rect x="13" y="9" width="8" height="6" rx="1"/><path d="M9 5l2 4M15 5l-2 4"/></svg>`,
+  l89: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="4" y="10" width="16" height="5" rx="1"/><path d="M8 10V6m8 4V6"/><circle cx="12" cy="17.5" r="1"/></svg>`,
+  bank: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 3 3 7l9 4 9-4-9-4Z"/><path d="M3 12l9 4 9-4M3 16.5l9 4 9-4"/></svg>`,
+};
+
+const code = loadCode(dataset.name);
+---
+
+<article class="dcard">
+  <div class="dcard__head">
+    <span class="dcard__icon" set:html={icons[dataset.icon]} />
+    <div>
+      <h3>{dataset.name}</h3>
+      <div class="dcard__meta">
+        <span class="dcard__chip">{dataset.family}</span>
+        <span class="dcard__chip">{dataset.subset}</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="dcard__abstract">{dataset.abstract}</p>
+
+  <div class="dcard__stats">
+    <div><b>{dataset.samples.toLocaleString("en-US")}</b><span>samples</span></div>
+    <div><b>{dataset.sizeGB} GB</b><span>on disk</span></div>
+  </div>
+
+  <div class="dcard__code">
+    <code>{code}</code>
+    <button class="dcard__copy" data-copy={code} aria-label="Copy load path">copy</button>
+  </div>
+
+  <a class="dcard__link" href={hfUrl(dataset.name)} target="_blank" rel="noopener"
+    >Hugging Face <span aria-hidden="true">→</span></a
+  >
+</article>
+
+<style>
+  .dcard {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--card);
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+  .dcard:hover {
+    border-color: rgba(45, 212, 191, 0.5);
+    background: var(--card-hover);
+    transform: translateY(-2px);
+  }
+  .dcard__head {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .dcard__icon {
+    width: 42px;
+    height: 42px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: rgba(45, 212, 191, 0.1);
+    color: var(--teal);
+  }
+  .dcard__icon :global(svg) {
+    width: 22px;
+    height: 22px;
+  }
+  .dcard__head h3 {
+    font-size: 1.02rem;
+    margin: 0 0 6px;
+    word-break: break-word;
+  }
+  .dcard__meta {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .dcard__chip {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 9px;
+  }
+  .dcard__abstract {
+    color: var(--muted);
+    font-size: 0.92rem;
+    margin: 16px 0;
+    flex: 1;
+  }
+  .dcard__stats {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 14px;
+  }
+  .dcard__stats b {
+    font-family: var(--font-display);
+    font-size: 1.02rem;
+    color: var(--text);
+    display: block;
+  }
+  .dcard__stats span {
+    font-size: 0.75rem;
+    color: var(--slate);
+    font-family: var(--font-mono);
+  }
+  .dcard__code {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(2, 6, 23, 0.7);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 10px;
+    overflow: hidden;
+  }
+  .dcard__code code {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--teal-light);
+    white-space: normal;
+    word-break: break-all;
+    line-height: 1.5;
+    flex: 1;
+  }
+  .dcard__copy {
+    flex: none;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    border-radius: 7px;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    padding: 4px 8px;
+    cursor: pointer;
+  }
+  .dcard__copy:hover {
+    color: var(--teal-light);
+    border-color: var(--teal);
+  }
+  .dcard__link {
+    margin-top: 14px;
+    font-size: 0.88rem;
+  }
+</style>

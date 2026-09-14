@@ -1,17 +1,175 @@
 ---
 interface Props {
   scrollZoom?: boolean;
+  controls?: boolean;
+  rotate?: boolean;
 }
-const { scrollZoom = false } = Astro.props;
+const { scrollZoom = false, controls = false, rotate = false } = Astro.props;
+
+const sensors = [
+  { id: "EMIT", color: "#f97316", label: "EMIT · hyperspectral" },
+  { id: "Sentinel-2", color: "#2dd4bf", label: "Sentinel-2 · multispectral" },
+  { id: "Landsat 8/9", color: "#fde047", label: "Landsat 8/9 · multispectral" },
+];
 ---
 
-<div id="globe" class="globe" data-scroll-zoom={scrollZoom ? "true" : "false"}></div>
+<div class="globe-wrap">
+  <div
+    id="globe"
+    class="globe"
+    data-scroll-zoom={scrollZoom ? "true" : "false"}
+    data-rotate={rotate ? "true" : "false"}
+    data-controls={controls ? "true" : "false"}></div>
+
+  {controls && (
+    <div class="globe-ui">
+      <div class="globe-panel">
+        <p class="globe-panel__title">Sensors</p>
+        {
+          sensors.map((s) => (
+            <label class="globe-check">
+              <input type="checkbox" value={s.id} checked data-sensor />
+              <span class="globe-dot" style={`background:${s.color}`} />
+              {s.label}
+            </label>
+          ))
+        }
+        <p class="globe-panel__title" style="margin-top:14px;">Country</p>
+        <select id="country-select" class="globe-select">
+          <option value="">All countries</option>
+        </select>
+        <p id="globe-count" class="globe-count"></p>
+      </div>
+
+      <div class="globe-legend">
+        <p class="globe-panel__title">Legend</p>
+        {
+          sensors.map((s) => (
+            <div class="globe-legend__row">
+              <span class="globe-dot" style={`background:${s.color}`} />
+              {s.id}
+            </div>
+          ))
+        }
+        <div class="globe-legend__size">
+          <span class="globe-legend__circle" style="width:6px;height:6px;" />
+          <span class="globe-legend__circle" style="width:11px;height:11px;" />
+          <span class="globe-legend__circle" style="width:16px;height:16px;" />
+          <span>flux · kg/h</span>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
 
 <style>
-  .globe {
+  .globe-wrap {
+    position: relative;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle at 60% 40%, #0b2b3a 0%, #020617 70%);
+    overflow: hidden;
+  }
+  .globe {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 60% 42%, #0b2b3a 0%, #020617 72%);
+  }
+  .globe-ui {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .globe-panel,
+  .globe-legend {
+    position: absolute;
+    pointer-events: auto;
+    background: rgba(2, 6, 23, 0.82);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .globe-panel {
+    top: 80px;
+    left: 20px;
+    min-width: 220px;
+  }
+  .globe-legend {
+    bottom: 20px;
+    left: 20px;
+  }
+  .globe-panel__title {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 0 0 8px;
+  }
+  .globe-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+  .globe-check input {
+    accent-color: var(--teal);
+  }
+  .globe-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex: none;
+  }
+  .globe-select {
+    width: 100%;
+    background: rgba(2, 6, 23, 0.9);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+  }
+  .globe-count {
+    margin: 10px 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--teal-light);
+  }
+  .globe-legend__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+  }
+  .globe-legend__size {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+  }
+  .globe-legend__circle {
+    border-radius: 50%;
+    border: 1px solid var(--orange);
+    display: inline-block;
+  }
+  @media (max-width: 720px) {
+    .globe-legend {
+      display: none;
+    }
+    .globe-panel {
+      top: 12px;
+      left: 12px;
+    }
   }
 </style>
 
@@ -20,15 +178,23 @@ const { scrollZoom = false } = Astro.props;
   import "maplibre-gl/dist/maplibre-gl.css";
   import { url } from "../lib/url";
 
+  const SENSOR_COLOR = {
+    EMIT: "#f97316",
+    "Sentinel-2": "#2dd4bf",
+    "Landsat 8/9": "#fde047",
+  };
+
   const el = document.getElementById("globe");
   if (el) {
     const allowZoom = el.dataset.scrollZoom === "true";
+    const rotate = el.dataset.rotate === "true";
+    const controls = el.dataset.controls === "true";
 
     const map = new maplibregl.Map({
       container: el,
       style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-      center: [40, 20],
-      zoom: 1.1,
+      center: [30, 20],
+      zoom: 0.75,
       attributionControl: false,
       scrollZoom: allowZoom,
       dragRotate: false,
@@ -40,75 +206,166 @@ const { scrollZoom = false } = Astro.props;
       }
     });
 
-    fetch(url("data/emit.geojson"))
+    if (rotate) {
+      let lng = 30;
+      const spin = () => {
+        lng += 0.35;
+        map.easeTo({ center: [lng, 20], duration: 1200, easing: (t) => t });
+      };
+      map.once("load", () => {
+        const timer = setInterval(spin, 1200);
+        const stop = () => clearInterval(timer);
+        map.once("mousedown", stop);
+        map.once("touchstart", stop);
+        map.once("wheel", stop);
+      });
+    }
+
+    const popup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 12,
+      className: "plume-popup",
+      maxWidth: "280px",
+    });
+
+    fetch(url("data/plumes.geojson"))
       .then((r) => r.json())
       .then((geojson) => {
         map.on("load", () => {
-          map.addSource("emit", { type: "geojson", data: geojson });
+          map.addSource("plumes", { type: "geojson", data: geojson });
 
           map.addLayer({
-            id: "emit-halo",
+            id: "plumes-halo",
             type: "circle",
-            source: "emit",
+            source: "plumes",
             paint: {
-              "circle-radius": 12,
-              "circle-color": "#f97316",
-              "circle-opacity": 0.12,
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["coalesce", ["get", "flux"], 0],
+                0, 9,
+                5000, 14,
+                20000, 22,
+              ],
+              "circle-color": [
+                "match",
+                ["get", "sensor"],
+                "EMIT", SENSOR_COLOR.EMIT,
+                "Sentinel-2", SENSOR_COLOR["Sentinel-2"],
+                "Landsat 8/9", SENSOR_COLOR["Landsat 8/9"],
+                "#94a3b8",
+              ],
+              "circle-opacity": 0.14,
               "circle-blur": 1,
             },
           });
 
           map.addLayer({
-            id: "emit-points",
+            id: "plumes",
             type: "circle",
-            source: "emit",
+            source: "plumes",
             paint: {
               "circle-radius": [
                 "interpolate",
                 ["linear"],
-                ["coalesce", ["get", "flux_max"], 0],
-                0, 2.4,
-                5000, 5.5,
-                20000, 9,
+                ["coalesce", ["get", "flux"], 0],
+                0, 2.2,
+                5000, 4.5,
+                20000, 7.5,
               ],
-              "circle-color": "#f97316",
-              "circle-opacity": 0.9,
-              "circle-stroke-color": "#fde047",
-              "circle-stroke-width": 0.5,
-              "circle-stroke-opacity": 0.6,
+              "circle-color": [
+                "match",
+                ["get", "sensor"],
+                "EMIT", SENSOR_COLOR.EMIT,
+                "Sentinel-2", SENSOR_COLOR["Sentinel-2"],
+                "Landsat 8/9", SENSOR_COLOR["Landsat 8/9"],
+                "#94a3b8",
+              ],
+              "circle-opacity": 0.92,
+              "circle-stroke-color": "#020617",
+              "circle-stroke-width": 0.4,
             },
           });
 
-          const popup = new maplibregl.Popup({
-            closeButton: false,
-            closeOnClick: false,
-            offset: 10,
-            className: "emit-popup",
-          });
+          const fmt = (v: number | null) =>
+            v == null ? "n/a" : `${Math.round(v).toLocaleString()} kg/h`;
 
-          map.on("mouseenter", "emit-points", (e) => {
+          map.on("mouseenter", "plumes", (e) => {
             map.getCanvas().style.cursor = "pointer";
             const f = (e.features && e.features[0]) as any;
             if (!f) return;
             const p = f.properties;
-            const flux =
-              p.flux_max != null ? `${Math.round(p.flux_max).toLocaleString()} kg/h` : "n/a";
+            const color = SENSOR_COLOR[p.sensor as keyof typeof SENSOR_COLOR] ?? "#94a3b8";
+            const extra =
+              p.n_imeo != null
+                ? `<div class="pp-row"><span>IMEO plumes</span><b>${p.n_imeo}</b></div>` +
+                  `<div class="pp-row"><span>Carbon Mapper</span><b>${p.n_cm}</b></div>`
+                : "";
+            const sector = p.sector ? `<div class="pp-row"><span>Sector</span><b>${p.sector}</b></div>` : "";
             popup
               .setLngLat(f.geometry.coordinates)
               .setHTML(
-                `<strong>${p.country ?? "Unknown"}</strong><br>` +
-                  `IMEO plumes: ${p.n_imeo ?? "·"} · Carbon Mapper: ${p.n_cm ?? "·"}<br>` +
-                  `Max flux: ${flux}`,
+                `<div class="pp"><span class="pp-sensor" style="color:${color}">${p.sensor}</span>` +
+                  `<h4>${p.country ?? "Unknown"}</h4>` +
+                  `<div class="pp-row"><span>Dataset</span><b>${p.dataset}</b></div>` +
+                  `<div class="pp-row"><span>Date</span><b>${p.date || "n/a"}</b></div>` +
+                  `<div class="pp-row"><span>Flux</span><b>${fmt(p.flux)}</b></div>` +
+                  sector +
+                  extra +
+                  `</div>`,
               )
               .addTo(map);
           });
 
-          map.on("mouseleave", "emit-points", () => {
+          map.on("mouseleave", "plumes", () => {
             map.getCanvas().style.cursor = "";
             popup.remove();
           });
+
+          if (controls) {
+            const boxes = Array.from(
+              document.querySelectorAll<HTMLInputElement>("[data-sensor]"),
+            );
+            const select = document.getElementById("country-select") as HTMLSelectElement | null;
+            const count = document.getElementById("globe-count");
+
+            const countries = Array.from(
+              new Set(geojson.features.map((f: any) => f.properties.country).filter(Boolean)),
+            ).sort() as string[];
+            if (select) {
+              for (const c of countries) {
+                const opt = document.createElement("option");
+                opt.value = c;
+                opt.textContent = c;
+                select.appendChild(opt);
+              }
+            }
+
+            const apply = () => {
+              const sensors = boxes.filter((b) => b.checked).map((b) => b.value);
+              const country = select?.value ?? "";
+              const filters: any[] = [["in", ["get", "sensor"], ["literal", sensors]]];
+              if (country) filters.push(["==", ["get", "country"], country]);
+              map.setFilter("plumes", ["all", ...filters]);
+              map.setFilter("plumes-halo", ["all", ...filters]);
+              const visible = geojson.features.filter(
+                (f: any) =>
+                  sensors.includes(f.properties.sensor) &&
+                  (!country || f.properties.country === country),
+              ).length;
+              if (count) count.textContent = `${visible.toLocaleString()} plumes shown`;
+            };
+
+            boxes.forEach((b) => b.addEventListener("change", apply));
+            select?.addEventListener("change", apply);
+            apply();
+          } else {
+            const controlsEl = document.querySelector(".globe-count");
+            if (controlsEl) controlsEl.textContent = "";
+          }
         });
       })
-      .catch((err) => console.error("emit.geojson:", err));
+      .catch((err) => console.error("plumes.geojson:", err));
   }
 </script>

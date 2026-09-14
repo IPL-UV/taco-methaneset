@@ -4,7 +4,8 @@ export interface Dataset {
   subset: "Pretraining" | "Finetune" | "Single";
   samples: number;
   sizeGB: number;
-  note: string;
+  icon: "hyper" | "s2" | "l89" | "bank";
+  abstract: string;
 }
 
 export const datasets: Dataset[] = [
@@ -14,15 +15,19 @@ export const datasets: Dataset[] = [
     subset: "Pretraining",
     samples: 57291,
     sizeGB: 37.2,
-    note: "Confirmed plume-free scenes with a temporally paired reference.",
+    icon: "s2",
+    abstract:
+      "Confirmed plume-free Sentinel-2 scenes with a temporally close, plume-free reference. Pairs to combine with the plume bank for synthetic augmentation.",
   },
   {
     name: "methaneset-s2-finetune",
     family: "Sentinel-2",
     subset: "Finetune",
-    samples: 3612,
+    samples: 3603,
     sizeGB: 13.6,
-    note: "Expert-verified plume masks over Sentinel-2 imagery.",
+    icon: "s2",
+    abstract:
+      "Sentinel-2 imagery with expert-verified plume masks from IMEO MARS, all 13 bands at 10 m and 200x200 px patches.",
   },
   {
     name: "methaneset-l89-pretraining",
@@ -30,15 +35,19 @@ export const datasets: Dataset[] = [
     subset: "Pretraining",
     samples: 21926,
     sizeGB: 8.88,
-    note: "Confirmed plume-free scenes with a temporally paired reference.",
+    icon: "l89",
+    abstract:
+      "Plume-free Landsat 8/9 scenes with a matched reference, extending the surface and temporal diversity back to 2018.",
   },
   {
     name: "methaneset-l89-finetune",
     family: "Landsat 8/9",
     subset: "Finetune",
-    samples: 1548,
+    samples: 1353,
     sizeGB: 0.78,
-    note: "Expert-verified plume masks over Landsat 8/9 imagery.",
+    icon: "l89",
+    abstract:
+      "Landsat 8/9 imagery with expert-verified plume masks, 9 OLI bands at 30 m resampled to 10 m.",
   },
   {
     name: "methaneset-emit",
@@ -46,7 +55,9 @@ export const datasets: Dataset[] = [
     subset: "Single",
     samples: 721,
     sizeGB: 652,
-    note: "Calibrated radiance cubes, matched-filter products and two independent masks.",
+    icon: "hyper",
+    abstract:
+      "EMIT radiance hypercubes (285 bands, 60 m) with standard matched filter, mag1c, and two independent plume masks per granule from IMEO and Carbon Mapper.",
   },
   {
     name: "methaneset-bank",
@@ -54,7 +65,9 @@ export const datasets: Dataset[] = [
     subset: "Single",
     samples: 238545,
     sizeGB: 5.1,
-    note: "Precomputed WRF-LES column enhancements across geometry and wind.",
+    icon: "bank",
+    abstract:
+      "Precomputed WRF-LES column enhancements across solar and wind geometry, at a reference rate of 3000 kg/h. Injected into any plume-free scene.",
   },
   {
     name: "methaneset-bank-les",
@@ -62,7 +75,9 @@ export const datasets: Dataset[] = [
     subset: "Single",
     samples: 1647,
     sizeGB: 3.1,
-    note: "The raw 3D WRF-LES simulation cubes the bank is projected from.",
+    icon: "bank",
+    abstract:
+      "The raw 3D WRF-LES simulation cubes the plume bank is projected from, for reprocessing under new geometries.",
   },
 ];
 
@@ -72,6 +87,8 @@ export const totals = {
   sizeGB: datasets.reduce((a, d) => a + d.sizeGB, 0),
 };
 
-const hfBase = "https://huggingface.co/datasets/tacofoundation/methaneset/tree/main";
+export const HF_PREFIX = "hf://datasets/tacofoundation/methaneset";
+const HF_BASE = "https://huggingface.co/datasets/tacofoundation/methaneset/tree/main";
 
-export const hfUrl = (name: string) => `${hfBase}/${name}`;
+export const hfUrl = (name: string) => `${HF_BASE}/${name}`;
+export const loadCode = (name: string) => `${HF_PREFIX}/${name}`;

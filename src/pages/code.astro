@@ -1,10 +1,37 @@
 ---
 import Base from "../layouts/Base.astro";
+
+const examples = [
+  {
+    title: "Detect plumes in Sentinel-2",
+    body: "Load the finetune subset, read the plume masks and train a change-detection baseline.",
+    tag: "Multispectral",
+    href: "https://colab.research.google.com/github/tacofoundation/methaneset/blob/main/notebooks/01_multispectral.ipynb",
+  },
+  {
+    title: "Detect plumes in EMIT",
+    body: "Stream radiance hypercubes, compare the two matched-filter products and the independent masks.",
+    tag: "Hyperspectral",
+    href: "https://colab.research.google.com/github/tacofoundation/methaneset/blob/main/notebooks/02_hyperspectral.ipynb",
+  },
+  {
+    title: "Query the catalog",
+    body: "Filter samples by country, date or flux with SQL over the Parquet index, before downloading imagery.",
+    tag: "Metadata",
+    href: "https://huggingface.co/datasets/tacofoundation/methaneset",
+  },
+  {
+    title: "Inject synthetic plumes",
+    body: "Combine a plume-free pretraining scene with an enhancement from the plume bank.",
+    tag: "Bank",
+    href: "https://huggingface.co/datasets/tacofoundation/methaneset/tree/main/methaneset-bank",
+  },
+];
 ---
 
 <Base
   title="Code · MethaneSET"
-  description="Load and query MethaneSET from Python, R, Julia or the browser, and reproduce the validation notebooks."
+  description="Load and query MethaneSET from Python, R, Julia or the browser, and run the examples."
 >
   <section class="section">
     <div class="container prose">
@@ -15,7 +42,6 @@ import Base from "../layouts/Base.astro";
         what you need, then fetch only those pixels by byte range.
       </p>
 
-      <h3>Python</h3>
       <pre class="code"><span class="tok-com"># pip install taco-eo</span>
 <span class="tok-key">import</span> taco
 
@@ -24,20 +50,36 @@ ds = taco.load(
 )
 df = ds.metadata()
 df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Turkmenistan"</span>]</pre>
+    </div>
+  </section>
 
-      <h3>Tutorials</h3>
-      <ul>
-        <li>
-          <a href="https://colab.research.google.com/github/tacofoundation/methaneset/blob/main/notebooks/01_multispectral.ipynb" target="_blank" rel="noopener">
-            Multispectral plume detection (Sentinel-2 / Landsat-8/9)
-          </a>
-        </li>
-        <li>
-          <a href="https://colab.research.google.com/github/tacofoundation/methaneset/blob/main/notebooks/02_hyperspectral.ipynb" target="_blank" rel="noopener">
-            Hyperspectral plume detection (EMIT)
-          </a>
-        </li>
-      </ul>
+  <section class="section section--tight">
+    <div class="container">
+      <p class="eyebrow">Examples</p>
+      <h2>Explore and reproduce</h2>
+      <p class="lead">
+        Each example is a small recipe: load one dataset, do one thing, and keep the
+        result.
+      </p>
+      <div class="grid grid--2" style="margin-top:36px;">
+        {
+          examples.map((e) => (
+            <a class="card ex" href={e.href} target="_blank" rel="noopener">
+              <div class="card__tag">{e.tag}</div>
+              <h3>{e.title}</h3>
+              <p>{e.body}</p>
+              <span class="ex__go">Open →</span>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--tight">
+    <div class="container prose">
+      <h3>Python</h3>
+      <p>Requires <a href="https://pypi.org/project/taco-eo" target="_blank" rel="noopener">taco-eo</a>.</p>
 
       <h3>Other clients</h3>
       <table>
@@ -55,8 +97,25 @@ df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Tur
         Notebooks and clients from the
         <a href="https://huggingface.co/datasets/tacofoundation/methaneset" target="_blank" rel="noopener">
           MethaneSET dataset card
-        </a>.
+        </a>. The notebooks are placeholders until the repository is published.
       </span>
     </div>
   </section>
 </Base>
+
+<style>
+  .ex {
+    display: block;
+    color: inherit;
+  }
+  .ex:hover {
+    color: inherit;
+  }
+  .ex__go {
+    display: inline-block;
+    margin-top: 14px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--teal-light);
+  }
+</style>
