@@ -224,7 +224,7 @@ async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
         img.data[i * 4] = r;
         img.data[i * 4 + 1] = g;
         img.data[i * 4 + 2] = b;
-        img.data[i * 4 + 3] = Math.round(Math.min(1, Math.max(0, (t - 0.1) / 0.3)) * 255);
+        img.data[i * 4 + 3] = Math.round(Math.min(1, Math.max(0, (t - 0.06) / 0.22)) * 170);
       } else {
         img.data[i * 4] = 249;
         img.data[i * 4 + 1] = 115;
