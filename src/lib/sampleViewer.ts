@@ -55,6 +55,7 @@ const ASSET_LABEL: Record<Asset, string> = {
 const cache = new Map<string, Rendered>();
 const entries: Entry[] = [];
 const loading = new Set<string>();
+const failed = new Map<string, string>();
 const bound = new Set<string>();
 
 let mapRef: any = null;
@@ -112,8 +113,18 @@ function colormap(t: number): [number, number, number] {
   return stops[stops.length - 1][1];
 }
 
+async function fetchWithTimeout(url: string, opts: RequestInit, ms = 30000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchRange(url: string, start: number, end: number): Promise<Uint8Array> {
-  const res = await fetch(url, { headers: { Range: `bytes=${start}-${end}` } });
+  const res = await fetchWithTimeout(url, { headers: { Range: `bytes=${start}-${end}` } });
   if (res.status !== 206 && res.status !== 200) throw new Error(`Range failed: ${res.status}`);
   return new Uint8Array(await res.arrayBuffer());
 }
@@ -124,7 +135,7 @@ async function inflateRaw(bytes: Uint8Array): Promise<Uint8Array> {
 }
 
 async function extractTacozipEntry(url: string, entryName: string): Promise<Uint8Array> {
-  const tailRes = await fetch(url, { headers: { Range: "bytes=-131072" } });
+  const tailRes = await fetchWithTimeout(url, { headers: { Range: "bytes=-131072" } });
   const tail = new Uint8Array(await tailRes.arrayBuffer());
   const range = tailRes.headers.get("content-range") || "";
   const total = Number(range.split("/")[1] || 0);
@@ -318,25 +329,33 @@ function setVisible(entry: Entry, visible: boolean): void {
 
 async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
   const key = keyOf(props.id, asset);
-  let entry = entries.find((e) => e.key === key);
-  if (entry) return entry;
+  const existing = entries.find((e) => e.key === key);
+  if (existing) return existing;
 
   loading.add(key);
+  failed.delete(key);
   render();
-  const url = `${HF}/${props.dataset}/${props.file}`;
-  let rendered = cache.get(key);
-  if (!rendered) {
-    const bytes = await extractTacozipEntry(url, `DATA/${props.id}/${asset}`);
-    rendered = await renderAsset(bytes, asset);
-    cache.set(key, rendered);
+  try {
+    const url = `${HF}/${props.dataset}/${props.file}`;
+    let rendered = cache.get(key);
+    if (!rendered) {
+      const bytes = await extractTacozipEntry(url, `DATA/${props.id}/${asset}`);
+      rendered = await renderAsset(bytes, asset);
+      cache.set(key, rendered);
+    }
+    const entry: Entry = { key, asset, props, rendered, visible: true };
+    entries.push(entry);
+    addEntryLayers(mapRef, entry);
+    zoomToGroup([entry]);
+    (window as any).__sampleLoaded = true;
+    return entry;
+  } catch (err) {
+    failed.set(key, (err as Error).message);
+    (window as any).__sampleError = (err as Error).message;
+    throw err;
+  } finally {
+    loading.delete(key);
   }
-  entry = { key, asset, props, rendered, visible: true };
-  entries.push(entry);
-  addEntryLayers(mapRef, entry);
-  zoomToGroup([entry]);
-  loading.delete(key);
-  (window as any).__sampleLoaded = true;
-  return entry;
 }
 
 function current(): Feature | undefined {
@@ -460,11 +479,12 @@ function render(): void {
         const entry = entries.find((e) => e.key === key);
         const on = !!entry && entry.visible;
         const busy = loading.has(key);
+        const err = failed.get(key);
         return (
           `<label class="sv-asset">` +
           `<input type="checkbox" data-asset="${a}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
           `<span>${a === "target" ? "RGB" : a === "ch4" ? "CH₄ enhancement" : "Plume mask"}</span>` +
-          `<span class="sv-asset__state">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : ""}</span>` +
+          `<span class="sv-asset__state${err ? " is-error" : ""}">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : err ? "error" : ""}</span>` +
           `</label>`
         );
       }).join("") +
