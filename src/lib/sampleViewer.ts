@@ -129,12 +129,31 @@ async function fetchRange(url: string, start: number, end: number): Promise<Uint
   return new Uint8Array(await res.arrayBuffer());
 }
 
-async function inflateRaw(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+async function withRetry<T>(fn: () => Promise<T>, tries = 3): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      last = err;
+      await new Promise((r) => setTimeout(r, 600 * (i + 1)));
+    }
+  }
+  throw last;
 }
 
-async function extractTacozipEntry(url: string, entryName: string): Promise<Uint8Array> {
+interface ZipEntry {
+  method: number;
+  compSize: number;
+  localOffset: number;
+}
+
+const zipDirs = new Map<string, Map<string, ZipEntry>>();
+
+async function loadZipDir(url: string): Promise<Map<string, ZipEntry>> {
+  const cached = zipDirs.get(url);
+  if (cached) return cached;
+
   const tailRes = await fetchWithTimeout(url, { headers: { Range: "bytes=-131072" } });
   const tail = new Uint8Array(await tailRes.arrayBuffer());
   const range = tailRes.headers.get("content-range") || "";
@@ -156,8 +175,8 @@ async function extractTacozipEntry(url: string, entryName: string): Promise<Uint
   const cd = cdOffset >= tailStart ? tail.subarray(cdOffset - tailStart) : await fetchRange(url, cdOffset, cdOffset + cdSize - 1);
   const cdv = new DataView(cd.buffer, cd.byteOffset, cd.byteLength);
 
+  const dir = new Map<string, ZipEntry>();
   let p = 0;
-  let found: { method: number; compSize: number; localOffset: number } | null = null;
   while (p + 46 <= cd.length) {
     if (cdv.getUint32(p, true) !== 0x02014b50) break;
     const method = cdv.getUint16(p + 10, true);
@@ -167,12 +186,16 @@ async function extractTacozipEntry(url: string, entryName: string): Promise<Uint
     const commentLen = cdv.getUint16(p + 32, true);
     const localOffset = cdv.getUint32(p + 42, true);
     const name = new TextDecoder().decode(cd.subarray(p + 46, p + 46 + nameLen));
-    if (name === entryName) {
-      found = { method, compSize, localOffset };
-      break;
-    }
+    dir.set(name, { method, compSize, localOffset });
     p += 46 + nameLen + extraLen + commentLen;
   }
+  zipDirs.set(url, dir);
+  return dir;
+}
+
+async function extractTacozipEntry(url: string, entryName: string): Promise<Uint8Array> {
+  const dir = await loadZipDir(url);
+  const found = dir.get(entryName);
   if (!found) throw new Error(`Entry not found: ${entryName}`);
 
   const localHeader = await fetchRange(url, found.localOffset, found.localOffset + 29);
@@ -180,6 +203,11 @@ async function extractTacozipEntry(url: string, entryName: string): Promise<Uint
   const dataStart = found.localOffset + 30 + lv.getUint16(26, true) + lv.getUint16(28, true);
   const raw = await fetchRange(url, dataStart, dataStart + found.compSize - 1);
   return found.method === 0 ? raw : await inflateRaw(raw);
+}
+
+async function inflateRaw(bytes: Uint8Array): Promise<Uint8Array> {
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 function percentiles(data: ArrayLike<number>): { lo: number; hi: number } {
@@ -339,7 +367,7 @@ async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
     const url = `${HF}/${props.dataset}/${props.file}`;
     let rendered = cache.get(key);
     if (!rendered) {
-      const bytes = await extractTacozipEntry(url, `DATA/${props.id}/${asset}`);
+      const bytes = await withRetry(() => extractTacozipEntry(url, `DATA/${props.id}/${asset}`));
       rendered = await renderAsset(bytes, asset);
       cache.set(key, rendered);
     }
@@ -484,7 +512,7 @@ function render(): void {
           `<label class="sv-asset">` +
           `<input type="checkbox" data-asset="${a}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
           `<span>${a === "target" ? "RGB" : a === "ch4" ? "CH₄ enhancement" : "Plume mask"}</span>` +
-          `<span class="sv-asset__state${err ? " is-error" : ""}">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : err ? "error" : ""}</span>` +
+          `<span class="sv-asset__state${err ? " is-error" : ""}" title="${err ? err.replace(/"/g, "&quot;") : ""}">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : err ? "error" : ""}</span>` +
           `</label>`
         );
       }).join("") +
