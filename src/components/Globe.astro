@@ -72,8 +72,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
           <option value="auto">Match theme</option>
           <option value="dark">Dark</option>
           <option value="light">Light</option>
-          <option value="satellite">Satellite · Esri (detail)</option>
-          <option value="gibs">Satellite · NASA (smooth)</option>
+          <option value="satellite">Satellite · Esri</option>
         </select>
 
         <p id="globe-count" class="globe-count"></p>
@@ -91,6 +90,10 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
 
       <div id="sample-viewer" class="sample-viewer" style="display:none">
         <div id="sample-viewer-body" class="sample-viewer__body"></div>
+      </div>
+
+      <div id="layer-panel" class="layer-panel" style="display:none">
+        <div id="layer-panel-body"></div>
       </div>
     </div>
   )}
@@ -335,15 +338,86 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     border-color: var(--teal);
     color: var(--teal-light);
   }
+  .layer-panel {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    max-height: 42%;
+    overflow-y: auto;
+    pointer-events: auto;
+    background: var(--panel-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .layer-panel :global(.lp-item) {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 8px;
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+  }
+  .layer-panel :global(.lp-item__text) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .layer-panel :global(.lp-item__text b) {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .layer-panel :global(.lp-item__text span) {
+    font-size: 0.7rem;
+    color: var(--slate);
+  }
+  .layer-panel :global(.lp-item__chips) {
+    display: flex;
+    gap: 4px;
+    grid-column: 1 / -1;
+  }
+  .layer-panel :global(.lp-chip) {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--slate);
+    border-radius: 999px;
+    padding: 3px 9px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+  }
+  .layer-panel :global(.lp-chip.is-on) {
+    border-color: var(--teal);
+    color: var(--teal-light);
+    background: rgba(45, 212, 191, 0.12);
+  }
+  .layer-panel :global(.lp-item__actions) {
+    display: flex;
+    gap: 2px;
+  }
+  .layer-panel :global(.lp-icon) {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1;
+    padding: 2px 4px;
+  }
+  .layer-panel :global(.lp-icon:hover) {
+    color: var(--teal-light);
+  }
   @media (max-width: 720px) {
-    .globe-legend {
-      display: none;
-    }
     .globe-panel {
       top: 12px;
       left: 12px;
     }
-    .sample-viewer {
+    .sample-viewer,
+    .layer-panel {
       display: none !important;
     }
   }
@@ -382,28 +456,6 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
           id: "sat",
           type: "raster",
           source: "sat",
-          paint: { "raster-fade-duration": 0, "raster-resampling": "linear" },
-        },
-      ],
-    },
-    gibs: {
-      version: 8,
-      sources: {
-        gibs: {
-          type: "raster",
-          tiles: [
-            "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg",
-          ],
-          tileSize: 256,
-          maxzoom: 9,
-          attribution: "Imagery © NASA GIBS / VIIRS",
-        },
-      },
-      layers: [
-        {
-          id: "gibs",
-          type: "raster",
-          source: "gibs",
           paint: { "raster-fade-duration": 0, "raster-resampling": "linear" },
         },
       ],
@@ -546,8 +598,14 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         if (!f) return;
         const root = document.getElementById("sample-viewer");
         const bodyEl = document.getElementById("sample-viewer-body");
-        if (!root || !bodyEl) return;
-        openInspector(map, { properties: f.properties, geometry: f.geometry }, { root, body: bodyEl, list: visibleFeatures });
+        const layersRoot = document.getElementById("layer-panel");
+        const layersBody = document.getElementById("layer-panel-body");
+        if (!root || !bodyEl || !layersRoot || !layersBody) return;
+        openInspector(
+          map,
+          { properties: f.properties, geometry: f.geometry },
+          { root, body: bodyEl, layersRoot, layersBody, list: visibleFeatures },
+        );
       });
 
       reAddAll(map);
@@ -644,7 +702,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
                 (minFlux === 0 || (p.flux ?? 0) >= minFlux)
               );
             });
-            if (count) count.textContent = `${visibleFeatures.length.toLocaleString()} plumes shown`;
+            if (count) count.textContent = `${visibleFeatures.length.toLocaleString()} scenes shown`;
           };
 
           boxes.forEach((b) => b.addEventListener("change", applyFilters));

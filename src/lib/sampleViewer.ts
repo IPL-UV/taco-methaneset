@@ -1,4 +1,5 @@
 import { fromArrayBuffer } from "geotiff";
+import maplibregl from "maplibre-gl";
 import proj4 from "proj4";
 
 const HF = "https://huggingface.co/datasets/tacofoundation/methaneset/resolve/main";
@@ -24,6 +25,8 @@ interface Feature {
 interface UiElements {
   root: HTMLElement;
   body: HTMLElement;
+  layersRoot: HTMLElement;
+  layersBody: HTMLElement;
   list?: Feature[];
 }
 
@@ -45,23 +48,25 @@ interface Entry {
 const ASSETS: Asset[] = ["target", "ch4", "plume"];
 const ASSET_LABEL: Record<Asset, string> = {
   target: "RGB",
-  ch4: "CH₄ enhancement",
-  plume: "Plume mask",
+  ch4: "CH₄",
+  plume: "Mask",
 };
 
 const cache = new Map<string, Rendered>();
 const entries: Entry[] = [];
 const loading = new Set<string>();
+const bound = new Set<string>();
 
 let mapRef: any = null;
 let uiRef: UiElements | null = null;
+let popup: any = null;
 let curList: Feature[] = [];
 let curIndex = 0;
 
 const keyOf = (id: string, asset: Asset) => `${id}:${asset}`;
 const ids = (key: string) => {
   const s = key.replace(/[^a-zA-Z0-9]/g, "-");
-  return { src: `ssrc-${s}`, img: `simg-${s}`, osrc: `osrc-${s}`, line: `oline-${s}` };
+  return { src: `ssrc-${s}`, img: `simg-${s}`, osrc: `osrc-${s}`, fill: `sfill-${s}` };
 };
 
 function utm(zone: number, south: boolean): string {
@@ -237,46 +242,76 @@ async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
   return { dataUrl: canvas.toDataURL("image/png"), coordinates, width, height };
 }
 
+function polygonOf(coordinates: [number, number][]) {
+  return {
+    type: "Feature",
+    geometry: { type: "Polygon", coordinates: [[...coordinates, coordinates[0]]] },
+    properties: {},
+  };
+}
+
+function popupHTML(p: SampleProps, asset?: Asset): string {
+  const color = p.sensor === "EMIT" ? "#f97316" : p.sensor === "Sentinel-2" ? "#2dd4bf" : "#fde047";
+  return (
+    `<div class="pp"><span class="pp-sensor" style="color:${color}">${p.sensor}${asset ? ` · ${ASSET_LABEL[asset]}` : ""}</span>` +
+    `<h4>${p.country ?? "Unknown"}</h4>` +
+    `<div class="pp-row"><span>Date</span><b>${p.date || "n/a"}</b></div>` +
+    (p.flux ? `<div class="pp-row"><span>Flux</span><b>${Math.round(p.flux).toLocaleString()} kg/h</b></div>` : "") +
+    `</div>`
+  );
+}
+
+function attachHover(map: any, entry: Entry): void {
+  const { fill } = ids(entry.key);
+  if (bound.has(fill)) return;
+  bound.add(fill);
+  map.on("mouseenter", fill, (e: any) => {
+    if (!popup) {
+      popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10, className: "plume-popup", maxWidth: "280px" });
+    }
+    popup.setLngLat(e.lngLat).setHTML(popupHTML(entry.props, entry.asset)).addTo(map);
+    map.getCanvas().style.cursor = "pointer";
+  });
+  map.on("mouseleave", fill, () => {
+    if (popup) popup.remove();
+    map.getCanvas().style.cursor = "";
+  });
+}
+
 function addEntryLayers(map: any, entry: Entry): void {
-  const { src, img, osrc, line } = ids(entry.key);
+  const { src, img, osrc, fill } = ids(entry.key);
   const vis = entry.visible ? "visible" : "none";
   if (!map.getSource(src)) {
     map.addSource(src, { type: "image", url: entry.rendered.dataUrl, coordinates: entry.rendered.coordinates });
-    map.addSource(osrc, {
-      type: "geojson",
-      data: {
-        type: "Feature",
-        geometry: { type: "Polygon", coordinates: [[...entry.rendered.coordinates, entry.rendered.coordinates[0]]] },
-        properties: {},
-      },
-    });
+    map.addSource(osrc, { type: "geojson", data: polygonOf(entry.rendered.coordinates) });
   }
   if (!map.getLayer(img)) {
     map.addLayer({ id: img, type: "raster", source: src, paint: { "raster-opacity": 0.95 }, layout: { visibility: vis } });
     map.addLayer({
-      id: line,
-      type: "line",
+      id: fill,
+      type: "fill",
       source: osrc,
-      paint: { "line-color": "#fde047", "line-width": 1.2, "line-opacity": 0.85 },
+      paint: { "fill-color": "#000000", "fill-opacity": 0.01 },
       layout: { visibility: vis },
     });
   } else {
     map.setLayoutProperty(img, "visibility", vis);
-    map.setLayoutProperty(line, "visibility", vis);
+    map.setLayoutProperty(fill, "visibility", vis);
   }
+  attachHover(map, entry);
 }
 
 function removeEntryLayers(map: any, key: string): void {
-  const { src, img, osrc, line } = ids(key);
-  for (const id of [img, line]) if (map.getLayer(id)) map.removeLayer(id);
+  const { src, img, osrc, fill } = ids(key);
+  for (const id of [img, fill]) if (map.getLayer(id)) map.removeLayer(id);
   for (const id of [src, osrc]) if (map.getSource(id)) map.removeSource(id);
 }
 
 function setVisible(entry: Entry, visible: boolean): void {
   entry.visible = visible;
-  const { img, line } = ids(entry.key);
+  const { img, fill } = ids(entry.key);
   const vis = visible ? "visible" : "none";
-  for (const id of [img, line]) {
+  for (const id of [img, fill]) {
     if (mapRef.getLayer(id)) mapRef.setLayoutProperty(id, "visibility", vis);
   }
 }
@@ -298,6 +333,7 @@ async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
   entry = { key, asset, props, rendered, visible: true };
   entries.push(entry);
   addEntryLayers(mapRef, entry);
+  zoomToGroup([entry]);
   loading.delete(key);
   (window as any).__sampleLoaded = true;
   return entry;
@@ -307,11 +343,93 @@ function current(): Feature | undefined {
   return curList[curIndex];
 }
 
+function zoomToGroup(group: Entry[]): void {
+  const coords = group.flatMap((e) => e.rendered.coordinates);
+  const lngs = coords.map((c) => c[0]);
+  const lats = coords.map((c) => c[1]);
+  mapRef.fitBounds(
+    [
+      [Math.min(...lngs), Math.min(...lats)],
+      [Math.max(...lngs), Math.max(...lats)],
+    ],
+    { padding: { top: 140, bottom: 140, left: 420, right: 340 }, duration: 800 },
+  );
+}
+
+function renderLayersPanel(): void {
+  if (!uiRef) return;
+  const { layersRoot, layersBody } = uiRef;
+  if (entries.length === 0) {
+    layersRoot.style.display = "none";
+    return;
+  }
+  layersRoot.style.display = "block";
+
+  const groups = new Map<string, Entry[]>();
+  for (const e of entries) {
+    const g = groups.get(e.props.id) ?? [];
+    g.push(e);
+    groups.set(e.props.id, g);
+  }
+
+  layersBody.innerHTML =
+    `<p class="globe-panel__title">On the map · ${groups.size}</p>` +
+    Array.from(groups.values())
+      .map((group) => {
+        const p = group[0].props;
+        const chips = ASSETS.filter((a) => group.some((e) => e.asset === a))
+          .map((a) => {
+            const e = group.find((x) => x.asset === a)!;
+            return `<button class="lp-chip ${e.visible ? "is-on" : ""}" data-chip="${e.key}" type="button">${ASSET_LABEL[a]}</button>`;
+          })
+          .join("");
+        return (
+          `<div class="lp-item">` +
+          `<div class="lp-item__text"><b>${p.sensor}</b><span>${p.country} · ${p.date}</span></div>` +
+          `<div class="lp-item__chips">${chips}</div>` +
+          `<div class="lp-item__actions">` +
+          `<button class="lp-icon" data-zoom="${p.id}" type="button" aria-label="Zoom">⌕</button>` +
+          `<button class="lp-icon" data-remove="${p.id}" type="button" aria-label="Remove">×</button>` +
+          `</div>` +
+          `</div>`
+        );
+      })
+      .join("");
+
+  layersBody.querySelectorAll<HTMLButtonElement>("[data-chip]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const entry = entries.find((e) => e.key === el.dataset.chip);
+      if (!entry) return;
+      setVisible(entry, !entry.visible);
+      render();
+    });
+  });
+  layersBody.querySelectorAll<HTMLButtonElement>("[data-zoom]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const group = entries.filter((e) => e.props.id === el.dataset.zoom);
+      if (group.length) zoomToGroup(group);
+    });
+  });
+  layersBody.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const id = el.dataset.remove!;
+      for (const e of entries.filter((x) => x.props.id === id)) {
+        removeEntryLayers(mapRef, e.key);
+        cache.delete(e.key);
+      }
+      for (let i = entries.length - 1; i >= 0; i--) {
+        if (entries[i].props.id === id) entries.splice(i, 1);
+      }
+      render();
+    });
+  });
+}
+
 function render(): void {
   if (!uiRef) return;
-  const map = mapRef;
   const ui = uiRef;
   const feature = current();
+  renderLayersPanel();
   if (!feature) {
     ui.root.style.display = "none";
     return;
@@ -329,7 +447,7 @@ function render(): void {
       : "";
 
   const head =
-    `<p class="globe-panel__title">${p.viz === "multispectral" ? "Sample" : "Plume"}</p>` +
+    `<p class="globe-panel__title">Sample</p>` +
     `<p class="sv-title">${p.sensor} · ${p.country ?? "Unknown"}</p>` +
     `<p class="sv-status">${p.date || "n/a"} · ${p.dataset}${p.flux ? ` · ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
 
@@ -345,7 +463,7 @@ function render(): void {
         return (
           `<label class="sv-asset">` +
           `<input type="checkbox" data-asset="${a}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
-          `<span>${ASSET_LABEL[a]}</span>` +
+          `<span>${a === "target" ? "RGB" : a === "ch4" ? "CH₄ enhancement" : "Plume mask"}</span>` +
           `<span class="sv-asset__state">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : ""}</span>` +
           `</label>`
         );
@@ -355,21 +473,7 @@ function render(): void {
     bodyHtml = `<p class="sv-status">EMIT is stored in sensor coordinates, so it cannot be drawn on the map yet.</p>`;
   }
 
-  const listHtml = entries.length
-    ? `<p class="globe-panel__title" style="margin-top:14px;">On the map · ${entries.length}</p>` +
-      entries
-        .map(
-          (e) =>
-            `<div class="sv-item">` +
-            `<input type="checkbox" data-toggle="${e.key}" ${e.visible ? "checked" : ""}>` +
-            `<div class="sv-item__text"><b>${ASSET_LABEL[e.asset]}</b><span>${e.props.sensor} · ${e.props.country}</span></div>` +
-            `<button class="sv-remove" data-remove="${e.key}" type="button" aria-label="Remove">×</button>` +
-            `</div>`,
-        )
-        .join("")
-    : "";
-
-  ui.body.innerHTML = nav + head + bodyHtml + listHtml;
+  ui.body.innerHTML = nav + head + bodyHtml;
 
   ui.body.querySelectorAll<HTMLButtonElement>("[data-move]").forEach((el) => {
     el.addEventListener("click", () => move(Number(el.dataset.move)));
@@ -391,24 +495,6 @@ function render(): void {
         (window as any).__sampleError = (err as Error).message;
         console.error(err);
       }
-      render();
-    });
-  });
-  ui.body.querySelectorAll<HTMLInputElement>("[data-toggle]").forEach((el) => {
-    el.addEventListener("change", () => {
-      const entry = entries.find((e) => e.key === el.dataset.toggle);
-      if (!entry) return;
-      setVisible(entry, el.checked);
-      render();
-    });
-  });
-  ui.body.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((el) => {
-    el.addEventListener("click", () => {
-      const key = el.dataset.remove!;
-      removeEntryLayers(map, key);
-      const i = entries.findIndex((e) => e.key === key);
-      if (i >= 0) entries.splice(i, 1);
-      cache.delete(key);
       render();
     });
   });
