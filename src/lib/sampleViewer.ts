@@ -11,25 +11,58 @@ export interface SampleProps {
   id: string;
   file: string;
   flux?: number | null;
+  viz?: string;
 }
 
-export type Asset = "target" | "ch4" | "plume";
+type Asset = "target" | "ch4" | "plume";
 
-interface Loaded {
-  key: string;
-  title: string;
-  subtitle: string;
-  dataUrl: string;
-  coordinates: [number, number][];
-  visible: boolean;
+interface Feature {
+  properties: SampleProps;
+  geometry: { coordinates: [number, number] };
 }
 
 interface UiElements {
   root: HTMLElement;
   body: HTMLElement;
+  list?: Feature[];
 }
 
-const loaded: Loaded[] = [];
+interface Rendered {
+  dataUrl: string;
+  coordinates: [number, number][];
+  width: number;
+  height: number;
+}
+
+interface Entry {
+  key: string;
+  asset: Asset;
+  props: SampleProps;
+  rendered: Rendered;
+  visible: boolean;
+}
+
+const ASSETS: Asset[] = ["target", "ch4", "plume"];
+const ASSET_LABEL: Record<Asset, string> = {
+  target: "RGB",
+  ch4: "CH₄ enhancement",
+  plume: "Plume mask",
+};
+
+const cache = new Map<string, Rendered>();
+const entries: Entry[] = [];
+const loading = new Set<string>();
+
+let mapRef: any = null;
+let uiRef: UiElements | null = null;
+let curList: Feature[] = [];
+let curIndex = 0;
+
+const keyOf = (id: string, asset: Asset) => `${id}:${asset}`;
+const ids = (key: string) => {
+  const s = key.replace(/[^a-zA-Z0-9]/g, "-");
+  return { src: `ssrc-${s}`, img: `simg-${s}`, osrc: `osrc-${s}`, line: `oline-${s}` };
+};
 
 function utm(zone: number, south: boolean): string {
   return `+proj=utm +zone=${zone}${south ? " +south" : ""} +datum=WGS84 +units=m +no_defs`;
@@ -104,7 +137,6 @@ async function extractTacozipEntry(url: string, entryName: string): Promise<Uint
 
   const cdSize = view.getUint32(eocd + 12, true);
   const cdOffset = view.getUint32(eocd + 16, true);
-
   const cd = cdOffset >= tailStart ? tail.subarray(cdOffset - tailStart) : await fetchRange(url, cdOffset, cdOffset + cdSize - 1);
   const cdv = new DataView(cd.buffer, cd.byteOffset, cd.byteLength);
 
@@ -140,7 +172,7 @@ function percentiles(data: ArrayLike<number>): { lo: number; hi: number } {
   return { lo: at(0.02), hi: at(0.98) };
 }
 
-async function renderAsset(bytes: Uint8Array, asset: Asset) {
+async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
   const image = await (await fromArrayBuffer(buffer)).getImage();
   const width = image.getWidth();
@@ -178,11 +210,10 @@ async function renderAsset(bytes: Uint8Array, asset: Asset) {
         img.data[i * 4 + 2] = b;
         img.data[i * 4 + 3] = Math.round(Math.min(1, Math.max(0, (t - 0.1) / 0.3)) * 255);
       } else {
-        const on = band[i] > 0;
         img.data[i * 4] = 249;
         img.data[i * 4 + 1] = 115;
         img.data[i * 4 + 2] = 22;
-        img.data[i * 4 + 3] = on ? 210 : 0;
+        img.data[i * 4 + 3] = band[i] > 0 ? 210 : 0;
       }
     }
   }
@@ -206,157 +237,206 @@ async function renderAsset(bytes: Uint8Array, asset: Asset) {
   return { dataUrl: canvas.toDataURL("image/png"), coordinates, width, height };
 }
 
-const ASSET_LABEL: Record<Asset, string> = { target: "RGB", ch4: "CH₄ enhancement", plume: "Plume mask" };
-
-function layerId(key: string, suffix: string): string {
-  return `${suffix}-${key}`;
-}
-
-function addToMap(map: any, item: Loaded): void {
-  const src = layerId(item.key, "samplesrc");
-  const raster = layerId(item.key, "sampleimg");
-  const outlineSrc = layerId(item.key, "outlinesrc");
-  const outline = layerId(item.key, "outline");
-  if (map.getSource(src)) return;
-
-  map.addSource(src, { type: "image", url: item.dataUrl, coordinates: item.coordinates });
-  map.addLayer({
-    id: raster,
-    type: "raster",
-    source: src,
-    paint: { "raster-opacity": 0.95 },
-    layout: { visibility: item.visible ? "visible" : "none" },
-  });
-  map.addSource(outlineSrc, {
-    type: "geojson",
-    data: { type: "Feature", geometry: { type: "Polygon", coordinates: [[...item.coordinates, item.coordinates[0]]] }, properties: {} },
-  });
-  map.addLayer({
-    id: outline,
-    type: "line",
-    source: outlineSrc,
-    paint: { "line-color": "#fde047", "line-width": 1.2, "line-opacity": 0.85 },
-    layout: { visibility: item.visible ? "visible" : "none" },
-  });
-}
-
-function removeFromMap(map: any, key: string): void {
-  for (const suffix of ["sampleimg", "outline"]) {
-    if (map.getLayer(layerId(key, suffix))) map.removeLayer(layerId(key, suffix));
+function addEntryLayers(map: any, entry: Entry): void {
+  const { src, img, osrc, line } = ids(entry.key);
+  const vis = entry.visible ? "visible" : "none";
+  if (!map.getSource(src)) {
+    map.addSource(src, { type: "image", url: entry.rendered.dataUrl, coordinates: entry.rendered.coordinates });
+    map.addSource(osrc, {
+      type: "geojson",
+      data: {
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [[...entry.rendered.coordinates, entry.rendered.coordinates[0]]] },
+        properties: {},
+      },
+    });
   }
-  for (const suffix of ["samplesrc", "outlinesrc"]) {
-    if (map.getSource(layerId(key, suffix))) map.removeSource(layerId(key, suffix));
+  if (!map.getLayer(img)) {
+    map.addLayer({ id: img, type: "raster", source: src, paint: { "raster-opacity": 0.95 }, layout: { visibility: vis } });
+    map.addLayer({
+      id: line,
+      type: "line",
+      source: osrc,
+      paint: { "line-color": "#fde047", "line-width": 1.2, "line-opacity": 0.85 },
+      layout: { visibility: vis },
+    });
+  } else {
+    map.setLayoutProperty(img, "visibility", vis);
+    map.setLayoutProperty(line, "visibility", vis);
   }
 }
 
-function renderList(map: any, ui: UiElements): void {
-  if (loaded.length === 0) {
+function removeEntryLayers(map: any, key: string): void {
+  const { src, img, osrc, line } = ids(key);
+  for (const id of [img, line]) if (map.getLayer(id)) map.removeLayer(id);
+  for (const id of [src, osrc]) if (map.getSource(id)) map.removeSource(id);
+}
+
+function setVisible(entry: Entry, visible: boolean): void {
+  entry.visible = visible;
+  const { img, line } = ids(entry.key);
+  const vis = visible ? "visible" : "none";
+  for (const id of [img, line]) {
+    if (mapRef.getLayer(id)) mapRef.setLayoutProperty(id, "visibility", vis);
+  }
+}
+
+async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
+  const key = keyOf(props.id, asset);
+  let entry = entries.find((e) => e.key === key);
+  if (entry) return entry;
+
+  loading.add(key);
+  render();
+  const url = `${HF}/${props.dataset}/${props.file}`;
+  let rendered = cache.get(key);
+  if (!rendered) {
+    const bytes = await extractTacozipEntry(url, `DATA/${props.id}/${asset}`);
+    rendered = await renderAsset(bytes, asset);
+    cache.set(key, rendered);
+  }
+  entry = { key, asset, props, rendered, visible: true };
+  entries.push(entry);
+  addEntryLayers(mapRef, entry);
+  loading.delete(key);
+  (window as any).__sampleLoaded = true;
+  return entry;
+}
+
+function current(): Feature | undefined {
+  return curList[curIndex];
+}
+
+function render(): void {
+  if (!uiRef) return;
+  const map = mapRef;
+  const ui = uiRef;
+  const feature = current();
+  if (!feature) {
     ui.root.style.display = "none";
     return;
   }
+  const p = feature.properties;
   ui.root.style.display = "block";
-  ui.body.innerHTML =
-    `<p class="globe-panel__title">Layers · ${loaded.length}</p>` +
-    loaded
-      .map(
-        (item) =>
-          `<div class="sv-item">` +
-          `<input type="checkbox" data-toggle="${item.key}" ${item.visible ? "checked" : ""}>` +
-          `<div class="sv-item__text"><b>${item.title}</b><span>${item.subtitle}</span></div>` +
-          `<button class="sv-remove" data-remove="${item.key}" type="button" aria-label="Remove">×</button>` +
-          `</div>`,
-      )
-      .join("");
 
+  const nav =
+    curList.length > 1
+      ? `<div class="sv-nav">` +
+        `<button class="sv-nav__btn" data-move="-1" type="button" aria-label="Previous">‹</button>` +
+        `<span class="sv-nav__pos">${curIndex + 1} / ${curList.length}</span>` +
+        `<button class="sv-nav__btn" data-move="1" type="button" aria-label="Next">›</button>` +
+        `</div>`
+      : "";
+
+  const head =
+    `<p class="globe-panel__title">${p.viz === "multispectral" ? "Sample" : "Plume"}</p>` +
+    `<p class="sv-title">${p.sensor} · ${p.country ?? "Unknown"}</p>` +
+    `<p class="sv-status">${p.date || "n/a"} · ${p.dataset}${p.flux ? ` · ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
+
+  let bodyHtml = "";
+  if (p.viz === "multispectral") {
+    bodyHtml =
+      `<div class="sv-assets">` +
+      ASSETS.map((a) => {
+        const key = keyOf(p.id, a);
+        const entry = entries.find((e) => e.key === key);
+        const on = !!entry && entry.visible;
+        const busy = loading.has(key);
+        return (
+          `<label class="sv-asset">` +
+          `<input type="checkbox" data-asset="${a}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
+          `<span>${ASSET_LABEL[a]}</span>` +
+          `<span class="sv-asset__state">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : ""}</span>` +
+          `</label>`
+        );
+      }).join("") +
+      `</div>`;
+  } else {
+    bodyHtml = `<p class="sv-status">EMIT is stored in sensor coordinates, so it cannot be drawn on the map yet.</p>`;
+  }
+
+  const listHtml = entries.length
+    ? `<p class="globe-panel__title" style="margin-top:14px;">On the map · ${entries.length}</p>` +
+      entries
+        .map(
+          (e) =>
+            `<div class="sv-item">` +
+            `<input type="checkbox" data-toggle="${e.key}" ${e.visible ? "checked" : ""}>` +
+            `<div class="sv-item__text"><b>${ASSET_LABEL[e.asset]}</b><span>${e.props.sensor} · ${e.props.country}</span></div>` +
+            `<button class="sv-remove" data-remove="${e.key}" type="button" aria-label="Remove">×</button>` +
+            `</div>`,
+        )
+        .join("")
+    : "";
+
+  ui.body.innerHTML = nav + head + bodyHtml + listHtml;
+
+  ui.body.querySelectorAll<HTMLButtonElement>("[data-move]").forEach((el) => {
+    el.addEventListener("click", () => move(Number(el.dataset.move)));
+  });
+  ui.body.querySelectorAll<HTMLInputElement>("[data-asset]").forEach((el) => {
+    el.addEventListener("change", async () => {
+      const asset = el.dataset.asset as Asset;
+      const f = current();
+      if (!f) return;
+      try {
+        if (el.checked) {
+          const entry = await ensureLoaded(f.properties, asset);
+          setVisible(entry, true);
+        } else {
+          const entry = entries.find((e) => e.key === keyOf(f.properties.id, asset));
+          if (entry) setVisible(entry, false);
+        }
+      } catch (err) {
+        (window as any).__sampleError = (err as Error).message;
+        console.error(err);
+      }
+      render();
+    });
+  });
   ui.body.querySelectorAll<HTMLInputElement>("[data-toggle]").forEach((el) => {
     el.addEventListener("change", () => {
-      const item = loaded.find((x) => x.key === el.dataset.toggle);
-      if (!item) return;
-      item.visible = el.checked;
-      const vis = el.checked ? "visible" : "none";
-      for (const suffix of ["sampleimg", "outline"]) {
-        if (map.getLayer(layerId(item.key, suffix))) map.setLayoutProperty(layerId(item.key, suffix), "visibility", vis);
-      }
+      const entry = entries.find((e) => e.key === el.dataset.toggle);
+      if (!entry) return;
+      setVisible(entry, el.checked);
+      render();
     });
   });
   ui.body.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((el) => {
     el.addEventListener("click", () => {
       const key = el.dataset.remove!;
-      removeFromMap(map, key);
-      const i = loaded.findIndex((x) => x.key === key);
-      if (i >= 0) loaded.splice(i, 1);
-      renderList(map, ui);
+      removeEntryLayers(map, key);
+      const i = entries.findIndex((e) => e.key === key);
+      if (i >= 0) entries.splice(i, 1);
+      cache.delete(key);
+      render();
     });
   });
 }
 
+function move(delta: number): void {
+  if (curList.length < 2) return;
+  curIndex = (curIndex + delta + curList.length) % curList.length;
+  const f = current();
+  if (f) mapRef.easeTo({ center: f.geometry.coordinates, duration: 600 });
+  render();
+}
+
+export function openInspector(map: any, feature: Feature, ui: UiElements): void {
+  mapRef = map;
+  uiRef = ui;
+  const source = ui.list && ui.list.length ? ui.list : [feature];
+  curList = [...source].sort((a, b) => (a.properties.date || "").localeCompare(b.properties.date || ""));
+  curIndex = Math.max(0, curList.findIndex((f) => f.properties.id === feature.properties.id));
+  render();
+}
+
 export function reAddAll(map: any): void {
-  for (const item of loaded) {
+  for (const entry of entries) {
     try {
-      addToMap(map, item);
+      addEntryLayers(map, entry);
     } catch (e) {
       /* style not ready */
     }
-  }
-}
-
-export function showChooser(map: any, props: SampleProps, ui: UiElements): void {
-  ui.root.style.display = "block";
-  const assets: Asset[] = ["target", "ch4", "plume"];
-  ui.body.innerHTML =
-    `<p class="globe-panel__title">Load sample</p>` +
-    `<p class="sv-title">${props.sensor} · ${props.country}</p>` +
-    `<p class="sv-status">${props.date} · ${props.dataset}</p>` +
-    `<div class="sv-assets">` +
-    assets
-      .map((a) => `<button class="sv-asset" data-asset="${a}" type="button">${ASSET_LABEL[a]}</button>`)
-      .join("") +
-    `</div>` +
-    (loaded.length ? `<button class="sv-clear" data-showlist type="button">Show layers (${loaded.length})</button>` : "");
-
-  ui.body.querySelectorAll<HTMLButtonElement>("[data-asset]").forEach((el) => {
-    el.addEventListener("click", () => loadAsset(map, props, el.dataset.asset as Asset, ui));
-  });
-  ui.body.querySelector<HTMLButtonElement>("[data-showlist]")?.addEventListener("click", () => renderList(map, ui));
-}
-
-export async function loadAsset(map: any, props: SampleProps, asset: Asset, ui: UiElements): Promise<void> {
-  ui.root.style.display = "block";
-  ui.body.innerHTML = `<p class="globe-panel__title">Loading</p><p class="sv-status">Reading ${ASSET_LABEL[asset]} from Hugging Face…</p>`;
-
-  const url = `${HF}/${props.dataset}/${props.file}`;
-  try {
-    const bytes = await extractTacozipEntry(url, `DATA/${props.id}/${asset}`);
-    const { dataUrl, coordinates, width, height } = await renderAsset(bytes, asset);
-    const key = `${props.id.slice(0, 8)}-${asset}-${Date.now().toString(36)}`;
-    const item: Loaded = {
-      key,
-      title: `${ASSET_LABEL[asset]} · ${props.sensor}`,
-      subtitle: `${props.country} · ${props.date} · ${width}×${height}`,
-      dataUrl,
-      coordinates,
-      visible: true,
-    };
-    loaded.push(item);
-    addToMap(map, item);
-
-    const lngs = coordinates.map((c) => c[0]);
-    const lats = coordinates.map((c) => c[1]);
-    map.fitBounds(
-      [
-        [Math.min(...lngs), Math.min(...lats)],
-        [Math.max(...lngs), Math.max(...lats)],
-      ],
-      { padding: { top: 120, bottom: 120, left: 420, right: 360 }, duration: 900 },
-    );
-
-    renderList(map, ui);
-    (window as any).__sampleLoaded = true;
-  } catch (err) {
-    ui.body.innerHTML =
-      `<p class="globe-panel__title">Error</p>` +
-      `<p class="sv-status sv-error">Could not load ${ASSET_LABEL[asset]}. ${(err as Error).message}</p>`;
-    (window as any).__sampleError = (err as Error).message;
-    console.error(err);
   }
 }

@@ -77,23 +77,15 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         </select>
 
         <p id="globe-count" class="globe-count"></p>
-      </div>
 
-      <div class="globe-legend">
-        <p class="globe-panel__title">Legend</p>
-        {
-          sensors.map((s) => (
-            <div class="globe-legend__row">
-              <span class="globe-dot" style={`background:${s.color}`} />
-              {s.id}
-            </div>
-          ))
-        }
-        <div class="globe-legend__size">
-          <span class="globe-legend__circle" style="width:6px;height:6px;" />
-          <span class="globe-legend__circle" style="width:11px;height:11px;" />
-          <span class="globe-legend__circle" style="width:16px;height:16px;" />
-          <span>flux · kg/h</span>
+        <div class="globe-flux">
+          <span class="globe-panel__title" style="margin:0;">Flux size</span>
+          <div class="globe-flux__row">
+            <span class="globe-legend__circle" style="width:6px;height:6px;"></span>
+            <span class="globe-legend__circle" style="width:10px;height:10px;"></span>
+            <span class="globe-legend__circle" style="width:15px;height:15px;"></span>
+            <span>kg/h</span>
+          </div>
         </div>
       </div>
 
@@ -121,9 +113,13 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     inset: 0;
     pointer-events: none;
   }
-  .globe-panel,
-  .globe-legend {
+  .globe-panel {
     position: absolute;
+    top: 80px;
+    left: 20px;
+    min-width: 230px;
+    max-height: calc(100% - 100px);
+    overflow-y: auto;
     pointer-events: auto;
     background: var(--panel-bg);
     backdrop-filter: blur(10px);
@@ -132,17 +128,6 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     padding: 14px 16px;
     font-size: 0.85rem;
     color: var(--muted);
-  }
-  .globe-panel {
-    top: 80px;
-    left: 20px;
-    min-width: 230px;
-    max-height: calc(100% - 100px);
-    overflow-y: auto;
-  }
-  .globe-legend {
-    bottom: 20px;
-    right: 20px;
   }
   .globe-panel__title {
     font-family: var(--font-mono);
@@ -192,32 +177,35 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     font-size: 0.72rem;
     color: var(--teal-light);
   }
-  .globe-legend__row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 3px 0;
-  }
-  .globe-legend__size {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 10px;
-    padding-top: 10px;
+  .globe-flux {
+    margin-top: 14px;
+    padding-top: 12px;
     border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .globe-flux__row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
     font-family: var(--font-mono);
     font-size: 0.68rem;
+    color: var(--slate);
   }
   .globe-legend__circle {
     border-radius: 50%;
     border: 1px solid var(--orange);
     display: inline-block;
+    flex: none;
   }
   .sample-viewer {
     position: absolute;
     top: 80px;
     right: 20px;
-    width: 260px;
+    width: 268px;
+    max-height: calc(100% - 100px);
+    overflow-y: auto;
     pointer-events: auto;
     background: var(--panel-bg);
     backdrop-filter: blur(10px);
@@ -240,24 +228,60 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   .sample-viewer :global(.sv-error) {
     color: var(--orange);
   }
-  .sample-viewer :global(.sv-assets) {
+  .sample-viewer :global(.sv-nav) {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 6px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
   }
-  .sample-viewer :global(.sv-asset) {
-    background: rgba(148, 163, 184, 0.08);
+  .sample-viewer :global(.sv-nav__btn) {
+    background: transparent;
     border: 1px solid var(--line);
     color: var(--text);
     border-radius: 8px;
-    padding: 6px 10px;
+    width: 30px;
+    height: 30px;
     cursor: pointer;
-    font-size: 0.78rem;
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .sample-viewer :global(.sv-nav__btn:hover) {
+    border-color: var(--teal);
+    color: var(--teal-light);
+  }
+  .sample-viewer :global(.sv-nav__pos) {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--slate);
+  }
+  .sample-viewer :global(.sv-assets) {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .sample-viewer :global(.sv-asset) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: var(--text);
   }
   .sample-viewer :global(.sv-asset:hover) {
     border-color: var(--teal);
-    color: var(--teal-light);
+  }
+  .sample-viewer :global(.sv-asset input) {
+    accent-color: var(--teal);
+  }
+  .sample-viewer :global(.sv-asset__state) {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    color: var(--slate);
   }
   .sample-viewer :global(.sv-item) {
     display: flex;
@@ -329,7 +353,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { url } from "../lib/url";
-  import { showChooser, reAddAll } from "../lib/sampleViewer";
+  import { openInspector, reAddAll } from "../lib/sampleViewer";
 
   const SENSOR_COLOR = {
     EMIT: "#f97316",
@@ -407,6 +431,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     });
 
     let plumeData: any = null;
+    let visibleFeatures: any[] = [];
     let basemapChoice = "auto";
 
     (window as any).__map = map;
@@ -522,17 +547,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         const root = document.getElementById("sample-viewer");
         const bodyEl = document.getElementById("sample-viewer-body");
         if (!root || !bodyEl) return;
-        const p = f.properties;
-        if (p.viz === "multispectral") {
-          showChooser(map, p, { root, body: bodyEl });
-        } else {
-          root.style.display = "block";
-          bodyEl.innerHTML =
-            `<p class="globe-panel__title">EMIT</p>` +
-            `<p class="sv-title">${p.sensor} · ${p.country ?? ""}</p>` +
-            `<p class="sv-status">${p.dataset} · ${p.date || ""}</p>` +
-            `<p class="sv-status">EMIT is stored in sensor coordinates, so it cannot be drawn on the map yet. Coming next.</p>`;
-        }
+        openInspector(map, { properties: f.properties, geometry: f.geometry }, { root, body: bodyEl, list: visibleFeatures });
       });
 
       reAddAll(map);
@@ -618,7 +633,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
             map.setFilter("plumes", ["all", ...filters]);
             map.setFilter("plumes-halo", ["all", ...filters]);
 
-            const visible = geojson.features.filter((f: any) => {
+            visibleFeatures = geojson.features.filter((f: any) => {
               const p = f.properties;
               const y = (p.date || "").slice(0, 4);
               return (
@@ -628,8 +643,8 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
                 y <= to &&
                 (minFlux === 0 || (p.flux ?? 0) >= minFlux)
               );
-            }).length;
-            if (count) count.textContent = `${visible.toLocaleString()} plumes shown`;
+            });
+            if (count) count.textContent = `${visibleFeatures.length.toLocaleString()} plumes shown`;
           };
 
           boxes.forEach((b) => b.addEventListener("change", applyFilters));
