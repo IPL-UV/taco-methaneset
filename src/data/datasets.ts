@@ -14,7 +14,7 @@ export const datasets: Dataset[] = [
     family: "Sentinel-2",
     subset: "Pretraining",
     samples: 57291,
-    sizeGB: 37.2,
+    sizeGB: 36.91,
     icon: "s2",
     abstract:
       "Confirmed plume-free Sentinel-2 scenes with a temporally close, plume-free reference. Pairs to combine with the plume bank for synthetic augmentation.",
@@ -24,7 +24,7 @@ export const datasets: Dataset[] = [
     family: "Sentinel-2",
     subset: "Finetune",
     samples: 3603,
-    sizeGB: 13.6,
+    sizeGB: 6.37,
     icon: "s2",
     abstract:
       "Sentinel-2 imagery with expert-verified plume masks from IMEO MARS, all 13 bands at 10 m and 200x200 px patches.",
@@ -44,7 +44,7 @@ export const datasets: Dataset[] = [
     family: "Landsat 8/9",
     subset: "Finetune",
     samples: 1353,
-    sizeGB: 0.78,
+    sizeGB: 1.2,
     icon: "l89",
     abstract:
       "Landsat 8/9 imagery with expert-verified plume masks, 9 OLI bands at 30 m resampled to 10 m.",
@@ -54,7 +54,7 @@ export const datasets: Dataset[] = [
     family: "EMIT",
     subset: "Single",
     samples: 721,
-    sizeGB: 652,
+    sizeGB: 1185.17,
     icon: "hyper",
     abstract:
       "EMIT radiance hypercubes (285 bands, 60 m) with standard matched filter, mag1c, and two independent plume masks per granule from IMEO and Carbon Mapper.",
@@ -64,7 +64,7 @@ export const datasets: Dataset[] = [
     family: "Plume bank",
     subset: "Single",
     samples: 238545,
-    sizeGB: 5.1,
+    sizeGB: 5.08,
     icon: "bank",
     abstract:
       "Precomputed WRF-LES column enhancements across solar and wind geometry, at a reference rate of 3000 kg/h. Injected into any plume-free scene.",
@@ -74,7 +74,7 @@ export const datasets: Dataset[] = [
     family: "Plume bank",
     subset: "Single",
     samples: 1647,
-    sizeGB: 3.1,
+    sizeGB: 3.06,
     icon: "bank",
     abstract:
       "The raw 3D WRF-LES simulation cubes the plume bank is projected from, for reprocessing under new geometries.",
@@ -87,8 +87,12 @@ export const totals = {
   sizeGB: datasets.reduce((a, d) => a + d.sizeGB, 0),
 };
 
-export const HF_PREFIX = "hf://datasets/tacofoundation/methaneset";
-const HF_BASE = "https://huggingface.co/datasets/tacofoundation/methaneset/tree/main";
+export const fmtSize = (gb: number) =>
+  gb >= 1000 ? `${(gb / 1000).toFixed(2)} TB` : `${gb} GB`;
 
-export const hfUrl = (name: string) => `${HF_BASE}/${name}`;
+export const HF_PREFIX = "hf://datasets/tacofoundation/methaneset";
+const HF_BASE = "https://huggingface.co/datasets/tacofoundation/methaneset";
+
+export const hfUrl = (name: string) => `${HF_BASE}/tree/main/${name}`;
+export const hfReadme = (name: string) => `${HF_BASE}/blob/main/${name}/README.md`;
 export const loadCode = (name: string) => `${HF_PREFIX}/${name}`;

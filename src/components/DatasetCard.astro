@@ -1,5 +1,5 @@
 ---
-import { hfUrl, loadCode, type Dataset } from "../data/datasets";
+import { fmtSize, hfUrl, hfReadme, loadCode, type Dataset } from "../data/datasets";
 
 interface Props {
   dataset: Dataset;
@@ -32,7 +32,7 @@ const code = loadCode(dataset.name);
 
   <div class="dcard__stats">
     <div><b>{dataset.samples.toLocaleString("en-US")}</b><span>samples</span></div>
-    <div><b>{dataset.sizeGB} GB</b><span>on disk</span></div>
+    <div><b>{fmtSize(dataset.sizeGB)}</b><span>on disk</span></div>
   </div>
 
   <div class="dcard__code">
@@ -40,9 +40,18 @@ const code = loadCode(dataset.name);
     <button class="dcard__copy" data-copy={code} aria-label="Copy load path">copy</button>
   </div>
 
-  <a class="dcard__link" href={hfUrl(dataset.name)} target="_blank" rel="noopener"
-    >Hugging Face <span aria-hidden="true">→</span></a
-  >
+  <div class="dcard__links">
+    <a class="dcard__link" href={hfUrl(dataset.name)} target="_blank" rel="noopener"
+      >Hugging Face <span aria-hidden="true">→</span></a
+    >
+    <a class="dcard__link dcard__link--readme" href={hfReadme(dataset.name)} target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"></path>
+        <path d="M14 3v5h5M9 13h6M9 17h6"></path>
+      </svg>
+      README
+    </a>
+  </div>
 </article>
 
 <style>
@@ -155,8 +164,29 @@ const code = loadCode(dataset.name);
     color: var(--teal-light);
     border-color: var(--teal);
   }
-  .dcard__link {
+  .dcard__links {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     margin-top: 14px;
+  }
+  .dcard__link {
     font-size: 0.88rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .dcard__link svg {
+    width: 15px;
+    height: 15px;
+  }
+  .dcard__link--readme {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .dcard__link--readme:hover {
+    color: var(--teal-light);
   }
 </style>

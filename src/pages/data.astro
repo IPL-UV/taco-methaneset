@@ -2,7 +2,7 @@
 import Base from "../layouts/Base.astro";
 import Globe from "../components/Globe.astro";
 import DatasetCard from "../components/DatasetCard.astro";
-import { datasets, totals } from "../data/datasets";
+import { datasets, totals, fmtSize } from "../data/datasets";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 ---
@@ -41,7 +41,7 @@ const fmt = (n: number) => n.toLocaleString("en-US");
         {datasets.map((d) => <DatasetCard dataset={d} />)}
       </div>
       <span class="src">
-        {totals.datasets} datasets · {fmt(totals.samples)} samples · ~{Math.round(totals.sizeGB)} GB ·
+        {totals.datasets} datasets · {fmt(totals.samples)} samples · ~{fmtSize(totals.sizeGB)} ·
         counts from the published
         <a href="https://huggingface.co/datasets/tacofoundation/methaneset" target="_blank" rel="noopener">
           MethaneSET card
