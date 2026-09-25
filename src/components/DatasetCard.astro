@@ -61,7 +61,9 @@ const code = loadCode(dataset.name);
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
     background: var(--surface);
-    transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+    transition: opacity 0.72s var(--ease-out), translate 0.72s var(--ease-out),
+      transform var(--dur) var(--ease), border-color var(--dur) var(--ease),
+      background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   }
   .dcard:hover {
     border-color: var(--line-strong);

@@ -406,7 +406,7 @@ img {
   margin-left: auto;
 }
 
-.nav__links a:not(.btn) {
+.nav__links a:not(.btn):not(.nav__icon) {
   color: var(--muted);
   display: inline-flex;
   align-items: center;
@@ -420,7 +420,7 @@ img {
   transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 
-.nav__links a:not(.btn):hover {
+.nav__links a:not(.btn):not(.nav__icon):hover {
   color: var(--text);
 }
 
@@ -990,7 +990,7 @@ img {
     display: flex;
   }
 
-  .nav__links a:not(.btn) {
+  .nav__links a:not(.btn):not(.nav__icon) {
     padding: 14px 4px 14px 12px;
     font-size: 0.8rem;
     border-left: 2px solid transparent;
@@ -1153,7 +1153,7 @@ img {
    Motion: one system, one duration, one easing
    ========================================================================== */
 
-.nav__links a:not(.btn):hover {
+.nav__links a:not(.btn):not(.nav__icon):hover {
   border-bottom-color: var(--accent-line);
 }
 
@@ -1224,10 +1224,10 @@ img {
 .js-reveal .stats > *,
 .js-reveal .steps > * {
   opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.72s var(--ease-out), transform 0.72s var(--ease-out),
-    box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease),
-    background-color var(--dur) var(--ease);
+  translate: 0 18px;
+  transition: opacity 0.72s var(--ease-out), translate 0.72s var(--ease-out),
+    transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+    border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
   transition-delay: calc(var(--rd, 0) * 70ms);
 }
 
@@ -1236,5 +1236,5 @@ img {
 .js-reveal .stats > .is-in,
 .js-reveal .steps > .is-in {
   opacity: 1;
-  transform: none;
+  translate: none;
 }
