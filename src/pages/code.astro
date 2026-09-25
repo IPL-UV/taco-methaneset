@@ -36,9 +36,9 @@ const examples = [
   <section class="section">
     <div class="container prose">
       <p class="eyebrow">Code</p>
-      <h2>Load and query</h2>
-      <p>
-        Metadata is a Parquet index; imagery is cloud-optimized. Read the index, filter
+      <h1>Load and query</h1>
+      <p class="lead">
+        Metadata is a Parquet index, imagery is cloud-optimized. Read the index, filter
         what you need, then fetch only those pixels by byte range.
       </p>
 
@@ -78,20 +78,23 @@ df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Tur
 
   <section class="section section--tight">
     <div class="container prose">
-      <h3>Python</h3>
-      <p>Requires <a href="https://pypi.org/project/taco-eo" target="_blank" rel="noopener">taco-eo</a>.</p>
-
-      <h3>Other clients</h3>
+      <p class="eyebrow">Clients</p>
+      <h2>Install</h2>
       <table>
         <thead>
-          <tr><th>Language</th><th>Install</th></tr>
+          <tr><th scope="col">Language</th><th scope="col">Install</th></tr>
         </thead>
         <tbody>
+          <tr><td>Python</td><td><code>pip install taco-eo</code></td></tr>
           <tr><td>R</td><td><code>install.packages("taco", repos = "https://asterisk-labs.r-universe.dev")</code></td></tr>
           <tr><td>Julia</td><td><code>Pkg.add("Taco")</code></td></tr>
           <tr><td>JavaScript</td><td><code>npm install @asterisk-labs/taco</code></td></tr>
         </tbody>
       </table>
+      <p>
+        The Python client is the reference implementation and the only one that writes.
+        See <a href="https://pypi.org/project/taco-eo" target="_blank" rel="noopener">taco-eo</a> on PyPI.
+      </p>
 
       <span class="src">
         Notebooks and clients from the
@@ -104,16 +107,21 @@ df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Tur
 </Base>
 
 <style>
+  /* flex column so "Open" lines up along the bottom of every card in a row */
   .ex {
-    display: block;
+    display: flex;
+    flex-direction: column;
     color: inherit;
   }
   .ex:hover {
     color: inherit;
   }
+  .ex p {
+    flex: 1;
+  }
   .ex__go {
     display: inline-block;
-    margin-top: 14px;
+    margin-top: 16px;
     font-family: var(--font-mono);
     font-size: 0.78rem;
     color: var(--teal-light);

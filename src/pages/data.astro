@@ -14,18 +14,18 @@ const fmt = (n: number) => n.toLocaleString("en-US");
   <section class="section section--tight">
     <div class="container">
       <p class="eyebrow">Data</p>
-      <h2>Every verified plume, on the map</h2>
+      <h1>Every verified plume, on the map</h1>
       <p class="lead">
         Each point is a real observation where a monitoring system verified a plume:
         EMIT granules confirmed by both IMEO and Carbon Mapper, and Sentinel-2 and
         Landsat 8/9 scenes annotated by IMEO MARS. Filter by sensor or country, and
-        hover a point for its details. The plume bank has no geographic reference, so it
+        select a point for its details. The plume bank has no geographic reference, so it
         is not on the map.
       </p>
     </div>
   </section>
 
-  <section style="height: 72vh; min-height: 520px; position: relative;">
+  <section class="map" aria-label="Map of verified methane plumes">
     <Globe scrollZoom={true} controls={true} />
   </section>
 
@@ -50,6 +50,23 @@ const fmt = (n: number) => n.toLocaleString("en-US");
     </div>
   </section>
 </Base>
+
+<style>
+  .map {
+    position: relative;
+    height: 72vh;
+    min-height: 520px;
+    border-top: 1px solid var(--line-strong);
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  @media (max-width: 720px) {
+    .map {
+      height: 68svh;
+      min-height: 440px;
+    }
+  }
+</style>
 
 <script>
   document.addEventListener("click", (event) => {

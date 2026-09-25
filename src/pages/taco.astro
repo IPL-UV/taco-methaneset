@@ -1,5 +1,20 @@
 ---
 import Base from "../layouts/Base.astro";
+
+const levels = [
+  {
+    title: "Collection",
+    body: "Identity and contract. Title, version, license, providers and the schema every sample must follow.",
+  },
+  {
+    title: "Catalog",
+    body: "The index. A Parquet table with one row per sample, queryable with SQL over HTTP before anything is downloaded.",
+  },
+  {
+    title: "Sample",
+    body: "The data. Radiance, masks and ancillary layers as Cloud-Optimized GeoTIFFs, fetched by byte range.",
+  },
+];
 ---
 
 <Base
@@ -9,42 +24,56 @@ import Base from "../layouts/Base.astro";
   <section class="section">
     <div class="container prose">
       <p class="eyebrow">Format</p>
-      <h2>What TACO is</h2>
-      <p>
+      <h1>What TACO is</h1>
+      <p class="lead">
         TACO (Transparent Access to Cloud-Optimized datasets) packages Earth observation
         data, metadata and sample structure as one portable dataset. You query the
         catalog by region, time, cloud cover or split and only then load pixels, so a
         multi-hundred-gigabyte collection is usable without downloading it.
       </p>
+    </div>
+  </section>
 
-      <h3>Three levels</h3>
-      <ul>
-        <li><strong>Collection</strong>: identity and contract. Title, version, license, providers and the schema every sample must follow.</li>
-        <li><strong>Catalog</strong>: the index. A Parquet table with one row per sample, queryable with SQL.</li>
-        <li><strong>Sample</strong>: the data. Imagery as Cloud-Optimized GeoTIFFs, fetched by byte range.</li>
-      </ul>
+  <section class="section section--tight">
+    <div class="container">
+      <p class="eyebrow">Structure</p>
+      <h2>Three levels</h2>
+      <div class="steps" style="margin-top:36px;">
+        {
+          levels.map((l) => (
+            <div class="step">
+              <h3>{l.title}</h3>
+              <p>{l.body}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
 
-      <h3>Containers</h3>
+  <section class="section">
+    <div class="container prose">
+      <h2>Containers</h2>
       <p>
         A TACO ships as a plain folder, a Cloud-Optimized ZIP, or a partitioned catalog.
         The same contract is validated on write and used on read, so folders, ZIPs and
         partitioned catalogs behave identically.
       </p>
 
-      <h3>Clients</h3>
+      <h2>Clients</h2>
       <table>
         <thead>
-          <tr><th>Language</th><th>Install</th><th>Role</th></tr>
+          <tr><th scope="col">Language</th><th scope="col">Install</th><th scope="col">Role</th></tr>
         </thead>
         <tbody>
-          <tr><td>Python</td><td><code>pip install taco-eo</code></td><td>read + write</td></tr>
+          <tr><td>Python</td><td><code>pip install taco-eo</code></td><td>read and write</td></tr>
           <tr><td>R</td><td><code>install.packages("taco")</code></td><td>reader</td></tr>
           <tr><td>Julia</td><td><code>Pkg.add("Taco")</code></td><td>reader</td></tr>
           <tr><td>JavaScript</td><td><code>npm install @asterisk-labs/taco</code></td><td>reader</td></tr>
         </tbody>
       </table>
 
-      <h3>How MethaneSET uses it</h3>
+      <h2>How MethaneSET uses it</h2>
       <p>
         The seven datasets expose their metadata as Parquet indexes and their imagery as
         cloud-optimized rasters. This site reads the EMIT index straight from Hugging Face

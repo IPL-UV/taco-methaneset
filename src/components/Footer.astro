@@ -30,14 +30,18 @@ const funders = [
         Image and Signal Processing Group, Universitat de València
       </span>
     </div>
-    <div class="footer__links">
-      <a href="https://github.com/IPL-UV/taco-methaneset" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://huggingface.co/datasets/tacofoundation/methaneset" target="_blank" rel="noopener"
-        >Hugging Face</a
-      >
-      <span>CC-BY-NC-SA 4.0</span>
+    <div class="footer__meta">
+      <div class="footer__links">
+        <a href="https://github.com/IPL-UV/taco-methaneset" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://huggingface.co/datasets/tacofoundation/methaneset" target="_blank" rel="noopener"
+          >Hugging Face</a
+        >
+        <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener"
+          >CC BY-NC-SA 4.0</a
+        >
+      </div>
+      <p class="footer__legal">© {year} MethaneSET. Funded by CCAI and the Global Methane Hub.</p>
     </div>
-    <div>© {year}. Funded by CCAI and the Global Methane Hub.</div>
   </div>
 </footer>
 
@@ -45,59 +49,87 @@ const funders = [
   .footer__funders {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 30px;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 38px;
   }
   .footer__funder {
+    /* White tiles on a white page need their own edge in light mode */
     background: #ffffff;
+    border: 1px solid var(--line-strong);
     border-radius: var(--radius-xs);
-    padding: 8px 12px;
+    padding: 10px 16px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 68px;
-    min-width: 128px;
-    transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
-  }
-  .footer__funder:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+    height: 78px;
+    min-width: 148px;
+    flex: 0 1 auto;
   }
   .footer__funder img {
-    max-height: 42px;
+    max-height: 48px;
     max-width: 100%;
     object-fit: contain;
   }
   .footer__brand {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
+    min-width: 0;
   }
   .footer__brand span {
     display: flex;
     flex-direction: column;
-    line-height: 1.35;
+    line-height: 1.4;
   }
   .footer__brand strong {
     font-family: var(--font-display);
+    font-size: 1rem;
     color: var(--text);
   }
   .footer__isp {
+    flex: none;
     background: #ffffff;
+    border: 1px solid var(--line-strong);
     border-radius: var(--radius-xs);
-    padding: 5px 7px;
+    padding: 6px 9px;
     display: inline-flex;
     align-items: center;
   }
   .footer__isp img {
-    height: 30px;
+    height: 34px;
     width: auto;
     display: block;
   }
+  .footer__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    text-align: right;
+  }
   .footer__links {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 18px;
+    gap: 8px 20px;
+  }
+  .footer__legal {
+    margin: 0;
+  }
+
+  @media (max-width: 720px) {
+    .footer__meta {
+      align-items: flex-start;
+      text-align: left;
+    }
+    .footer__funder {
+      height: 68px;
+      min-width: 126px;
+      flex: 1 1 126px;
+    }
+    .footer__funder img {
+      max-height: 40px;
+    }
   }
 </style>

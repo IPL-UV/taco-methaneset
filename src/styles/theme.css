@@ -14,7 +14,7 @@
   --orange: #f97316;
   --yellow: #fde047;
   --red: #dc2626;
-  --slate: #64748b;
+  --slate: #8899ae;
   --text: #f8fafc;
   --muted: #b6c2d4;
   --line: rgba(148, 163, 184, 0.18);
@@ -26,6 +26,15 @@
   --nav-bg: rgba(2, 6, 23, 0.72);
   --nav-bg-scrolled: rgba(2, 6, 23, 0.9);
   --gradient: linear-gradient(90deg, #2dd4bf, #4ade80);
+  /* Same gradient, but reserved for anything a reader has to *read*: clipped
+     headline text and the filled button. Light mode swaps it for darker shades
+     of the same two hues, because #2dd4bf on white is ~1.8:1. */
+  --gradient-strong: linear-gradient(90deg, #2dd4bf, #4ade80);
+  --btn-primary-fg: #04231f;
+  /* Accent used as small text (eyebrows, table headers, step numbers). */
+  --accent-text: #2dd4bf;
+  --dot-glow: 0 0 12px rgba(45, 212, 191, 0.7);
+  --dot-glow-hover: 0 0 18px rgba(45, 212, 191, 0.9);
   --bg: radial-gradient(120% 70% at 82% -8%, rgba(45, 212, 191, 0.09), transparent 62%),
     radial-gradient(90% 55% at 4% 104%, rgba(74, 222, 128, 0.06), transparent 60%),
     linear-gradient(160deg, #020617, #0b2b3a);
@@ -79,7 +88,7 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  --slate: #64748b;
+  --slate: #526176;
   --text: #0f172a;
   --muted: #475569;
   --line: rgba(15, 23, 42, 0.12);
@@ -93,8 +102,14 @@
   --teal: #0d9488;
   --teal-light: #0f766e;
   --emerald: #16a34a;
-  --orange: #ea580c;
+  --orange: #c2410c;
   --yellow: #b45309;
+  --gradient: linear-gradient(90deg, #0d9488, #16a34a);
+  --gradient-strong: linear-gradient(90deg, #0f766e, #15803d);
+  --btn-primary-fg: #ffffff;
+  --accent-text: #0f766e;
+  --dot-glow: 0 0 10px rgba(13, 148, 136, 0.45);
+  --dot-glow-hover: 0 0 16px rgba(13, 148, 136, 0.6);
   --bg: radial-gradient(120% 70% at 84% -10%, rgba(13, 148, 136, 0.08), transparent 60%),
     radial-gradient(90% 55% at 2% 104%, rgba(22, 163, 74, 0.05), transparent 58%),
     linear-gradient(160deg, #ffffff, #e8eef4);
@@ -218,6 +233,32 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
+/* Keyboard users land here first and can jump the nav */
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-solid);
+  border: 1px solid var(--accent-line);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.skip:focus {
+  left: var(--gutter);
+  top: 12px;
+  color: var(--text);
+}
+
+main:focus {
+  outline: none;
+}
+
 h1,
 h2,
 h3,
@@ -285,7 +326,7 @@ img {
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--teal);
+  color: var(--accent-text);
   margin: 0 0 1em;
 }
 
@@ -303,6 +344,13 @@ img {
   line-height: 1.7;
   color: var(--muted);
   max-width: 62ch;
+}
+
+/* Inner pages open on an h1; the rest of the page steps down from there. */
+.section h1 {
+  font-size: clamp(2rem, 3.6vw, 2.8rem);
+  letter-spacing: -0.025em;
+  margin-bottom: 0.45em;
 }
 
 .section h2 {
@@ -340,6 +388,18 @@ img {
 .sep {
   margin: 0 0.5em;
   opacity: 0.5;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ==========================================================================
@@ -382,7 +442,7 @@ img {
 .nav__inner {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 24px;
   height: 64px;
 }
 
@@ -406,19 +466,19 @@ img {
   height: 11px;
   border-radius: 50%;
   background: var(--gradient);
-  box-shadow: 0 0 12px rgba(45, 212, 191, 0.7);
+  box-shadow: var(--dot-glow);
   transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
 .nav__brand:hover .nav__dot {
   transform: scale(1.18);
-  box-shadow: 0 0 18px rgba(45, 212, 191, 0.9);
+  box-shadow: var(--dot-glow-hover);
 }
 
 .nav__links {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 20px;
   margin-left: auto;
   font-size: 0.94rem;
 }
@@ -456,16 +516,13 @@ img {
   transform: scaleX(1);
 }
 
-.nav__cta {
-  margin-left: 6px;
-}
-
 .theme-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  flex: none;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   background: transparent;
@@ -496,6 +553,111 @@ img {
   transform: rotate(36deg);
 }
 
+/* ISP mark, external links and the mobile menu button.
+   Kept global (not scoped to Nav.astro) so the responsive rules below can
+   reliably override them without fighting stylesheet order. */
+.nav__isp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  padding: 6px 11px;
+  height: 44px;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.nav__isp:hover,
+.nav__isp:focus-visible {
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-sm);
+}
+
+.nav__isp img {
+  height: 32px;
+  width: auto;
+  display: block;
+}
+
+.nav__icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  background: transparent;
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.nav__icon:hover {
+  color: var(--accent-text);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.nav__icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.nav__hf {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.nav__burger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.nav__burger:hover,
+.nav__burger[aria-expanded="true"] {
+  color: var(--accent-text);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.nav__burger svg {
+  width: 20px;
+  height: 20px;
+}
+
+.nav__burger .burger-close,
+.nav__burger[aria-expanded="true"] .burger-open {
+  display: none;
+}
+
+.nav__burger[aria-expanded="true"] .burger-close {
+  display: block;
+}
+
 /* ==========================================================================
    Buttons
    ========================================================================== */
@@ -503,8 +665,11 @@ img {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 11px 20px;
+  /* 44px tall so it stays a comfortable touch target on phones */
+  min-height: 44px;
+  padding: 11px 22px;
   border-radius: var(--radius-pill);
   font-family: var(--font-display);
   font-weight: 600;
@@ -527,15 +692,15 @@ img {
 }
 
 .btn--primary {
-  background: var(--gradient);
+  background: var(--gradient-strong);
   background-size: 180% 100%;
   background-position: 0 0;
-  color: #04231f;
+  color: var(--btn-primary-fg);
   box-shadow: var(--btn-glow);
 }
 
 .btn--primary:hover {
-  color: #04231f;
+  color: var(--btn-primary-fg);
   background-position: 100% 0;
   box-shadow: var(--btn-glow-hover);
 }
@@ -594,7 +759,7 @@ img {
 }
 
 .hero h1 .accent {
-  background: var(--gradient);
+  background: var(--gradient-strong);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -608,10 +773,56 @@ img {
   margin-bottom: 1.6em;
 }
 
-.hero__actions {
+.hero__actions,
+.actions {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
+}
+
+/* Scroll cue: the hero is full-height, so say there is more below. */
+.hero__cue {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  background: var(--accent-softer);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: cue-bob 2.4s var(--ease) infinite;
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.hero__cue:hover {
+  color: var(--text);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.hero__cue svg {
+  width: 17px;
+  height: 17px;
+}
+
+@keyframes cue-bob {
+  0%,
+  72%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+  86% {
+    transform: translate(-50%, 5px);
+  }
 }
 
 .hero__content > * {
@@ -703,7 +914,7 @@ img {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  background: var(--gradient);
+  background: var(--gradient-strong);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -726,12 +937,23 @@ img {
   gap: 20px;
 }
 
+/* stops a wide <pre> or <table> from blowing out its track */
+.grid > * {
+  min-width: 0;
+}
+
 .grid--3 {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .grid--2 {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+/* prose beside a code block: centre them instead of stretching the <pre> */
+.grid--split {
+  align-items: center;
+  gap: 40px;
 }
 
 .card {
@@ -792,6 +1014,62 @@ img {
   margin-bottom: 0.8em;
 }
 
+/* ==========================================================================
+   Team (project page)
+   ========================================================================== */
+
+.team {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.team__card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 22px 22px 20px;
+  color: inherit;
+}
+
+.team__card:hover {
+  color: inherit;
+}
+
+.team__name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.team__name span {
+  color: var(--accent-text);
+  transition: transform var(--dur) var(--ease);
+}
+
+.team__card:hover .team__name span {
+  transform: translateX(3px);
+}
+
+.team__role {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.team__org {
+  margin-top: 3px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
 /* example cards (code page) — arrow nudges on hover */
 .ex__go {
   transition: transform var(--dur) var(--ease), color var(--dur-fast) var(--ease);
@@ -838,7 +1116,7 @@ img {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   letter-spacing: 0.1em;
-  color: var(--teal);
+  color: var(--accent-text);
   display: inline-block;
   margin-bottom: 1em;
   padding: 3px 9px;
@@ -941,7 +1219,9 @@ img {
 }
 
 .prose > :first-child + h2,
-.prose > h2:first-child {
+.prose > h2:first-child,
+.prose > :first-child + h3,
+.prose > h3:first-child {
   margin-top: 0;
 }
 
@@ -963,7 +1243,7 @@ img {
 }
 
 .prose li::marker {
-  color: var(--teal);
+  color: var(--accent-text);
 }
 
 .prose strong {
@@ -972,8 +1252,8 @@ img {
 }
 
 /* animated underline for inline links in body copy */
-.prose a,
-.footer__row a {
+.prose a:not(.card),
+.footer__row a:not(.footer__isp) {
   background-image: linear-gradient(currentColor, currentColor);
   background-size: 0% 1px;
   background-position: 0 100%;
@@ -981,8 +1261,8 @@ img {
   transition: background-size var(--dur) var(--ease), color var(--dur-fast) var(--ease);
 }
 
-.prose a:hover,
-.footer__row a:hover {
+.prose a:not(.card):hover,
+.footer__row a:not(.footer__isp):hover {
   background-size: 100% 1px;
 }
 
@@ -1007,7 +1287,7 @@ img {
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--teal);
+  color: var(--accent-text);
   white-space: nowrap;
 }
 
@@ -1029,7 +1309,7 @@ img {
   color: var(--teal-light);
   background: var(--accent-soft);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 0.1em 0.4em;
 }
 
@@ -1050,21 +1330,17 @@ img {
 }
 
 .funder:hover,
-.footer__funder:hover {
+.funder:focus-visible,
+.footer__funder:hover,
+.footer__funder:focus-visible {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
+/* Funders are shown in full colour: these marks are the point of the wall. */
 .funder img,
 .footer__funder img {
-  filter: grayscale(1);
-  opacity: 0.72;
-  transition: filter var(--dur) var(--ease), opacity var(--dur) var(--ease);
-}
-
-.funder:hover img,
-.footer__funder:hover img {
-  filter: grayscale(0);
+  filter: none;
   opacity: 1;
 }
 
@@ -1102,8 +1378,8 @@ img {
 .footer__row {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px 32px;
-  align-items: baseline;
+  gap: 24px 40px;
+  align-items: center;
   justify-content: space-between;
   line-height: 1.7;
 }
@@ -1135,25 +1411,129 @@ img {
    Responsive
    ========================================================================== */
 
+/* The nav runs out of room before the page does: brand, ISP mark, five links,
+   two icons and the theme toggle need ~830px. Collapse into a menu at 900px. */
+@media (max-width: 900px) {
+  .nav__burger {
+    display: inline-flex;
+  }
+
+  /* the links leave the flex flow below, so the toggle takes over pushing right */
+  .theme-toggle {
+    margin-left: auto;
+  }
+
+  .nav__links {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    margin: 0;
+    padding: 10px var(--gutter) 16px;
+    font-size: 1rem;
+    background: var(--nav-bg-scrolled);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border-bottom: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-md);
+  }
+
+  [data-nav-open] .nav__links {
+    display: flex;
+    animation: rise-in 0.28s var(--ease-out) both;
+  }
+
+  .nav__links a:not(.btn) {
+    padding: 12px 4px 12px 12px;
+    border-left: 2px solid transparent;
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* the sliding underline is off below, so mark the current page on the edge */
+  .nav__links a[aria-current="page"] {
+    border-left-color: var(--accent-line);
+    background: var(--accent-softer);
+  }
+
+  /* the sliding underline reads as noise in a stacked menu */
+  .nav__links a:not(.btn)::after {
+    display: none;
+  }
+
+  .nav__icons {
+    display: flex;
+    gap: 10px;
+    padding-top: 12px;
+  }
+
+  .nav__icon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 @media (max-width: 860px) {
   :root {
     --gutter: 20px;
   }
+
+  /* Side-lit hero overlay only works while the copy sits in a left column.
+     Once it spans the full width, light it from the top instead. */
+  :root {
+    --hero-overlay: linear-gradient(
+      180deg,
+      rgba(2, 6, 23, 0.92) 0%,
+      rgba(2, 6, 23, 0.84) 58%,
+      rgba(2, 6, 23, 0.62) 100%
+    );
+  }
+
+  [data-theme="light"] {
+    --hero-overlay: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.88) 58%,
+      rgba(255, 255, 255, 0.68) 100%
+    );
+  }
 }
 
 @media (max-width: 720px) {
-  .nav__links {
-    display: none;
-  }
   .section {
     padding: 64px 0;
   }
+  .hero {
+    min-height: calc(100svh - 64px);
+  }
   .hero__content {
-    padding: 64px 0;
+    padding: 56px 0 96px;
+  }
+  .nav__isp {
+    display: none;
   }
   .prose table {
     display: block;
     overflow-x: auto;
+  }
+  .grid--split {
+    gap: 28px;
+  }
+  .footer__row {
+    gap: 22px;
+  }
+  .footer__row > * {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero__actions .btn,
+  .actions .btn {
+    flex: 1 1 100%;
   }
 }
 
@@ -1183,6 +1563,10 @@ img {
   .funder:hover,
   .footer__funder:hover {
     transform: none;
+  }
+
+  .hero__cue {
+    animation: none;
   }
 
   .js-reveal .section .container > *:not(.grid):not(.stats):not(.steps),

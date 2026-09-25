@@ -48,10 +48,15 @@ const sensors = [
         <a class="btn btn--ghost" href={url("paper/")}>Read the paper</a>
       </div>
     </div>
+    <a class="hero__cue" href="#numbers" aria-label="Skip to the dataset numbers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"
+        ><path d="M6 9l6 6 6-6" /></svg>
+    </a>
   </section>
 
-  <section class="section section--tight">
+  <section class="section section--tight" id="numbers">
     <div class="container">
+      <h2 class="sr-only">MethaneSET in numbers</h2>
       <div class="stats">
         {
           stats.map((s) => (
@@ -129,7 +134,7 @@ const sensors = [
 
   <section class="section">
     <div class="container">
-      <div class="grid grid--2">
+      <div class="grid grid--2 grid--split">
         <div>
           <p class="eyebrow">Get started</p>
           <h2>One line to load</h2>
@@ -156,13 +161,13 @@ df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Tur
   <section class="section section--tight">
     <div class="container">
       <p class="eyebrow">Paper</p>
-      <h2>MethaneSET</h2>
+      <h2>The paper behind the data</h2>
       <p class="lead">
         Unified multi-sensor AI-ready datasets for satellite-based methane plume detection.
         Submitted to Scientific Data.
       </p>
-      <div class="hero__actions" style="margin-top:24px;">
-        <a class="btn btn--ghost" href={url("paper/")}>Abstract and citation</a>
+      <div class="actions" style="margin-top:26px;">
+        <a class="btn btn--primary" href={url("paper/")}>Abstract and citation</a>
         <a
           class="btn btn--ghost"
           href="https://huggingface.co/datasets/tacofoundation/methaneset"

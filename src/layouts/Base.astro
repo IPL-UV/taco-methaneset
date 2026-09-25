@@ -13,6 +13,9 @@ const {
   title = "MethaneSET: AI-ready methane datasets",
   description = "Unified multi-sensor TACO datasets for satellite-based methane plume detection: Sentinel-2, Landsat 8/9 and EMIT, with expert-verified plume masks and a synthetic plume bank.",
 } = Astro.props;
+
+const path = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : `${Astro.url.pathname}/`;
+const canonical = new URL(path, Astro.site ?? Astro.url).href;
 ---
 
 <!doctype html>
@@ -21,9 +24,15 @@ const {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <link rel="canonical" href={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content="MethaneSET" />
     <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
     <link rel="icon" href={url("favicon.svg")} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,8 +66,9 @@ const {
     <title>{title}</title>
   </head>
   <body>
+    <a class="skip" href="#main">Skip to content</a>
     <Nav />
-    <main>
+    <main id="main" tabindex="-1">
       <slot />
     </main>
     <Footer />

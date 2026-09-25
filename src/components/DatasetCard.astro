@@ -37,7 +37,9 @@ const code = loadCode(dataset.name);
 
   <div class="dcard__code">
     <code>{code}</code>
-    <button class="dcard__copy" data-copy={code} aria-label="Copy load path">copy</button>
+    <button class="dcard__copy" data-copy={code} type="button" title="Copy load path" aria-live="polite"
+      >copy</button
+    >
   </div>
 
   <div class="dcard__links">
@@ -98,7 +100,7 @@ const code = loadCode(dataset.name);
     flex: none;
     display: grid;
     place-items: center;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: var(--accent-soft);
     border: 1px solid transparent;
     color: var(--teal);
@@ -198,11 +200,11 @@ const code = loadCode(dataset.name);
     background: transparent;
     border: 1px solid var(--line-strong);
     color: var(--muted);
-    border-radius: 7px;
+    border-radius: var(--radius-xs);
     font-family: var(--font-mono);
-    font-size: 0.66rem;
+    font-size: 0.68rem;
     letter-spacing: 0.04em;
-    padding: 4px 9px;
+    padding: 4px 10px;
     cursor: pointer;
     transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
       background-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);

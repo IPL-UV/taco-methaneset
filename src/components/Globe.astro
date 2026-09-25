@@ -152,7 +152,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     font-weight: 500;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--teal);
+    color: var(--accent-text);
     margin: 0 0 8px;
   }
   .globe-check {
@@ -487,6 +487,9 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       top: 12px;
       left: 12px;
       max-width: calc(100% - 24px);
+      /* leave most of the map visible: the panel is a filter, not the content */
+      max-height: 48%;
+      font-size: 0.82rem;
     }
     .sample-viewer,
     .layer-panel {

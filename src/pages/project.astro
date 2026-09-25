@@ -35,8 +35,8 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
   <section class="section">
     <div class="container prose">
       <p class="eyebrow">Project</p>
-      <h2>About</h2>
-      <p>
+      <h1>About the project</h1>
+      <p class="lead">
         MethaneSET is a benchmark of multi-sensor datasets for the detection and
         quantification of methane leaks from space. It unifies Sentinel-2, Landsat-8/9 and
         EMIT under one TACO schema, with plume annotations from two independent operational
@@ -56,6 +56,7 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
 
   <section class="section section--tight">
     <div class="container">
+      <h2 class="sr-only">Outcomes</h2>
       <div class="stats">
         {
           outcomes.map((o) => (
@@ -77,33 +78,40 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
       <h2>Grant</h2>
       <table>
         <tbody>
-          <tr><th>Program</th><td>Climate Change AI Innovation Grants 2024</td></tr>
-          <tr><th>Funder</th><td>Global Methane Hub (GMH)</td></tr>
-          <tr><th>Grant ID</th><td>G-2025-00888</td></tr>
-          <tr><th>Amount</th><td>USD 139,810</td></tr>
-          <tr><th>Period</th><td>September 2025 to August 2026</td></tr>
-          <tr><th>Host</th><td>University of Valencia, Spain</td></tr>
+          <tr><th scope="row">Program</th><td>Climate Change AI Innovation Grants 2024</td></tr>
+          <tr><th scope="row">Funder</th><td>Global Methane Hub (GMH)</td></tr>
+          <tr><th scope="row">Grant ID</th><td>G-2025-00888</td></tr>
+          <tr><th scope="row">Amount</th><td>USD 139,810</td></tr>
+          <tr><th scope="row">Period</th><td>September 2025 to August 2026</td></tr>
+          <tr><th scope="row">Host</th><td>University of Valencia, Spain</td></tr>
         </tbody>
       </table>
+    </div>
+  </section>
 
+  <section class="section section--tight">
+    <div class="container">
+      <p class="eyebrow">People</p>
       <h2>Team</h2>
-      <table>
-        <thead>
-          <tr><th>Name</th><th>Role</th><th>Group</th></tr>
-        </thead>
-        <tbody>
-          {
-            team.map((t) => (
-              <tr>
-                <td><a href={t.href} target="_blank" rel="noopener">{t.name}</a></td>
-                <td>{t.role}</td>
-                <td>{t.org}</td>
-              </tr>
-            ))
-          }
-        </tbody>
-      </table>
+      <div class="grid team" style="margin-top:34px;">
+        {
+          team.map((t) => (
+            <a class="card team__card" href={t.href} target="_blank" rel="noopener">
+              <span class="team__role">{t.role}</span>
+              <span class="team__name">
+                {t.name}
+                <span aria-hidden="true">→</span>
+              </span>
+              <span class="team__org">{t.org}</span>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
 
+  <section class="section">
+    <div class="container prose">
       <h2>Acknowledgements</h2>
       <p>
         This project was funded by the Climate Change AI (CCAI) Innovation Grants program,
@@ -121,6 +129,7 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
   <section class="section section--tight">
     <div class="container">
       <p class="eyebrow">Supported by</p>
+      <h2 class="sr-only">Funders and host institutions</h2>
       <div class="funders">
         {
           funders.map((f) => (
