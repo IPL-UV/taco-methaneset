@@ -63,13 +63,18 @@
 
   --shadow-panel: 0 18px 42px -26px rgba(0, 0, 0, 0.92);
   --shadow-nav: 0 1px 0 rgba(148, 163, 184, 0.12);
+  --shadow-lg: 0 26px 60px -32px rgba(0, 0, 0, 0.9);
 
+  --radius-xs: 3px;
   --radius-sm: 3px;
   --radius-md: 6px;
+  --radius-pill: 3px;
 
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 0.14s;
   --dur: 0.22s;
+  --dur-slow: 0.5s;
 
   --max: 1120px;
   --gutter: 24px;
@@ -125,6 +130,7 @@
 
   --shadow-panel: 0 18px 40px -26px rgba(15, 23, 42, 0.45);
   --shadow-nav: 0 1px 0 rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 26px 60px -34px rgba(15, 23, 42, 0.4);
 }
 
 /* ==========================================================================
@@ -1127,4 +1133,39 @@ img {
   color: var(--text);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Map panel titles
+   Global on purpose: the same class is used by Astro markup and by the
+   JS-injected panels (inspector, layer list), which escape scoped styles.
+   ========================================================================== */
+
+.globe-panel__title {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  margin: 0 0 10px;
+}
+
+/* Map attribution: required by the CARTO and Esri basemaps, kept quiet. */
+.maplibregl-ctrl-attrib {
+  background: var(--panel-bg) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  color: var(--slate);
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--muted);
+}
+
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  margin: 0 0 16px 16px;
 }

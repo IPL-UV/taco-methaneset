@@ -151,8 +151,8 @@ const code = loadCode(dataset.name);
   .dcard__copy {
     flex: none;
     background: transparent;
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    color: #94a3b8;
+    border: 1px solid var(--line-strong);
+    color: var(--slate);
     border-radius: var(--radius-sm);
     font-family: var(--font-mono);
     font-size: 0.66rem;
@@ -163,8 +163,8 @@ const code = loadCode(dataset.name);
     transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
   }
   .dcard__copy:hover {
-    color: #5eead4;
-    border-color: rgba(94, 234, 212, 0.6);
+    color: var(--accent-text);
+    border-color: var(--accent-line);
   }
   .dcard__links {
     display: flex;

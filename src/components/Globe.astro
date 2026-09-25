@@ -28,9 +28,8 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   {controls && (
     <div class="globe-ui">
       <div class="globe-panel">
-        <p class="globe-panel__title">
-          Filters<span id="globe-count" class="globe-count"></span>
-        </p>
+        <p class="globe-panel__title">Filters</p>
+        <p id="globe-count" class="globe-count"></p>
 
         <div class="field">
           <span class="field__label">Sensors</span>
@@ -209,15 +208,6 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       transform: none;
     }
   }
-  .globe-panel__title {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 500;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--accent-text);
-    margin: 0 0 8px;
-  }
   .globe-check {
     display: flex;
     align-items: center;
@@ -265,17 +255,38 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   .globe-select:hover {
     border-color: var(--accent-line);
   }
-  .globe-row {
+  .field {
+    margin-bottom: 14px;
+  }
+  .field:last-of-type {
+    margin-bottom: 0;
+  }
+  .field__label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--slate);
+    margin-bottom: 6px;
+  }
+  .field__checks {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .field--pair {
     display: flex;
     gap: 10px;
   }
-  .globe-row > div {
+  .field--pair > div {
     flex: 1;
   }
   .globe-count {
-    margin: 12px 0 0;
+    display: block;
+    margin: 0 0 14px;
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     color: var(--teal-light);
   }
   .globe-flux {
@@ -304,7 +315,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     position: absolute;
     top: 80px;
     right: 20px;
-    width: 268px;
+    width: 288px;
     max-height: calc(100% - 100px);
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -356,9 +367,6 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     border-color: var(--teal);
     color: var(--teal-light);
     background: var(--accent-soft);
-  }
-  .sample-viewer :global(.sv-nav__btn:active) {
-    transform: scale(0.92);
   }
   .sample-viewer :global(.sv-nav__pos) {
     font-family: var(--font-mono);
@@ -437,7 +445,6 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   }
   .sample-viewer :global(.sv-remove:hover) {
     color: var(--orange);
-    transform: scale(1.15);
   }
   .sample-viewer :global(.sv-clear) {
     margin-top: 8px;
@@ -461,7 +468,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     position: absolute;
     bottom: 20px;
     right: 20px;
-    width: 300px;
+    width: 288px;
     max-height: 42%;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -540,11 +547,8 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   }
   .layer-panel :global(.lp-icon:hover) {
     color: var(--teal-light);
-    transform: scale(1.12);
   }
-  .globe-count {
-    transition: color var(--dur) var(--ease);
-  }
+  
   @media (max-width: 720px) {
     .globe-panel {
       top: 12px;
@@ -632,6 +636,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     let basemapChoice = "auto";
 
     (window as any).__map = map;
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
 
     if (focusRight) {
       const applyPadding = () => map.setPadding({ left: Math.round(el.clientWidth * 0.42) });
