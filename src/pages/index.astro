@@ -36,7 +36,6 @@ const sensors = [
       <Globe rotate={true} focusRight={true} />
     </div>
     <div class="container hero__content">
-      <p class="eyebrow">AI-ready multi-sensor TACO datasets</p>
       <h1>Methane plumes,<br /><span class="accent">ready for AI</span></h1>
       <p class="hero__sub">
         MethaneSET unifies Sentinel-2, Landsat 8/9 and EMIT into queryable TACO datasets:
@@ -48,10 +47,6 @@ const sensors = [
         <a class="btn btn--ghost" href={url("paper/")}>Read the paper</a>
       </div>
     </div>
-    <a class="hero__cue" href="#numbers" aria-label="Skip to the dataset numbers">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"
-        ><path d="M6 9l6 6 6-6" /></svg>
-    </a>
   </section>
 
   <section class="section section--tight" id="numbers">
@@ -78,14 +73,13 @@ const sensors = [
 
   <section class="section">
     <div class="container">
-      <p class="eyebrow">One problem, three sensors</p>
-      <h2>Every sensor, one schema</h2>
+      <h2>One problem, three sensors, one schema</h2>
       <p class="lead">
         Multispectral instruments need a temporally paired, plume-free reference. Imaging
         spectrometers resolve the methane signature in a single acquisition. MethaneSET
         serves both under the same metadata contract.
       </p>
-      <div class="grid grid--3" style="margin-top:40px;">
+      <div class="grid grid--3" style="margin-top:44px;">
         {
           sensors.map((s) => (
             <div class="card">
@@ -104,14 +98,13 @@ const sensors = [
 
   <section class="section">
     <div class="container">
-      <p class="eyebrow">TACO format</p>
       <h2>Query before you download</h2>
       <p class="lead">
         Each dataset is a Collection of Catalogs of Samples. Metadata lives in Parquet,
         imagery in Cloud-Optimized GeoTIFFs, so you filter by region, date or sensor
         before pulling a single pixel.
       </p>
-      <div class="steps" style="margin-top:40px;">
+      <div class="steps" style="margin-top:44px;">
         <div class="step">
           <h3>Collection</h3>
           <p>Dataset-level identity: title, version, license, providers and the schema contract.</p>
@@ -136,7 +129,6 @@ const sensors = [
     <div class="container">
       <div class="grid grid--2 grid--split">
         <div>
-          <p class="eyebrow">Get started</p>
           <h2>One line to load</h2>
           <p class="lead">
             Read the metadata, filter the samples you need, then stream only those pixels.
@@ -160,13 +152,12 @@ df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Tur
 
   <section class="section section--tight">
     <div class="container">
-      <p class="eyebrow">Paper</p>
       <h2>The paper behind the data</h2>
       <p class="lead">
         Unified multi-sensor AI-ready datasets for satellite-based methane plume detection.
         Submitted to Scientific Data.
       </p>
-      <div class="actions" style="margin-top:26px;">
+      <div class="actions" style="margin-top:28px;">
         <a class="btn btn--primary" href={url("paper/")}>Abstract and citation</a>
         <a
           class="btn btn--ghost"

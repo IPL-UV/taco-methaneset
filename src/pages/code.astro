@@ -35,7 +35,6 @@ const examples = [
 >
   <section class="section">
     <div class="container prose">
-      <p class="eyebrow">Code</p>
       <h1>Load and query</h1>
       <p class="lead">
         Metadata is a Parquet index, imagery is cloud-optimized. Read the index, filter
@@ -55,13 +54,12 @@ df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Tur
 
   <section class="section section--tight">
     <div class="container">
-      <p class="eyebrow">Examples</p>
       <h2>Explore and reproduce</h2>
       <p class="lead">
         Each example is a small recipe: load one dataset, do one thing, and keep the
         result.
       </p>
-      <div class="grid grid--2" style="margin-top:36px;">
+      <div class="grid grid--2" style="margin-top:40px;">
         {
           examples.map((e) => (
             <a class="card ex" href={e.href} target="_blank" rel="noopener">
@@ -78,8 +76,7 @@ df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Tur
 
   <section class="section section--tight">
     <div class="container prose">
-      <p class="eyebrow">Clients</p>
-      <h2>Install</h2>
+      <h2>Install the clients</h2>
       <table>
         <thead>
           <tr><th scope="col">Language</th><th scope="col">Install</th></tr>
@@ -121,9 +118,10 @@ df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Tur
   }
   .ex__go {
     display: inline-block;
-    margin-top: 16px;
-    font-family: var(--font-mono);
+    margin-top: 20px;
     font-size: 0.78rem;
-    color: var(--teal-light);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--accent-text);
   }
 </style>

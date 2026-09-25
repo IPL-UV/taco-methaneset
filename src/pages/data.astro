@@ -13,7 +13,6 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 >
   <section class="section section--tight">
     <div class="container">
-      <p class="eyebrow">Data</p>
       <h1>Every verified plume, on the map</h1>
       <p class="lead">
         Each point is a real observation where a monitoring system verified a plume:
@@ -31,13 +30,12 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 
   <section class="section">
     <div class="container">
-      <p class="eyebrow">Catalog</p>
       <h2>Seven datasets</h2>
       <p class="lead">
         Load any of them with one line. Metadata is queryable as Parquet before you
         download a pixel.
       </p>
-      <div class="grid grid--2" style="margin-top:40px;">
+      <div class="grid grid--2" style="margin-top:44px;">
         {datasets.map((d) => <DatasetCard dataset={d} />)}
       </div>
       <span class="src">
@@ -54,8 +52,8 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 <style>
   .map {
     position: relative;
-    height: 72vh;
-    min-height: 520px;
+    height: 74vh;
+    min-height: 540px;
     border-top: 1px solid var(--line-strong);
     border-bottom: 1px solid var(--line-strong);
   }

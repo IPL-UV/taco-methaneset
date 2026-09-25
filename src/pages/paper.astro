@@ -1,6 +1,36 @@
 ---
 import Base from "../layouts/Base.astro";
 
+const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const url = (p = "") => `${base}${p.replace(/^\/+/, "")}`;
+
+const tacoAuthors = [
+  "Cesar Aybar¹",
+  "Julio Contreras¹",
+  "Chen Ma²",
+  "Oscar J. Pellicer-Valero¹",
+  "Gonzalo Mateo-García¹",
+  "Luis Gómez-Chova¹",
+  "Gustau Camps-Valls¹",
+  "Nils Lehmann³",
+  "Mikolaj Czerkawski⁴",
+  "David Montero⁵",
+  "Miguel D. Mahecha⁵",
+  "Ingrid Aybar⁶",
+];
+
+const tacoAffiliations = [
+  "¹ Image Processing Laboratory, University of Valencia, Spain",
+  "² Research Center of Satellite Technology, Harbin Institute of Technology, China",
+  "³ Technical University of Munich (TUM), Germany",
+  "⁴ Asterisk Labs, London, UK",
+  "⁵ Institute for Earth System Science and Remote Sensing, Leipzig University, Germany",
+  "⁶ Facultad de Ingeniería, Universidad Privada del Norte, Lima, Peru",
+];
+
+const tacoAbstract =
+  "Geospatial communities have long relied on standardised formats for raster and vector data, enabling interoperability, stable tool development, and long-term data preservation. In contrast, Artificial Intelligence (AI)-ready datasets, particularly those derived from Earth Observation (EO), lack equivalent conventions. As a result, data producers often adopt ad hoc file structures, loosely defined formats, and inconsistent semantic encodings. This fragmentation hinders interoperability, complicates reuse, and undermines reproducibility. We argue that the lack of a standard format represents a structural bottleneck to scalable scientific progress, especially in the era of foundation models, where diverse datasets must be combined for effective training and performance evaluation in downstream tasks. To address this, we introduce TACO: a comprehensive specification that defines a formal data model, a cloud-optimized on-disk layout, and an API for creating and accessing AI-ready EO datasets.";
+
 const authors = [
   "Julio Contreras¹*",
   "Carlos Giner¹*",
@@ -39,8 +69,7 @@ const bibtex = `@article{aybar2026methaneset,
 >
   <section class="section">
     <div class="container prose">
-      <p class="eyebrow">Papers</p>
-      <h1 class="paper-title">Papers</h1>
+      <h1>Papers</h1>
       <p class="lead">
         Two papers: the TACO specification this project is built on, and the MethaneSET
         manuscript describing the datasets.
@@ -52,18 +81,26 @@ const bibtex = `@article{aybar2026methaneset,
     <div class="container">
       <article class="paper">
         <div class="paper__head">
-          <span class="paper__tag">Specification</span>
-          <h2 class="paper__title">TACO: Transparent Access to Cloud-Optimized datasets</h2>
-          <p class="paper__desc">
-            How an AI-ready Earth observation dataset is described, stored and queried:
-            a collection of self-contained samples, metadata in a Parquet footer, and
-            pixels streamed by byte range. MethaneSET is published following this
-            specification.
-          </p>
+          <p class="paper__kind">Specification</p>
+          <h2 class="paper__title">
+            The Missing Piece: Standardising for AI-ready Earth Observation Datasets
+          </h2>
+          <p class="venue">TerraBytes, ICML 2025 Workshop</p>
         </div>
+
+        <div class="prose paper__body">
+          <p class="authors">{tacoAuthors.join(", ")}</p>
+          <ul class="affils">
+            {tacoAffiliations.map((a) => <li>{a}</li>)}
+          </ul>
+
+          <h3>Abstract</h3>
+          <p>{tacoAbstract}</p>
+        </div>
+
         <div class="paper__links">
-          <a class="btn btn--ghost" href="https://www.overleaf.com/project/682cf7b3e007a602bb67a7fe" target="_blank" rel="noopener">
-            Overleaf project
+          <a class="btn btn--ghost" href={url("papers/taco-icml-2025.pdf")} target="_blank" rel="noopener">
+            Paper (PDF)
           </a>
           <a class="btn btn--ghost" href="https://asterisk.coop/taco/spec" target="_blank" rel="noopener">
             Specification
@@ -80,16 +117,16 @@ const bibtex = `@article{aybar2026methaneset,
     <div class="container">
       <article class="paper">
         <div class="paper__head">
-          <span class="paper__tag">Manuscript</span>
+          <p class="paper__kind">Manuscript</p>
           <h2 class="paper__title">
             MethaneSET: Unified Multi-Sensor AI-Ready Datasets for Satellite-Based Methane
             Plume Detection
           </h2>
+          <p class="venue">Scientific Data, under review</p>
         </div>
 
         <div class="prose paper__body">
           <p class="authors">{authors.join(", ")}</p>
-          <p class="venue">Scientific Data, under review</p>
           <ul class="affils">
             {affiliations.map((a) => <li>{a}</li>)}
             <li>* Equal contribution.</li>
@@ -143,45 +180,68 @@ const bibtex = `@article{aybar2026methaneset,
 </Base>
 
 <style>
+  /* A publications page, not a card wall: each entry is a rule, a kind, a
+     title, the people, then the text. */
   .paper {
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    background: var(--card);
-    padding: clamp(24px, 3vw, 40px);
+    border-top: 1px solid var(--line-strong);
+    padding-top: 26px;
+    max-width: 78ch;
   }
-  .paper__tag {
-    display: inline-block;
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.16em;
+  .paper__kind {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--accent-text);
-    border: 1px solid var(--accent-line);
-    border-radius: var(--radius-xs);
-    padding: 4px 10px;
-    margin-bottom: 16px;
-  }
-  .paper__title {
-    font-size: clamp(1.3rem, 2.4vw, 1.8rem);
-    line-height: 1.25;
+    color: var(--slate);
     margin: 0 0 14px;
   }
-  .paper__desc {
-    color: var(--muted);
-    max-width: 70ch;
+  .paper__title {
+    font-size: clamp(1.5rem, 2.4vw, 2rem);
+    line-height: 1.18;
+    margin: 0 0 12px;
+  }
+  .venue {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.02em;
+    color: var(--slate);
     margin: 0;
   }
   .paper__body {
     max-width: none;
+    margin-top: 26px;
+  }
+  .authors {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--text);
+    margin: 0 0 12px;
+  }
+  .affils {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 8px;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    color: var(--slate);
+  }
+  .affils li {
+    margin: 0;
   }
   .paper__body h3 {
-    font-size: 1.05rem;
-    margin: 1.8em 0 0.6em;
+    margin: 2.2em 0 0.7em;
+    padding-bottom: 0.6em;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--slate);
   }
   .paper__links {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 28px;
+    gap: 10px;
+    margin-top: 32px;
   }
 </style>

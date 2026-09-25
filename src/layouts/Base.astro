@@ -37,7 +37,7 @@ const canonical = new URL(path, Astro.site ?? Astro.url).href;
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <script is:inline>
@@ -52,17 +52,6 @@ const canonical = new URL(path, Astro.site ?? Astro.url).href;
         }
       })();
     </script>
-    <script is:inline>
-      /* Arm the scroll-reveal styles before first paint, so nothing flashes.
-         Without JS (or with reduced motion) the class never lands and every
-         element stays visible. */
-      (function () {
-        var root = document.documentElement;
-        var reduced =
-          window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        if ("IntersectionObserver" in window && !reduced) root.classList.add("js-reveal");
-      })();
-    </script>
     <title>{title}</title>
   </head>
   <body>
@@ -73,59 +62,28 @@ const canonical = new URL(path, Astro.site ?? Astro.url).href;
     </main>
     <Footer />
     <script is:inline>
+      /* The only scroll behaviour left: the nav firms up once you leave the top. */
       (function () {
         var root = document.documentElement;
-
-        /* --- Reading progress + condensed nav ------------------------- */
         var ticking = false;
-        function paintScroll() {
+        function paint() {
           ticking = false;
-          var y = window.scrollY || window.pageYOffset || 0;
-          var travel = root.scrollHeight - window.innerHeight;
-          root.style.setProperty("--scroll", travel > 0 ? Math.min(1, y / travel).toFixed(4) : "0");
-          if (y > 8) root.setAttribute("data-scrolled", "");
-          else root.removeAttribute("data-scrolled");
-        }
-        function onScroll() {
-          if (ticking) return;
-          ticking = true;
-          requestAnimationFrame(paintScroll);
-        }
-        window.addEventListener("scroll", onScroll, { passive: true });
-        window.addEventListener("resize", onScroll, { passive: true });
-        paintScroll();
-
-        /* --- Scroll reveal -------------------------------------------- */
-        if (!root.classList.contains("js-reveal")) return;
-
-        /* Keep in sync with the .js-reveal block in theme.css */
-        var SELECTOR =
-          ".section .container > *:not(.grid):not(.stats):not(.steps)," +
-          ".grid > *,.stats > *,.steps > *";
-
-        var observer = new IntersectionObserver(
-          function (entries) {
-            entries.forEach(function (entry) {
-              if (!entry.isIntersecting) return;
-              entry.target.classList.add("is-in");
-              observer.unobserve(entry.target);
-            });
-          },
-          { rootMargin: "0px 0px -8% 0px", threshold: 0.05 },
-        );
-
-        /* Stagger only inside grids, whose items enter together. Items stacked
-           down a column scroll in one by one, so a delay there just feels slow. */
-        var groups = new Map();
-        document.querySelectorAll(SELECTOR).forEach(function (el) {
-          var parent = el.parentElement;
-          if (parent && parent.matches(".grid, .stats, .steps")) {
-            var i = groups.get(parent) || 0;
-            groups.set(parent, i + 1);
-            if (i > 0) el.style.setProperty("--rd", Math.min(i, 5));
+          if ((window.scrollY || window.pageYOffset || 0) > 8) {
+            root.setAttribute("data-scrolled", "");
+          } else {
+            root.removeAttribute("data-scrolled");
           }
-          observer.observe(el);
-        });
+        }
+        window.addEventListener(
+          "scroll",
+          function () {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(paint);
+          },
+          { passive: true },
+        );
+        paint();
       })();
     </script>
   </body>

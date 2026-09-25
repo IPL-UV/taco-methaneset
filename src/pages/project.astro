@@ -34,7 +34,6 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
 >
   <section class="section">
     <div class="container prose">
-      <p class="eyebrow">Project</p>
       <h1>About the project</h1>
       <p class="lead">
         MethaneSET is a benchmark of multi-sensor datasets for the detection and
@@ -91,9 +90,8 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
 
   <section class="section section--tight">
     <div class="container">
-      <p class="eyebrow">People</p>
       <h2>Team</h2>
-      <div class="grid team" style="margin-top:34px;">
+      <div class="grid team" style="margin-top:38px;">
         {
           team.map((t) => (
             <a class="card team__card" href={t.href} target="_blank" rel="noopener">
@@ -128,8 +126,7 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
 
   <section class="section section--tight">
     <div class="container">
-      <p class="eyebrow">Supported by</p>
-      <h2 class="sr-only">Funders and host institutions</h2>
+      <h2>Supported by</h2>
       <div class="funders">
         {
           funders.map((f) => (
@@ -156,26 +153,28 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
 
 <style>
   .funders {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px;
+    margin-top: 32px;
   }
+  /* Logos need a white ground to read, so the tile is the frame: same
+     hairline and radius as every other surface on the site. */
   .funder {
     background: #ffffff;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    padding: 20px 24px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    padding: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 124px;
-    min-width: 210px;
-    flex: 1 1 210px;
-    max-width: 300px;
+    height: 116px;
+  }
+  .funder:hover {
+    border-color: var(--accent-line);
   }
   .funder img {
-    max-height: 72px;
+    max-height: 64px;
     max-width: 100%;
     object-fit: contain;
   }

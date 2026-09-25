@@ -15,10 +15,7 @@ const links = [
 
 <footer class="footer">
   <div class="container footer__inner">
-    <a class="footer__mark" href={base}>
-      <span class="footer__dot"></span>
-      MethaneSET
-    </a>
+    <a class="footer__mark" href={base}>Methane<em>SET</em></a>
 
     <p class="footer__tagline">
       Multi-sensor, AI-ready methane datasets from Sentinel-2, Landsat 8/9 and EMIT,
@@ -40,93 +37,96 @@ const links = [
     </nav>
 
     <div class="footer__meta">
-      <span>© {year} MethaneSET</span>
-      <span>Image and Signal Processing Group, Universitat de València</span>
-      <span>Data CC-BY-NC-SA 4.0, plume bank CC-BY 4.0</span>
-      <span>
+      <p>Image and Signal Processing Group, Universitat de València</p>
+      <p>
         Funded by
         <a href="https://www.climatechange.ai" target="_blank" rel="noopener">CCAI</a>
         and the
         <a href="https://www.globalmethanehub.org" target="_blank" rel="noopener">Global Methane Hub</a>
-      </span>
+      </p>
+      <p class="footer__legal">
+        <span>© {year} MethaneSET</span>
+        <span>Data CC-BY-NC-SA 4.0, plume bank CC-BY 4.0</span>
+      </p>
     </div>
   </div>
 </footer>
 
 <style>
   .footer {
-    position: relative;
-    margin-top: 40px;
-  }
-  .footer::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(560px, 80%);
-    height: 1px;
-    background: var(--gradient-strong, var(--gradient));
-    opacity: 0.55;
+    border-top: 1px solid var(--line);
   }
   .footer__inner {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 64px 24px 56px;
+    padding: 64px 24px 60px;
   }
   .footer__mark {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: 1.15rem;
+    font-size: 1.32rem;
+    letter-spacing: -0.015em;
+    line-height: 1;
     color: var(--text);
-    margin-bottom: 14px;
+    margin-bottom: 16px;
   }
-  .footer__dot {
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    background: var(--gradient-strong, var(--gradient));
+  .footer__mark em {
+    font-style: normal;
+    color: var(--accent-text);
   }
   .footer__tagline {
     color: var(--muted);
-    font-size: 0.95rem;
-    max-width: 52ch;
-    margin: 0 0 26px;
+    font-size: 0.93rem;
+    line-height: 1.6;
+    max-width: 50ch;
+    margin: 0 0 30px;
   }
   .footer__nav {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 10px 26px;
-    margin-bottom: 30px;
+    padding-bottom: 28px;
+    margin-bottom: 26px;
+    border-bottom: 1px solid var(--line);
+    width: min(100%, 620px);
   }
   .footer__nav a {
-    color: var(--text);
-    font-family: var(--font-mono);
+    color: var(--muted);
     font-size: 0.72rem;
-    letter-spacing: 0.12em;
+    font-weight: 500;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
   }
   .footer__nav a:hover {
-    color: var(--accent-text);
+    color: var(--text);
   }
   .footer__meta {
+    color: var(--slate);
+    font-size: 0.8rem;
+    line-height: 1.7;
+    max-width: 64ch;
+  }
+  .footer__meta p {
+    margin: 0;
+  }
+  .footer__legal {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 6px 20px;
-    color: var(--slate);
-    font-size: 0.8rem;
-    max-width: 72ch;
+    gap: 2px 22px;
+    margin-top: 10px !important;
   }
   .footer__meta a {
     color: var(--muted);
     text-decoration: underline;
+    text-decoration-color: var(--line-strong);
     text-underline-offset: 3px;
+  }
+  .footer__meta a:hover {
+    color: var(--text);
+    text-decoration-color: currentColor;
   }
 </style>
