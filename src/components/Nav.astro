@@ -17,9 +17,6 @@ const rel = Astro.url.pathname.replace(base, "");
       <span class="nav__dot"></span>
       MethaneSET
     </a>
-    <a class="nav__isp" href="https://isp.uv.es" target="_blank" rel="noopener" title="Image and Signal Processing Group">
-      <img src={`${base}logos/isp.png`} alt="ISP, Universitat de València" />
-    </a>
     <div class="nav__links" id="nav-links">
       {
         links.map((l) => {
@@ -53,7 +50,7 @@ const rel = Astro.url.pathname.replace(base, "");
           title="Hugging Face"
           aria-label="Hugging Face"
         >
-          <span class="nav__hf">HF</span>
+          <img class="nav__hf" src={`${base}logos/hf.svg`} alt="" />
         </a>
       </div>
     </div>

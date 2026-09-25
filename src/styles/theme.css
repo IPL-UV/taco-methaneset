@@ -318,9 +318,6 @@ img {
    ========================================================================== */
 
 .eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.7em;
   font-family: var(--font-mono);
   font-size: 0.76rem;
   font-weight: 500;
@@ -328,15 +325,6 @@ img {
   text-transform: uppercase;
   color: var(--accent-text);
   margin: 0 0 1em;
-}
-
-.eyebrow::before {
-  content: "";
-  width: 22px;
-  height: 1px;
-  flex: none;
-  background: var(--gradient);
-  opacity: 0.9;
 }
 
 .lead {
@@ -553,34 +541,9 @@ img {
   transform: rotate(36deg);
 }
 
-/* ISP mark, external links and the mobile menu button.
+/* External links and the mobile menu button.
    Kept global (not scoped to Nav.astro) so the responsive rules below can
    reliably override them without fighting stylesheet order. */
-.nav__isp {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  background: #ffffff;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xs);
-  padding: 6px 11px;
-  height: 44px;
-  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
-}
-
-.nav__isp:hover,
-.nav__isp:focus-visible {
-  border-color: var(--accent-line);
-  box-shadow: var(--shadow-sm);
-}
-
-.nav__isp img {
-  height: 32px;
-  width: auto;
-  display: block;
-}
-
 .nav__icons {
   display: inline-flex;
   align-items: center;
@@ -614,10 +577,9 @@ img {
 }
 
 .nav__hf {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  width: 21px;
+  height: 21px;
+  display: block;
 }
 
 .nav__burger {
@@ -1253,7 +1215,8 @@ img {
 
 /* animated underline for inline links in body copy */
 .prose a:not(.card),
-.footer__row a:not(.footer__isp) {
+.footer__col a,
+.footer__bottom a {
   background-image: linear-gradient(currentColor, currentColor);
   background-size: 0% 1px;
   background-position: 0 100%;
@@ -1262,7 +1225,8 @@ img {
 }
 
 .prose a:not(.card):hover,
-.footer__row a:not(.footer__isp):hover {
+.footer__col a:hover,
+.footer__bottom a:hover {
   background-size: 100% 1px;
 }
 
@@ -1373,15 +1337,6 @@ img {
 
 .footer a:hover {
   color: var(--teal-light);
-}
-
-.footer__row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px 40px;
-  align-items: center;
-  justify-content: space-between;
-  line-height: 1.7;
 }
 
 /* ==========================================================================
@@ -1512,21 +1467,12 @@ img {
   .hero__content {
     padding: 56px 0 96px;
   }
-  .nav__isp {
-    display: none;
-  }
   .prose table {
     display: block;
     overflow-x: auto;
   }
   .grid--split {
     gap: 28px;
-  }
-  .footer__row {
-    gap: 22px;
-  }
-  .footer__row > * {
-    flex: 1 1 100%;
   }
 }
 
