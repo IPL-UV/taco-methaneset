@@ -478,6 +478,9 @@ img {
   align-items: center;
   line-height: 1;
   padding: 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 0.8rem;
 }
 
 .nav__links a:not(.btn)::after {
@@ -635,8 +638,9 @@ img {
   border-radius: var(--radius-pill);
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 0.95rem;
-  letter-spacing: -0.005em;
+  font-size: 0.85rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   border: 1px solid transparent;
   cursor: pointer;
   transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease),
@@ -1214,9 +1218,7 @@ img {
 }
 
 /* animated underline for inline links in body copy */
-.prose a:not(.card),
-.footer__col a,
-.footer__bottom a {
+.prose a:not(.card) {
   background-image: linear-gradient(currentColor, currentColor);
   background-size: 0% 1px;
   background-position: 0 100%;
@@ -1224,9 +1226,7 @@ img {
   transition: background-size var(--dur) var(--ease), color var(--dur-fast) var(--ease);
 }
 
-.prose a:not(.card):hover,
-.footer__col a:hover,
-.footer__bottom a:hover {
+.prose a:not(.card):hover {
   background-size: 100% 1px;
 }
 
@@ -1283,60 +1283,25 @@ img {
 }
 
 /* ==========================================================================
-   Funder logo walls (project page + footer)
+   Funder logo wall (project page)
    ========================================================================== */
 
-.funder,
-.footer__funder {
+.funder {
   transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
     border-color var(--dur) var(--ease);
   box-shadow: var(--shadow-sm);
 }
 
 .funder:hover,
-.funder:focus-visible,
-.footer__funder:hover,
-.footer__funder:focus-visible {
+.funder:focus-visible {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
 /* Funders are shown in full colour: these marks are the point of the wall. */
-.funder img,
-.footer__funder img {
+.funder img {
   filter: none;
   opacity: 1;
-}
-
-/* ==========================================================================
-   Footer
-   ========================================================================== */
-
-.footer {
-  position: relative;
-  border-top: 1px solid var(--line);
-  padding: 56px 0 48px;
-  margin-top: 8px;
-  color: var(--slate);
-  font-size: 0.89rem;
-}
-
-.footer::before {
-  content: "";
-  position: absolute;
-  inset: -1px 0 auto;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-line), transparent);
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.footer a {
-  color: var(--muted);
-}
-
-.footer a:hover {
-  color: var(--teal-light);
 }
 
 /* ==========================================================================
@@ -1506,8 +1471,7 @@ img {
   .card:hover,
   .stat:hover,
   .step:hover,
-  .funder:hover,
-  .footer__funder:hover {
+  .funder:hover {
     transform: none;
   }
 

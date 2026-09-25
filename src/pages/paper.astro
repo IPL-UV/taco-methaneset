@@ -34,108 +34,154 @@ const bibtex = `@article{aybar2026methaneset,
 ---
 
 <Base
-  title="Paper | MethaneSET"
-  description="MethaneSET: unified multi-sensor AI-ready datasets for satellite-based methane plume detection."
+  title="Papers | MethaneSET"
+  description="The TACO specification paper and the MethaneSET manuscript."
 >
   <section class="section">
     <div class="container prose">
-      <p class="eyebrow">Paper</p>
-      <h1 class="paper-title">
-        MethaneSET: Unified Multi-Sensor AI-Ready Datasets for Satellite-Based Methane Plume Detection
-      </h1>
-      <p class="authors">{authors.join(", ")}</p>
-      <p class="venue">Scientific Data, under review</p>
-      <ul class="affils">
-        {affiliations.map((a) => <li>{a}</li>)}
-        <li>* Equal contribution.</li>
-      </ul>
-
-      <h2>Abstract</h2>
-      <p>
-        Detecting methane plumes from space at high spatial resolution relies on two broad
-        classes of instruments that sample the shortwave infrared window: multispectral
-        radiometers such as Sentinel-2 and Landsat 8/9, and imaging spectrometers such as
-        EMIT, each with distinct data requirements. Multispectral radiometers possess only
-        two broad shortwave infrared bands, so robust detection requires temporally paired
-        acquisitions to isolate methane absorption. Imaging spectrometers sample the same
-        window at much finer spectral resolution, giving high sensitivity to the methane
-        signature and enabling detection from a single acquisition; their processing
-        approaches differ, from matched-filter retrievals to deep learning, but all require
-        calibrated radiance as input.
+      <p class="eyebrow">Papers</p>
+      <h1 class="paper-title">Papers</h1>
+      <p class="lead">
+        Two papers: the TACO specification this project is built on, and the MethaneSET
+        manuscript describing the datasets.
       </p>
-      <p>
-        No existing resource standardizes data across both instrument classes or provides
-        the input diversity needed to train and benchmark detection models jointly.
-        MethaneSET addresses this gap with datasets for Sentinel-2, Landsat 8/9, and EMIT
-        under a unified metadata schema. The multispectral components include
-        expert-verified plume masks and confirmed plume-free reference scenes. The
-        hyperspectral EMIT component is, to our knowledge, the first to distribute
-        calibrated radiance hypercubes alongside plume annotations, adding precomputed
-        matched-filter products and two independently derived plume segmentation masks per
-        scene. A synthetic plume bank of over one million enhancements from WRF-LES
-        simulations enables both controlled data augmentation and physical sensitivity
-        experiments across wind speeds, solar geometries, and source configurations. All
-        datasets are distributed as Parquet catalogs with Cloud-Optimized GeoTIFFs.
-      </p>
+    </div>
+  </section>
 
-      <h2>Citation</h2>
-      <pre class="code" set:html={bibtex}></pre>
+  <section class="section section--tight">
+    <div class="container">
+      <article class="paper">
+        <div class="paper__head">
+          <span class="paper__tag">Specification</span>
+          <h2 class="paper__title">TACO: Transparent Access to Cloud-Optimized datasets</h2>
+          <p class="paper__desc">
+            How an AI-ready Earth observation dataset is described, stored and queried:
+            a collection of self-contained samples, metadata in a Parquet footer, and
+            pixels streamed by byte range. MethaneSET is published following this
+            specification.
+          </p>
+        </div>
+        <div class="paper__links">
+          <a class="btn btn--ghost" href="https://www.overleaf.com/project/682cf7b3e007a602bb67a7fe" target="_blank" rel="noopener">
+            Overleaf project
+          </a>
+          <a class="btn btn--ghost" href="https://asterisk.coop/taco/spec" target="_blank" rel="noopener">
+            Specification
+          </a>
+          <a class="btn btn--ghost" href="https://github.com/asterisk-labs/taco" target="_blank" rel="noopener">
+            Source
+          </a>
+        </div>
+      </article>
+    </div>
+  </section>
 
-      <h2>Resources</h2>
-      <ul>
-        <li>
-          <a href="https://huggingface.co/datasets/tacofoundation/methaneset" target="_blank" rel="noopener">
+  <section class="section section--tight">
+    <div class="container">
+      <article class="paper">
+        <div class="paper__head">
+          <span class="paper__tag">Manuscript</span>
+          <h2 class="paper__title">
+            MethaneSET: Unified Multi-Sensor AI-Ready Datasets for Satellite-Based Methane
+            Plume Detection
+          </h2>
+        </div>
+
+        <div class="prose paper__body">
+          <p class="authors">{authors.join(", ")}</p>
+          <p class="venue">Scientific Data, under review</p>
+          <ul class="affils">
+            {affiliations.map((a) => <li>{a}</li>)}
+            <li>* Equal contribution.</li>
+          </ul>
+
+          <h3>Abstract</h3>
+          <p>
+            Detecting methane plumes from space at high spatial resolution relies on two
+            broad classes of instruments that sample the shortwave infrared window:
+            multispectral radiometers such as Sentinel-2 and Landsat 8/9, and imaging
+            spectrometers such as EMIT, each with distinct data requirements.
+            Multispectral radiometers possess only two broad shortwave infrared bands, so
+            robust detection requires temporally paired acquisitions to isolate methane
+            absorption. Imaging spectrometers sample the same window at much finer
+            spectral resolution, giving high sensitivity to the methane signature and
+            enabling detection from a single acquisition; their processing approaches
+            differ, from matched-filter retrievals to deep learning, but all require
+            calibrated radiance as input.
+          </p>
+          <p>
+            No existing resource standardizes data across both instrument classes or
+            provides the input diversity needed to train and benchmark detection models
+            jointly. MethaneSET addresses this gap with datasets for Sentinel-2,
+            Landsat 8/9, and EMIT under a unified metadata schema. The multispectral
+            components include expert-verified plume masks and confirmed plume-free
+            reference scenes. The hyperspectral EMIT component is, to our knowledge, the
+            first to distribute calibrated radiance hypercubes alongside plume
+            annotations, adding precomputed matched-filter products and two independently
+            derived plume segmentation masks per scene. A synthetic plume bank of over one
+            million enhancements from WRF-LES simulations enables both controlled data
+            augmentation and physical sensitivity experiments across wind speeds, solar
+            geometries, and source configurations. All datasets are distributed as Parquet
+            catalogs with Cloud-Optimized GeoTIFFs.
+          </p>
+
+          <h3>Citation</h3>
+          <pre class="code" set:html={bibtex}></pre>
+        </div>
+
+        <div class="paper__links">
+          <a class="btn btn--ghost" href="https://huggingface.co/datasets/tacofoundation/methaneset" target="_blank" rel="noopener">
             Dataset on Hugging Face
           </a>
-        </li>
-        <li>
-          <a href="https://huggingface.co/datasets/tacofoundation/methaneset/blob/main/README.md" target="_blank" rel="noopener">
+          <a class="btn btn--ghost" href="https://huggingface.co/datasets/tacofoundation/methaneset/blob/main/README.md" target="_blank" rel="noopener">
             Dataset card
           </a>
-        </li>
-        <li>
-          <a href="https://www.overleaf.com/project/682cf7b3e007a602bb67a7fe" target="_blank" rel="noopener">
-            TACO paper (Overleaf project)
-          </a>
-        </li>
-      </ul>
+        </div>
+      </article>
     </div>
   </section>
 </Base>
 
 <style>
-  /* A full paper title at the normal h1 scale swamps the page, so step it down
-     while keeping it the page's only h1. Selectors are prefixed with .prose
-     because the shared prose rules would otherwise win on specificity. */
-  .prose h1.paper-title {
-    font-size: clamp(1.55rem, 2.7vw, 2.1rem);
-    line-height: 1.2;
-    margin-bottom: 0.7em;
+  .paper {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    padding: clamp(24px, 3vw, 40px);
   }
-  .prose > p.authors {
-    margin-bottom: 0.3em;
-    color: var(--text);
-    font-size: 1.02rem;
-    line-height: 1.7;
-  }
-  .prose > p.venue {
-    margin-bottom: 1.2em;
+  .paper__tag {
+    display: inline-block;
     font-family: var(--font-mono);
-    font-size: 0.76rem;
-    letter-spacing: 0.08em;
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--accent-text);
+    border: 1px solid var(--accent-line);
+    border-radius: var(--radius-xs);
+    padding: 4px 10px;
+    margin-bottom: 16px;
   }
-  .prose ul.affils {
+  .paper__title {
+    font-size: clamp(1.3rem, 2.4vw, 1.8rem);
+    line-height: 1.25;
+    margin: 0 0 14px;
+  }
+  .paper__desc {
+    color: var(--muted);
+    max-width: 70ch;
     margin: 0;
-    padding: 1.1em 0 0;
-    border-top: 1px solid var(--line);
-    list-style: none;
-    color: var(--slate);
-    font-size: 0.84rem;
-    line-height: 1.6;
   }
-  .prose ul.affils li {
-    margin-bottom: 0;
+  .paper__body {
+    max-width: none;
+  }
+  .paper__body h3 {
+    font-size: 1.05rem;
+    margin: 1.8em 0 0.6em;
+  }
+  .paper__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 28px;
   }
 </style>

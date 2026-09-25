@@ -3,104 +3,88 @@ const year = new Date().getFullYear();
 const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 const url = (p = "") => `${base}${p.replace(/^\/+/, "")}`;
 
-const institutions = [
-  { src: "uv.svg", alt: "Universitat de València", href: "https://www.uv.es" },
-  { src: "upv.svg", alt: "Universitat Politècnica de València", href: "https://www.upv.es" },
-  { src: "leipzig.svg", alt: "Leipzig University", href: "https://www.uni-leipzig.de" },
-  { src: "gmh.png", alt: "Global Methane Hub", href: "https://www.globalmethanehub.org" },
-  { src: "ccai.png", alt: "Climate Change AI", href: "https://www.climatechange.ai" },
-];
-
-const columns = [
-  {
-    title: "Project",
-    links: [
-      { label: "Data", href: url("data/") },
-      { label: "Paper", href: url("paper/") },
-      { label: "Code", href: url("code/") },
-      { label: "About", href: url("project/") },
-    ],
-  },
-  {
-    title: "Repositories",
-    links: [
-      { label: "GitHub", href: "https://github.com/IPL-UV/taco-methaneset" },
-      { label: "Hugging Face", href: "https://huggingface.co/datasets/tacofoundation/methaneset" },
-      { label: "TACO specification", href: "https://asterisk.coop/taco/spec" },
-    ],
-  },
+const links = [
+  { label: "Data", href: url("data/") },
+  { label: "Papers", href: url("paper/") },
+  { label: "Code", href: url("code/") },
+  { label: "About", href: url("project/") },
+  { label: "GitHub", href: "https://github.com/IPL-UV/taco-methaneset", external: true },
+  { label: "Hugging Face", href: "https://huggingface.co/datasets/tacofoundation/methaneset", external: true },
 ];
 ---
 
 <footer class="footer">
-  <div class="container footer__top">
-    <div class="footer__brand">
-      <p class="footer__mark"><span class="footer__dot"></span>MethaneSET</p>
-      <p class="footer__tagline">
-        Multi-sensor, AI-ready methane datasets from Sentinel-2, Landsat 8/9 and EMIT,
-        built on the TACO specification.
-      </p>
-      <p class="footer__org">
-        Image and Signal Processing Group, Universitat de València
-      </p>
-    </div>
+  <div class="container footer__inner">
+    <a class="footer__mark" href={base}>
+      <span class="footer__dot"></span>
+      MethaneSET
+    </a>
 
-    <nav class="footer__cols" aria-label="Footer">
-      {
-        columns.map((col) => (
-          <div class="footer__col">
-            <p class="footer__col-title">{col.title}</p>
-            {col.links.map((l) => (
-              <a href={l.href} target={l.href.startsWith("http") ? "_blank" : undefined} rel={l.href.startsWith("http") ? "noopener" : undefined}>
-                {l.label}
-              </a>
-            ))}
-          </div>
-        ))
-      }
-    </nav>
-  </div>
+    <p class="footer__tagline">
+      Multi-sensor, AI-ready methane datasets from Sentinel-2, Landsat 8/9 and EMIT,
+      built on the TACO specification.
+    </p>
 
-  <div class="container footer__funders">
-    <p class="footer__funders-label">Funded and supported by</p>
-    <div class="footer__funders-row">
+    <nav class="footer__nav" aria-label="Footer">
       {
-        institutions.map((f) => (
-          <a class="footer__funder" href={f.href} target="_blank" rel="noopener" title={f.alt}>
-            <img src={`${base}logos/${f.src}`} alt={f.alt} loading="lazy" />
+        links.map((l) => (
+          <a
+            href={l.href}
+            target={l.external ? "_blank" : undefined}
+            rel={l.external ? "noopener" : undefined}
+          >
+            {l.label}
           </a>
         ))
       }
-    </div>
-  </div>
+    </nav>
 
-  <div class="container footer__bottom">
-    <span>© {year} MethaneSET</span>
-    <span>Data CC-BY-NC-SA 4.0, plume bank CC-BY 4.0</span>
-    <span>Built on <a href="https://asterisk.coop/taco/spec" target="_blank" rel="noopener">TACO</a></span>
+    <div class="footer__meta">
+      <span>© {year} MethaneSET</span>
+      <span>Image and Signal Processing Group, Universitat de València</span>
+      <span>Data CC-BY-NC-SA 4.0, plume bank CC-BY 4.0</span>
+      <span>
+        Funded by
+        <a href="https://www.climatechange.ai" target="_blank" rel="noopener">CCAI</a>
+        and the
+        <a href="https://www.globalmethanehub.org" target="_blank" rel="noopener">Global Methane Hub</a>
+      </span>
+    </div>
   </div>
 </footer>
 
 <style>
-  .footer__top {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 40px;
-    justify-content: space-between;
-    padding-top: 56px;
+  .footer {
+    position: relative;
+    margin-top: 40px;
   }
-  .footer__brand {
-    max-width: 420px;
+  .footer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(560px, 80%);
+    height: 1px;
+    background: var(--gradient-strong, var(--gradient));
+    opacity: 0.55;
+  }
+  .footer__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 64px 24px 56px;
   }
   .footer__mark {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 10px;
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     color: var(--text);
-    margin: 0 0 12px;
+    margin-bottom: 14px;
   }
   .footer__dot {
     width: 11px;
@@ -110,95 +94,39 @@ const columns = [
   }
   .footer__tagline {
     color: var(--muted);
-    font-size: 0.92rem;
-    margin: 0 0 10px;
+    font-size: 0.95rem;
+    max-width: 52ch;
+    margin: 0 0 26px;
   }
-  .footer__org {
-    color: var(--slate);
-    font-size: 0.82rem;
-    margin: 0;
-  }
-  .footer__cols {
-    display: flex;
-    gap: 56px;
-    flex-wrap: wrap;
-  }
-  .footer__col {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .footer__col-title {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--accent-text);
-    margin: 0 0 4px;
-  }
-  .footer__col a {
-    color: var(--muted);
-    font-size: 0.9rem;
-    width: fit-content;
-  }
-  .footer__col a:hover {
-    color: var(--accent-text);
-  }
-  .footer__funders {
-    padding-top: 40px;
-    padding-bottom: 32px;
-  }
-  .footer__funders-label {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--slate);
-    margin: 0 0 14px;
-  }
-  .footer__funders-row {
+  .footer__nav {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-  }
-  .footer__funder {
-    background: #ffffff;
-    border-radius: var(--radius-xs);
-    padding: 10px 16px;
-    display: inline-flex;
-    align-items: center;
     justify-content: center;
-    height: 72px;
-    min-width: 136px;
-    transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
+    gap: 10px 26px;
+    margin-bottom: 30px;
   }
-  .footer__funder:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+  .footer__nav a {
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
   }
-  .footer__funder img {
-    max-height: 46px;
-    max-width: 100%;
-    object-fit: contain;
+  .footer__nav a:hover {
+    color: var(--accent-text);
   }
-  .footer__bottom {
+  .footer__meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px 28px;
-    justify-content: space-between;
-    padding-top: 22px;
-    padding-bottom: 34px;
-    border-top: 1px solid var(--line);
+    justify-content: center;
+    gap: 6px 20px;
     color: var(--slate);
-    font-size: 0.82rem;
+    font-size: 0.8rem;
+    max-width: 72ch;
   }
-  .footer__bottom a {
+  .footer__meta a {
     color: var(--muted);
-  }
-  @media (max-width: 720px) {
-    .footer__cols {
-      gap: 32px;
-    }
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 </style>
