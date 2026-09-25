@@ -64,6 +64,7 @@
   --shadow-panel: 0 18px 42px -26px rgba(0, 0, 0, 0.92);
   --shadow-nav: 0 1px 0 rgba(148, 163, 184, 0.12);
   --shadow-lg: 0 26px 60px -32px rgba(0, 0, 0, 0.9);
+  --btn-glow: 0 10px 24px -12px rgba(45, 212, 191, 0.55);
 
   --radius-xs: 3px;
   --radius-sm: 3px;
@@ -299,12 +300,13 @@ img {
 
 .src {
   display: block;
-  margin-top: 2em;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1.75;
+  margin-top: 2.2em;
+  padding-left: 14px;
+  border-left: 2px solid var(--accent-line);
+  font-size: 0.8rem;
+  line-height: 1.7;
   color: var(--slate);
-  max-width: 76ch;
+  max-width: 78ch;
 }
 
 .src a {
@@ -1145,3 +1147,66 @@ img {
 }
 
 
+
+
+/* ==========================================================================
+   Motion: one system, one duration, one easing
+   ========================================================================== */
+
+.nav__links a:not(.btn):hover {
+  border-bottom-color: var(--accent-line);
+}
+
+.card,
+.dcard,
+.funder {
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+    border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+
+.card:hover,
+.card:focus-visible,
+.dcard:hover,
+.dcard:focus-visible,
+.funder:hover,
+.funder:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-panel);
+}
+
+.stat,
+.step {
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+.stat:hover,
+.step:hover {
+  border-color: var(--accent-line);
+  transform: translateY(-2px);
+}
+
+.stat__num,
+.step::before {
+  transition: color var(--dur) var(--ease);
+}
+
+.stat:hover .stat__num,
+.step:hover::before {
+  color: var(--accent-text);
+}
+
+.btn {
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease),
+    background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--btn-glow);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
