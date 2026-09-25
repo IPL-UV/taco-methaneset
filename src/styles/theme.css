@@ -1210,3 +1210,31 @@ img {
   transform: translateY(0);
   box-shadow: none;
 }
+
+
+/* ==========================================================================
+   Scroll reveal, enabled only when JS adds .js-reveal (see Base.astro).
+   The selector list must stay in sync with the observer's selector.
+   The transition also carries the hover motion, so cards inside grids keep
+   both their reveal and their lift.
+   ========================================================================== */
+
+.js-reveal .section .container > *:not(.grid):not(.stats):not(.steps),
+.js-reveal .grid > *,
+.js-reveal .stats > *,
+.js-reveal .steps > * {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.72s var(--ease-out), transform 0.72s var(--ease-out),
+    box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease),
+    background-color var(--dur) var(--ease);
+  transition-delay: calc(var(--rd, 0) * 70ms);
+}
+
+.js-reveal .section .container > .is-in:not(.grid):not(.stats):not(.steps),
+.js-reveal .grid > .is-in,
+.js-reveal .stats > .is-in,
+.js-reveal .steps > .is-in {
+  opacity: 1;
+  transform: none;
+}

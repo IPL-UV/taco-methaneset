@@ -52,6 +52,17 @@ const canonical = new URL(path, Astro.site ?? Astro.url).href;
         }
       })();
     </script>
+    <script is:inline>
+      /* Arm the scroll-reveal styles before first paint, so nothing flashes.
+         Without JS, or with reduced motion, the class never lands and every
+         element stays visible. */
+      (function () {
+        var root = document.documentElement;
+        var reduced =
+          window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if ("IntersectionObserver" in window && !reduced) root.classList.add("js-reveal");
+      })();
+    </script>
     <title>{title}</title>
   </head>
   <body>
@@ -84,6 +95,42 @@ const canonical = new URL(path, Astro.site ?? Astro.url).href;
           { passive: true },
         );
         paint();
+      })();
+    </script>
+    <script is:inline>
+      /* Scroll reveal: content fades and rises as it enters the viewport.
+         Selector list must stay in sync with the .js-reveal block in theme.css. */
+      (function () {
+        var root = document.documentElement;
+        if (!root.classList.contains("js-reveal")) return;
+
+        var SELECTOR =
+          ".section .container > *:not(.grid):not(.stats):not(.steps)," +
+          ".grid > *,.stats > *,.steps > *";
+
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (!entry.isIntersecting) return;
+              entry.target.classList.add("is-in");
+              observer.unobserve(entry.target);
+            });
+          },
+          { rootMargin: "0px 0px -8% 0px", threshold: 0.05 },
+        );
+
+        /* Stagger only inside grids, whose items enter together. Items stacked
+           down a column scroll in one by one, so a delay there just feels slow. */
+        var groups = new Map();
+        document.querySelectorAll(SELECTOR).forEach(function (el) {
+          var parent = el.parentElement;
+          if (parent && parent.matches(".grid, .stats, .steps")) {
+            var i = groups.get(parent) || 0;
+            groups.set(parent, i + 1);
+            if (i > 0) el.style.setProperty("--rd", Math.min(i, 5));
+          }
+          observer.observe(el);
+        });
       })();
     </script>
   </body>
