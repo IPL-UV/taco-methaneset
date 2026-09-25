@@ -5,9 +5,10 @@ const url = (p = "") => `${base}${p.replace(/^\/+/, "")}`;
 
 const links = [
   { label: "Data", href: url("data/") },
+  { label: "TACO", href: url("taco/") },
   { label: "Papers", href: url("paper/") },
   { label: "Code", href: url("code/") },
-  { label: "About", href: url("project/") },
+  { label: "Project", href: url("project/") },
   { label: "GitHub", href: "https://github.com/IPL-UV/taco-methaneset", external: true },
   { label: "Hugging Face", href: "https://huggingface.co/datasets/tacofoundation/methaneset", external: true },
 ];
@@ -47,6 +48,12 @@ const links = [
       <p class="footer__legal">
         <span>© {year} MethaneSET</span>
         <span>Data CC-BY-NC-SA 4.0, plume bank CC-BY 4.0</span>
+        <span>
+          Basemaps
+          <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>,
+          <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a>,
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+        </span>
       </p>
     </div>
   </div>
@@ -88,17 +95,13 @@ const links = [
     flex-wrap: wrap;
     justify-content: center;
     gap: 10px 26px;
-    padding-bottom: 28px;
     margin-bottom: 26px;
-    border-bottom: 1px solid var(--line);
     width: min(100%, 620px);
   }
   .footer__nav a {
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
   }
   .footer__nav a:hover {
     color: var(--text);

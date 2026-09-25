@@ -299,9 +299,7 @@ img {
 
 .src {
   display: block;
-  margin-top: 2.6em;
-  padding-top: 1.1em;
-  border-top: 1px solid var(--line);
+  margin-top: 2em;
   font-family: var(--font-mono);
   font-size: 0.75rem;
   line-height: 1.75;
@@ -350,18 +348,6 @@ img {
 
 .section--tight {
   padding: var(--section-tight) 0;
-}
-
-.section + .section::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(100% - calc(var(--gutter) * 2), var(--max));
-  height: 1px;
-  background: var(--line);
-  pointer-events: none;
 }
 
 /* ==========================================================================
@@ -565,7 +551,6 @@ img {
   display: flex;
   align-items: center;
   overflow: hidden;
-  border-bottom: 1px solid var(--line);
 }
 
 .hero__globe {
@@ -632,7 +617,7 @@ img {
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0 34px;
+  gap: 18px 34px;
 }
 
 .stat {
@@ -784,7 +769,7 @@ img {
 .steps {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
-  gap: 4px 34px;
+  gap: 18px 34px;
   counter-reset: step;
 }
 
@@ -922,6 +907,14 @@ img {
   border-bottom-color: var(--line-strong);
 }
 
+.prose tbody th[scope="row"] {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
 .prose th {
   font-size: 0.7rem;
   font-weight: 600;
@@ -1056,7 +1049,7 @@ img {
   }
   .stats,
   .steps {
-    gap: 0 24px;
+    gap: 16px 24px;
   }
 }
 
@@ -1151,21 +1144,4 @@ img {
   margin: 0 0 10px;
 }
 
-/* Map attribution: required by the CARTO and Esri basemaps, kept quiet. */
-.maplibregl-ctrl-attrib {
-  background: var(--panel-bg) !important;
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xs);
-  font-family: var(--font-body);
-  font-size: 0.68rem;
-  color: var(--slate);
-}
 
-.maplibregl-ctrl-attrib a {
-  color: var(--muted);
-}
-
-.maplibregl-ctrl-attrib.maplibregl-compact {
-  margin: 0 0 16px 16px;
-}

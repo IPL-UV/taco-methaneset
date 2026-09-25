@@ -636,7 +636,6 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     let basemapChoice = "auto";
 
     (window as any).__map = map;
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
 
     if (focusRight) {
       const applyPadding = () => map.setPadding({ left: Math.round(el.clientWidth * 0.42) });
