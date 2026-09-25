@@ -123,19 +123,34 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     min-width: 230px;
     max-height: calc(100% - 100px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     pointer-events: auto;
     background: var(--panel-bg);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px 16px;
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    padding: 15px 16px;
     font-size: 0.85rem;
     color: var(--muted);
+    box-shadow: var(--shadow-lg);
+    animation: panel-in 0.5s var(--ease-out) both;
+  }
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
   .globe-panel__title {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.14em;
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--teal);
     margin: 0 0 8px;
@@ -144,11 +159,19 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 0;
+    padding: 5px 7px;
+    margin: 0 -7px;
+    border-radius: var(--radius-xs);
     cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  }
+  .globe-check:hover {
+    background: var(--accent-soft);
+    color: var(--text);
   }
   .globe-check input {
     accent-color: var(--teal);
+    cursor: pointer;
   }
   .globe-dot {
     width: 10px;
@@ -156,16 +179,28 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     border-radius: 50%;
     display: inline-block;
     flex: none;
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.12);
   }
   .globe-select {
     width: 100%;
     background: var(--panel-solid);
     color: var(--text);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 6px 8px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-xs);
+    padding: 7px 26px 7px 9px;
     font-family: var(--font-body);
     font-size: 0.85rem;
+    cursor: pointer;
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+  }
+  .globe-select:hover {
+    border-color: var(--accent-line);
   }
   .globe-row {
     display: flex;
@@ -209,14 +244,18 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     width: 268px;
     max-height: calc(100% - 100px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     pointer-events: auto;
     background: var(--panel-bg);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px 16px;
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    padding: 15px 16px;
     font-size: 0.85rem;
     color: var(--muted);
+    box-shadow: var(--shadow-lg);
+    animation: panel-in 0.45s var(--ease-out) both;
   }
   .sample-viewer :global(.sv-title) {
     font-family: var(--font-display);
@@ -239,18 +278,24 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   }
   .sample-viewer :global(.sv-nav__btn) {
     background: transparent;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-strong);
     color: var(--text);
-    border-radius: 8px;
+    border-radius: var(--radius-xs);
     width: 30px;
     height: 30px;
     cursor: pointer;
     font-size: 1rem;
     line-height: 1;
+    transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+      background-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
   }
   .sample-viewer :global(.sv-nav__btn:hover) {
     border-color: var(--teal);
     color: var(--teal-light);
+    background: var(--accent-soft);
+  }
+  .sample-viewer :global(.sv-nav__btn:active) {
+    transform: scale(0.92);
   }
   .sample-viewer :global(.sv-nav__pos) {
     font-family: var(--font-mono);
@@ -269,13 +314,16 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     gap: 8px;
     padding: 6px 8px;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius-xs);
     cursor: pointer;
     font-size: 0.82rem;
     color: var(--text);
+    transition: border-color var(--dur-fast) var(--ease),
+      background-color var(--dur-fast) var(--ease);
   }
   .sample-viewer :global(.sv-asset:hover) {
     border-color: var(--teal);
+    background: var(--accent-soft);
   }
   .sample-viewer :global(.sv-asset input) {
     accent-color: var(--teal);
@@ -322,24 +370,29 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     font-size: 1.1rem;
     line-height: 1;
     padding: 0 2px;
+    transition: color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
   }
   .sample-viewer :global(.sv-remove:hover) {
     color: var(--orange);
+    transform: scale(1.15);
   }
   .sample-viewer :global(.sv-clear) {
     margin-top: 8px;
     background: transparent;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-strong);
     color: var(--muted);
-    border-radius: 8px;
+    border-radius: var(--radius-xs);
     padding: 5px 10px;
     cursor: pointer;
     font-family: var(--font-mono);
     font-size: 0.72rem;
+    transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+      background-color var(--dur-fast) var(--ease);
   }
   .sample-viewer :global(.sv-clear:hover) {
     border-color: var(--teal);
     color: var(--teal-light);
+    background: var(--accent-soft);
   }
   .layer-panel {
     position: absolute;
@@ -348,14 +401,18 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     width: 300px;
     max-height: 42%;
     overflow-y: auto;
+    overscroll-behavior: contain;
     pointer-events: auto;
     background: var(--panel-bg);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px 16px;
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    padding: 15px 16px;
     font-size: 0.85rem;
     color: var(--muted);
+    box-shadow: var(--shadow-lg);
+    animation: panel-in 0.45s var(--ease-out) both;
   }
   .layer-panel :global(.lp-item) {
     display: grid;
@@ -385,18 +442,24 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   }
   .layer-panel :global(.lp-chip) {
     background: transparent;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-strong);
     color: var(--slate);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     padding: 3px 9px;
     cursor: pointer;
     font-family: var(--font-mono);
     font-size: 0.66rem;
+    transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+      background-color var(--dur-fast) var(--ease);
+  }
+  .layer-panel :global(.lp-chip:hover) {
+    color: var(--text);
+    border-color: var(--accent-line);
   }
   .layer-panel :global(.lp-chip.is-on) {
     border-color: var(--teal);
     color: var(--teal-light);
-    background: rgba(45, 212, 191, 0.12);
+    background: var(--accent-soft);
   }
   .layer-panel :global(.lp-item__actions) {
     display: flex;
@@ -410,18 +473,31 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     font-size: 0.95rem;
     line-height: 1;
     padding: 2px 4px;
+    transition: color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
   }
   .layer-panel :global(.lp-icon:hover) {
     color: var(--teal-light);
+    transform: scale(1.12);
+  }
+  .globe-count {
+    transition: color var(--dur) var(--ease);
   }
   @media (max-width: 720px) {
     .globe-panel {
       top: 12px;
       left: 12px;
+      max-width: calc(100% - 24px);
     }
     .sample-viewer,
     .layer-panel {
       display: none !important;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .globe-panel,
+    .sample-viewer,
+    .layer-panel {
+      animation: none;
     }
   }
 </style>
