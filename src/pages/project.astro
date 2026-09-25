@@ -1,28 +1,36 @@
 ---
 import Base from "../layouts/Base.astro";
 
-const groups = [
-  {
-    org: "Image and Signal Processing Group (ISP)",
-    place: "Universitat de València",
-    people: "Luis Gómez-Chova (PI) · Cesar Aybar · Julio Contreras",
-  },
-  {
-    org: "Land and Atmosphere Remote Sensing (LARS)",
-    place: "Universitat Politècnica de València",
-    people: "Luis Guanter",
-  },
-  {
-    org: "Remote Sensing Centre for Earth System Research (RSC4Earth)",
-    place: "Leipzig University",
-    people: "Miguel D. Mahecha · David Montero",
-  },
+const team = [
+  { name: "Luis Gómez-Chova", role: "Principal Investigator", org: "Image and Signal Processing Group (ISP), Universitat de València" },
+  { name: "Cesar Aybar", role: "ML researcher", org: "Image and Signal Processing Group (ISP), Universitat de València" },
+  { name: "Julio Contreras", role: "ML researcher", org: "Image and Signal Processing Group (ISP), Universitat de València" },
+  { name: "Luis Guanter", role: "Co-Investigator", org: "Land and Atmosphere Remote Sensing (LARS), Universitat Politècnica de València" },
+  { name: "David Montero", role: "ML researcher", org: "Remote Sensing Centre for Earth System Research (RSC4Earth), Leipzig University" },
+  { name: "Miguel D. Mahecha", role: "Co-Investigator", org: "Remote Sensing Centre for Earth System Research (RSC4Earth), Leipzig University" },
 ];
+
+const outcomes = [
+  { num: "7", label: "TACO datasets published" },
+  { num: "6,819", label: "Hugging Face downloads by Sep 2026" },
+  { num: "948", label: "Zenodo simulation downloads" },
+  { num: "~1.07 TB", label: "released and documented" },
+];
+
+const funders = [
+  { src: "uv.svg", alt: "Universitat de València" },
+  { src: "upv.svg", alt: "Universitat Politècnica de València" },
+  { src: "leipzig.svg", alt: "Leipzig University" },
+  { src: "gmh.png", alt: "Global Methane Hub" },
+  { src: "ccai.png", alt: "Climate Change AI" },
+];
+
+const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 ---
 
 <Base
   title="Project · MethaneSET"
-  description="Team, funding and links for the MethaneSET dataset project."
+  description="Team, funding and acknowledgements for the MethaneSET dataset project."
 >
   <section class="section">
     <div class="container prose">
@@ -36,53 +44,130 @@ const groups = [
         WRF-LES simulations.
       </p>
       <p>
-        The project builds on the TACO specification to make methane data FAIR:
-        findable, accessible, interoperable and reusable, so models can be trained and
-        compared across sensors without weeks of preprocessing.
+        Seven datasets are publicly available, totaling approximately 1.07 TB: 83,168
+        multispectral image pairs (4,905 with expert-verified plume masks and 78,263
+        confirmed plume-free), 721 EMIT granules with calibrated radiance and two
+        independent masks each, and 238,545 synthetic enhancements plus the 1,647 source
+        simulation cubes. The project builds on the TACO specification to make methane data
+        FAIR: findable, accessible, interoperable and reusable.
       </p>
+    </div>
+  </section>
+
+  <section class="section section--tight">
+    <div class="container">
+      <div class="stats">
+        {
+          outcomes.map((o) => (
+            <div class="stat">
+              <div class="stat__num">{o.num}</div>
+              <div class="stat__label">{o.label}</div>
+            </div>
+          ))
+        }
+      </div>
+      <span class="src">
+        Outcomes from the CCAI Innovation Grant final report, September 2026.
+      </span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container prose">
+      <h2>Grant</h2>
+      <table>
+        <tbody>
+          <tr><th>Program</th><td>Climate Change AI Innovation Grants 2024</td></tr>
+          <tr><th>Funder</th><td>Global Methane Hub (GMH)</td></tr>
+          <tr><th>Grant ID</th><td>G-2025-00888</td></tr>
+          <tr><th>Amount</th><td>USD 139,810</td></tr>
+          <tr><th>Period</th><td>September 2025 to August 2026</td></tr>
+          <tr><th>Host</th><td>University of Valencia, Spain</td></tr>
+        </tbody>
+      </table>
 
       <h2>Team</h2>
       <table>
         <thead>
-          <tr><th>Group</th><th>Institution</th><th>People</th></tr>
+          <tr><th>Name</th><th>Role</th><th>Group</th></tr>
         </thead>
         <tbody>
           {
-            groups.map((g) => (
+            team.map((t) => (
               <tr>
-                <td>{g.org}</td>
-                <td>{g.place}</td>
-                <td>{g.people}</td>
+                <td>{t.name}</td>
+                <td>{t.role}</td>
+                <td>{t.org}</td>
               </tr>
             ))
           }
         </tbody>
       </table>
 
-      <h2>Funding</h2>
+      <h2>Acknowledgements</h2>
       <p>
-        Funded by the Climate Change AI (CCAI) Innovation Grants program, hosted by CCAI
-        with the support of the Global Methane Hub (GMH), grant G-2025-00888. Supported
-        also by the Spanish Ministry of Science, Innovation and Universities
-        (PID2023-148485OB-C21 / C22, funded by MCIU / AEI / 10.13039 / 501100011033, ERDF,
-        EU).
+        This project was funded by the Climate Change AI (CCAI) Innovation Grants program,
+        hosted by CCAI with the support of the Global Methane Hub (GMH), and by the Spanish
+        Ministry of Science, Innovation and Universities (grants PID2023-148485OB-C21 / C22
+        funded by MCIU / AEI / 10.13039 / 501100011033, ERDF, EU). We thank UNEP's
+        International Methane Emissions Observatory (IMEO) for providing access to the MARS
+        plume annotations and Carbon Mapper for making their plume detections publicly
+        available. EMIT Level 1B radiance data were obtained from NASA's Land Processes
+        Distributed Active Archive Center (LP DAAC).
       </p>
-      <p>
-        We thank UNEP's International Methane Emissions Observatory (IMEO) for the MARS
-        plume annotations, Carbon Mapper for their public detections, and NASA LP DAAC for
-        the EMIT Level 1B radiance data.
-      </p>
+    </div>
+  </section>
 
+  <section class="section section--tight">
+    <div class="container">
+      <p class="eyebrow">Supported by</p>
+      <div class="funders">
+        {
+          funders.map((f) => (
+            <div class="funder">
+              <img src={`${base}logos/${f.src}`} alt={f.alt} loading="lazy" />
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--tight">
+    <div class="container prose">
       <h2>Links</h2>
       <ul>
         <li><a href="https://github.com/IPL-UV/taco-methaneset" target="_blank" rel="noopener">This website (GitHub)</a></li>
         <li><a href="https://huggingface.co/datasets/tacofoundation/methaneset" target="_blank" rel="noopener">Datasets on Hugging Face</a></li>
         <li><a href="https://asterisk.coop/taco/spec" target="_blank" rel="noopener">TACO specification</a></li>
       </ul>
-
-      <span class="src">
-        Team and funding from the project description and the manuscript acknowledgements.
-      </span>
     </div>
   </section>
 </Base>
+
+<style>
+  .funders {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+  }
+  .funder {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 96px;
+    min-width: 170px;
+    flex: 1 1 170px;
+    max-width: 260px;
+  }
+  .funder img {
+    max-height: 52px;
+    max-width: 100%;
+    object-fit: contain;
+  }
+</style>

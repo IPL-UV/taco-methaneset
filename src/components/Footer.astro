@@ -1,8 +1,25 @@
 ---
 const year = new Date().getFullYear();
+const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const funders = [
+  { src: "uv.svg", alt: "Universitat de València" },
+  { src: "upv.svg", alt: "Universitat Politècnica de València" },
+  { src: "leipzig.svg", alt: "Leipzig University" },
+  { src: "gmh.png", alt: "Global Methane Hub" },
+  { src: "ccai.png", alt: "Climate Change AI" },
+];
 ---
 
 <footer class="footer">
+  <div class="container footer__funders">
+    {
+      funders.map((f) => (
+        <span class="footer__funder">
+          <img src={`${base}logos/${f.src}`} alt={f.alt} loading="lazy" />
+        </span>
+      ))
+    }
+  </div>
   <div class="container footer__row">
     <div>
       <strong style="font-family: var(--font-display); color: var(--text);">MethaneSET</strong>
@@ -20,3 +37,28 @@ const year = new Date().getFullYear();
     <div>© {year} · Funded by CCAI and the Global Methane Hub</div>
   </div>
 </footer>
+
+<style>
+  .footer__funders {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .footer__funder {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 52px;
+    min-width: 104px;
+  }
+  .footer__funder img {
+    max-height: 30px;
+    max-width: 100%;
+    object-fit: contain;
+  }
+</style>

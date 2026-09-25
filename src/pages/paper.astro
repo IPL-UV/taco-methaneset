@@ -1,11 +1,33 @@
 ---
 import Base from "../layouts/Base.astro";
 
+const authors = [
+  "Carlos Giner¹*",
+  "Julio Contreras¹*",
+  "Cesar Aybar¹",
+  "Gonzalo Mateo-García²",
+  "Javier Gorroño³",
+  "David Montero⁴,⁵",
+  "Miguel D. Mahecha⁴,⁵",
+  "Luis Guanter³",
+  "Luis Gómez-Chova¹",
+];
+
+const affiliations = [
+  "¹ Image and Signal Processing Group, Universitat de València, Spain",
+  "² International Methane Emissions Observatory, United Nations Environment Programme, France",
+  "³ Universitat Politècnica de València, Spain",
+  "⁴ Remote Sensing Centre for Earth System Research (RSC4Earth), Leipzig University, Germany",
+  "⁵ German Centre for Integrative Biodiversity Research (iDiv) Halle-Jena-Leipzig, Germany",
+];
+
 const bibtex = `@article{aybar2026methaneset,
-  title   = {MethaneSET: Unified Multi-Sensor Datasets for
-             Satellite-Based Methane Plume Detection},
-  author  = {Aybar, Cesar and Contreras, Julio and Montero, David
-             and Mahecha, Miguel D. and G{'}omez-Chova, Luis},
+  title   = {MethaneSET: Unified Multi-Sensor AI-Ready Datasets
+             for Satellite-Based Methane Plume Detection},
+  author  = {Giner, Carlos and Contreras, Julio and Aybar, Cesar
+             and Mateo-Garcia, Gonzalo and Gorrono, Javier
+             and Montero, David and Mahecha, Miguel D.
+             and Guanter, Luis and Gomez-Chova, Luis},
   journal = {Scientific Data},
   year    = {2026}
 }`;
@@ -13,35 +35,48 @@ const bibtex = `@article{aybar2026methaneset,
 
 <Base
   title="Paper · MethaneSET"
-  description="MethaneSET: unified multi-sensor datasets for satellite-based methane plume detection."
+  description="MethaneSET: unified multi-sensor AI-ready datasets for satellite-based methane plume detection."
 >
   <section class="section">
     <div class="container prose">
       <p class="eyebrow">Paper</p>
-      <h2>MethaneSET: unified multi-sensor datasets for satellite-based methane plume detection</h2>
+      <h2>MethaneSET: Unified Multi-Sensor AI-Ready Datasets for Satellite-Based Methane Plume Detection</h2>
       <p style="color: var(--muted);">
-        Cesar Aybar · Julio Contreras · David Montero · Miguel D. Mahecha · Luis Gómez-Chova
+        {authors.join(" · ")}
         <br />
         <span style="font-family: var(--font-mono); font-size: 0.8rem;">Scientific Data · under review</span>
       </p>
+      <p style="color: var(--slate); font-size: 0.85rem;">
+        {affiliations.map((a) => <span>{a}<br /></span>)}
+        * Equal contribution.
+      </p>
 
-      <h3>Summary</h3>
+      <h3>Abstract</h3>
       <p>
-        Methane is the second-largest driver of anthropogenic warming, and a
-        disproportionate share of emissions comes from a small number of super-emitters
-        detectable by satellite. MethaneSET provides analysis-ready datasets for methane
-        plume detection spanning three sensors, with expert-verified segmentation masks
-        from two independent monitoring systems (IMEO MARS and Carbon Mapper).
+        Detecting methane plumes from space at high spatial resolution relies on two broad
+        classes of instruments that sample the shortwave infrared window: multispectral
+        radiometers such as Sentinel-2 and Landsat 8/9, and imaging spectrometers such as
+        EMIT, each with distinct data requirements. Multispectral radiometers possess only
+        two broad shortwave infrared bands, so robust detection requires temporally paired
+        acquisitions to isolate methane absorption. Imaging spectrometers sample the same
+        window at much finer spectral resolution, giving high sensitivity to the methane
+        signature and enabling detection from a single acquisition; their processing
+        approaches differ, from matched-filter retrievals to deep learning, but all require
+        calibrated radiance as input.
       </p>
       <p>
-        For multispectral sensors (Sentinel-2, Landsat-8/9), labeled scenes with plume
-        masks and confirmed plume-free references are provided for change-detection
-        workflows. For the EMIT imaging spectrometer, calibrated radiance cubes and
-        precomputed matched-filter products support both end-to-end and retrieval-based
-        detection. A synthetic plume bank of 238,545 projected WRF-LES enhancements, plus
-        the 1,647 raw simulation cubes it is built from, enables physics-based data
-        augmentation. All datasets follow the TACO specification and are distributed as
-        Parquet catalogs with Cloud-Optimized GeoTIFFs.
+        No existing resource standardizes data across both instrument classes or provides
+        the input diversity needed to train and benchmark detection models jointly.
+        MethaneSET addresses this gap with datasets for Sentinel-2, Landsat 8/9, and EMIT
+        under a unified metadata schema. The multispectral components include
+        expert-verified plume masks and confirmed plume-free reference scenes. The
+        hyperspectral EMIT component is, to our knowledge, the first to distribute
+        calibrated radiance hypercubes alongside plume annotations, adding precomputed
+        matched-filter products and two independently derived plume segmentation masks per
+        scene. A synthetic plume bank of over one million enhancements from WRF-LES
+        simulations enables both controlled data augmentation and physical sensitivity
+        experiments across wind speeds, solar geometries, and source configurations. All
+        datasets are distributed as Parquet catalogs with Cloud-Optimized GeoTIFFs.
       </p>
 
       <h3>Citation</h3>
@@ -62,8 +97,8 @@ const bibtex = `@article{aybar2026methaneset,
       </ul>
 
       <span class="src">
-        Abstract from the published dataset card. The manuscript is being updated; figures
-        and final numbers will be added once it is stable.
+        Title, authors and abstract from the manuscript under review. Figures and final
+        numbers will be added once it is stable.
       </span>
     </div>
   </section>

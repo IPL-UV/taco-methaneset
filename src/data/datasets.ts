@@ -13,7 +13,7 @@ export const datasets: Dataset[] = [
     name: "methaneset-s2-pretraining",
     family: "Sentinel-2",
     subset: "Pretraining",
-    samples: 57291,
+    samples: 56344,
     sizeGB: 36.91,
     icon: "s2",
     abstract:
@@ -23,8 +23,8 @@ export const datasets: Dataset[] = [
     name: "methaneset-s2-finetune",
     family: "Sentinel-2",
     subset: "Finetune",
-    samples: 3603,
-    sizeGB: 6.37,
+    samples: 3552,
+    sizeGB: 6.4,
     icon: "s2",
     abstract:
       "Sentinel-2 imagery with expert-verified plume masks from IMEO MARS, all 13 bands at 10 m and 200x200 px patches.",
@@ -33,7 +33,7 @@ export const datasets: Dataset[] = [
     name: "methaneset-l89-pretraining",
     family: "Landsat 8/9",
     subset: "Pretraining",
-    samples: 21926,
+    samples: 21919,
     sizeGB: 8.88,
     icon: "l89",
     abstract:
@@ -54,7 +54,7 @@ export const datasets: Dataset[] = [
     family: "EMIT",
     subset: "Single",
     samples: 721,
-    sizeGB: 1005.24,
+    sizeGB: 1005,
     icon: "hyper",
     abstract:
       "EMIT radiance hypercubes (285 bands, 60 m) with standard matched filter, mag1c, and two independent plume masks per granule from IMEO and Carbon Mapper.",
@@ -64,7 +64,7 @@ export const datasets: Dataset[] = [
     family: "Plume bank",
     subset: "Single",
     samples: 238545,
-    sizeGB: 5.08,
+    sizeGB: 5.1,
     icon: "bank",
     abstract:
       "Precomputed WRF-LES column enhancements across solar and wind geometry, at a reference rate of 3000 kg/h. Injected into any plume-free scene.",
@@ -74,7 +74,7 @@ export const datasets: Dataset[] = [
     family: "Plume bank",
     subset: "Single",
     samples: 1647,
-    sizeGB: 3.06,
+    sizeGB: 3.1,
     icon: "bank",
     abstract:
       "The raw 3D WRF-LES simulation cubes the plume bank is projected from, for reprocessing under new geometries.",
