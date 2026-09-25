@@ -292,7 +292,7 @@ function polygonOf(coordinates: [number, number][]) {
 function popupHTML(p: SampleProps, asset?: Asset): string {
   const color = p.sensor === "EMIT" ? "#f97316" : p.sensor === "Sentinel-2" ? "#2dd4bf" : "#fde047";
   return (
-    `<div class="pp"><span class="pp-sensor" style="color:${color}">${p.sensor}${asset ? ` · ${ASSET_LABEL[asset]}` : ""}</span>` +
+    `<div class="pp"><span class="pp-sensor" style="color:${color}">${p.sensor}${asset ? ` (${ASSET_LABEL[asset]})` : ""}</span>` +
     `<h4>${p.country ?? "Unknown"}</h4>` +
     `<div class="pp-row"><span>Date</span><b>${p.date || "n/a"}</b></div>` +
     (p.flux ? `<div class="pp-row"><span>Flux</span><b>${Math.round(p.flux).toLocaleString()} kg/h</b></div>` : "") +
@@ -420,7 +420,7 @@ function renderLayersPanel(): void {
   }
 
   layersBody.innerHTML =
-    `<p class="globe-panel__title">On the map · ${groups.size}</p>` +
+    `<p class="globe-panel__title">On the map (${groups.size})</p>` +
     Array.from(groups.values())
       .map((group) => {
         const p = group[0].props;
@@ -432,7 +432,7 @@ function renderLayersPanel(): void {
           .join("");
         return (
           `<div class="lp-item">` +
-          `<div class="lp-item__text"><b>${p.sensor}</b><span>${p.country} · ${p.date}</span></div>` +
+          `<div class="lp-item__text"><b>${p.sensor}</b><span>${p.country}, ${p.date}</span></div>` +
           `<div class="lp-item__chips">${chips}</div>` +
           `<div class="lp-item__actions">` +
           `<button class="lp-icon" data-zoom="${p.id}" type="button" aria-label="Zoom">⌕</button>` +
@@ -495,8 +495,8 @@ function render(): void {
 
   const head =
     `<p class="globe-panel__title">Sample</p>` +
-    `<p class="sv-title">${p.sensor} · ${p.country ?? "Unknown"}</p>` +
-    `<p class="sv-status">${p.date || "n/a"} · ${p.dataset}${p.flux ? ` · ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
+    `<p class="sv-title">${p.sensor}, ${p.country ?? "Unknown"}</p>` +
+    `<p class="sv-status">${p.date || "n/a"}, ${p.dataset}${p.flux ? `, ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
 
   let bodyHtml = "";
   if (p.viz === "multispectral") {

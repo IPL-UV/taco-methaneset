@@ -17,6 +17,9 @@ const rel = Astro.url.pathname.replace(base, "");
       <span class="nav__dot"></span>
       MethaneSET
     </a>
+    <a class="nav__isp" href="https://isp.uv.es" target="_blank" rel="noopener" title="Image and Signal Processing Group">
+      <img src={`${base}logos/isp.png`} alt="ISP, Universitat de València" />
+    </a>
     <div class="nav__links">
       {
         links.map((l) => {
@@ -29,12 +32,27 @@ const rel = Astro.url.pathname.replace(base, "");
         })
       }
       <a
-        class="btn btn--primary nav__cta"
+        class="nav__icon"
+        href="https://github.com/IPL-UV/taco-methaneset"
+        target="_blank"
+        rel="noopener"
+        title="GitHub"
+        aria-label="GitHub"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+          ><path
+            d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.7.08-.7 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.73 1.27 3.4.97.1-.75.4-1.27.73-1.56-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.69 5.4-5.25 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"
+          /></svg>
+      </a>
+      <a
+        class="nav__icon"
         href="https://huggingface.co/datasets/tacofoundation/methaneset"
         target="_blank"
         rel="noopener"
+        title="Hugging Face"
+        aria-label="Hugging Face"
       >
-        Dataset
+        <span class="nav__hf">HF</span>
       </a>
       <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" type="button">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
@@ -63,6 +81,47 @@ const rel = Astro.url.pathname.replace(base, "");
 </script>
 
 <style>
+  .nav__isp {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border-radius: var(--radius-xs);
+    padding: 6px 11px;
+    height: 44px;
+    margin-left: 2px;
+  }
+  .nav__isp img {
+    height: 34px;
+    width: auto;
+    display: block;
+  }
+  .nav__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    color: var(--muted);
+    background: transparent;
+  }
+  .nav__icon:hover {
+    color: var(--text);
+    border-color: var(--teal);
+  }
+  .nav__icon svg {
+    width: 19px;
+    height: 19px;
+  }
+  .nav__hf {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+
   [data-theme="light"] .icon-sun,
   :root:not([data-theme="light"]) .icon-moon {
     display: none;

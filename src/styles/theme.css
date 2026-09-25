@@ -57,11 +57,11 @@
   --btn-glow: 0 8px 20px -10px rgba(45, 212, 191, 0.7);
   --btn-glow-hover: 0 14px 30px -12px rgba(45, 212, 191, 0.85);
 
-  --radius-xs: 8px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
-  --radius-pill: 999px;
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 3px;
 
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);

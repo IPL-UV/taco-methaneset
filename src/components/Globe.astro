@@ -8,9 +8,9 @@ interface Props {
 const { scrollZoom = false, controls = false, rotate = false, focusRight = false } = Astro.props;
 
 const sensors = [
-  { id: "EMIT", color: "#f97316", label: "EMIT · hyperspectral" },
-  { id: "Sentinel-2", color: "#2dd4bf", label: "Sentinel-2 · multispectral" },
-  { id: "Landsat 8/9", color: "#fde047", label: "Landsat 8/9 · multispectral" },
+  { id: "EMIT", color: "#f97316", label: "EMIT (hyperspectral)" },
+  { id: "Sentinel-2", color: "#2dd4bf", label: "Sentinel-2 (multispectral)" },
+  { id: "Landsat 8/9", color: "#fde047", label: "Landsat 8/9 (multispectral)" },
 ];
 
 const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
@@ -72,7 +72,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
           <option value="auto">Match theme</option>
           <option value="dark">Dark</option>
           <option value="light">Light</option>
-          <option value="satellite">Satellite · Esri</option>
+          <option value="satellite">Satellite (Esri)</option>
         </select>
 
         <p id="globe-count" class="globe-count"></p>

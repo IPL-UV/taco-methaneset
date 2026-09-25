@@ -2,8 +2,8 @@
 import Base from "../layouts/Base.astro";
 
 const authors = [
-  "Carlos Giner¹*",
   "Julio Contreras¹*",
+  "Carlos Giner¹*",
   "Cesar Aybar¹",
   "Gonzalo Mateo-García²",
   "Javier Gorroño³",
@@ -24,7 +24,7 @@ const affiliations = [
 const bibtex = `@article{aybar2026methaneset,
   title   = {MethaneSET: Unified Multi-Sensor AI-Ready Datasets
              for Satellite-Based Methane Plume Detection},
-  author  = {Giner, Carlos and Contreras, Julio and Aybar, Cesar
+  author  = {Contreras, Julio and Giner, Carlos and Aybar, Cesar
              and Mateo-Garcia, Gonzalo and Gorrono, Javier
              and Montero, David and Mahecha, Miguel D.
              and Guanter, Luis and Gomez-Chova, Luis},
@@ -34,7 +34,7 @@ const bibtex = `@article{aybar2026methaneset,
 ---
 
 <Base
-  title="Paper · MethaneSET"
+  title="Paper | MethaneSET"
   description="MethaneSET: unified multi-sensor AI-ready datasets for satellite-based methane plume detection."
 >
   <section class="section">
@@ -42,9 +42,9 @@ const bibtex = `@article{aybar2026methaneset,
       <p class="eyebrow">Paper</p>
       <h2>MethaneSET: Unified Multi-Sensor AI-Ready Datasets for Satellite-Based Methane Plume Detection</h2>
       <p style="color: var(--muted);">
-        {authors.join(" · ")}
+        {authors.join(", ")}
         <br />
-        <span style="font-family: var(--font-mono); font-size: 0.8rem;">Scientific Data · under review</span>
+        <span style="font-family: var(--font-mono); font-size: 0.8rem;">Scientific Data, under review</span>
       </p>
       <p style="color: var(--slate); font-size: 0.85rem;">
         {affiliations.map((a) => <span>{a}<br /></span>)}

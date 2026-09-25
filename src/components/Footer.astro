@@ -2,11 +2,11 @@
 const year = new Date().getFullYear();
 const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 const funders = [
-  { src: "uv.svg", alt: "Universitat de València" },
-  { src: "upv.svg", alt: "Universitat Politècnica de València" },
-  { src: "leipzig.svg", alt: "Leipzig University" },
-  { src: "gmh.png", alt: "Global Methane Hub" },
-  { src: "ccai.png", alt: "Climate Change AI" },
+  { src: "uv.svg", alt: "Universitat de València", href: "https://www.uv.es" },
+  { src: "upv.svg", alt: "Universitat Politècnica de València", href: "https://www.upv.es" },
+  { src: "leipzig.svg", alt: "Leipzig University", href: "https://www.uni-leipzig.de" },
+  { src: "gmh.png", alt: "Global Methane Hub", href: "https://www.globalmethanehub.org" },
+  { src: "ccai.png", alt: "Climate Change AI", href: "https://www.climatechange.ai" },
 ];
 ---
 
@@ -14,27 +14,30 @@ const funders = [
   <div class="container footer__funders">
     {
       funders.map((f) => (
-        <span class="footer__funder">
+        <a class="footer__funder" href={f.href} target="_blank" rel="noopener" title={f.alt}>
           <img src={`${base}logos/${f.src}`} alt={f.alt} loading="lazy" />
-        </span>
+        </a>
       ))
     }
   </div>
   <div class="container footer__row">
-    <div>
-      <strong style="font-family: var(--font-display); color: var(--text);">MethaneSET</strong>
-      · Image and Signal Processing Group (ISP) · Universitat de València
+    <div class="footer__brand">
+      <a class="footer__isp" href="https://isp.uv.es" target="_blank" rel="noopener" title="ISP, Universitat de València">
+        <img src={`${base}logos/isp.png`} alt="ISP, Universitat de València" loading="lazy" />
+      </a>
+      <span>
+        <strong>MethaneSET</strong>
+        Image and Signal Processing Group, Universitat de València
+      </span>
     </div>
-    <div>
+    <div class="footer__links">
       <a href="https://github.com/IPL-UV/taco-methaneset" target="_blank" rel="noopener">GitHub</a>
-      <span class="sep">·</span>
       <a href="https://huggingface.co/datasets/tacofoundation/methaneset" target="_blank" rel="noopener"
         >Hugging Face</a
       >
-      <span class="sep">·</span>
       <span>CC-BY-NC-SA 4.0</span>
     </div>
-    <div>© {year} · Funded by CCAI and the Global Methane Hub</div>
+    <div>© {year}. Funded by CCAI and the Global Methane Hub.</div>
   </div>
 </footer>
 
@@ -44,24 +47,57 @@ const funders = [
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
-    margin-bottom: 32px;
-    padding-bottom: 28px;
-    border-bottom: 1px solid var(--line);
+    margin-bottom: 30px;
   }
   .footer__funder {
     background: #ffffff;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm, 10px);
+    border-radius: var(--radius-xs);
     padding: 8px 12px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 52px;
-    min-width: 104px;
+    height: 68px;
+    min-width: 128px;
+    transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
+  }
+  .footer__funder:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
   }
   .footer__funder img {
-    max-height: 30px;
+    max-height: 42px;
     max-width: 100%;
     object-fit: contain;
+  }
+  .footer__brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .footer__brand span {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.35;
+  }
+  .footer__brand strong {
+    font-family: var(--font-display);
+    color: var(--text);
+  }
+  .footer__isp {
+    background: #ffffff;
+    border-radius: var(--radius-xs);
+    padding: 5px 7px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .footer__isp img {
+    height: 30px;
+    width: auto;
+    display: block;
+  }
+  .footer__links {
+    display: flex;
+    align-items: center;
+    gap: 18px;
   }
 </style>

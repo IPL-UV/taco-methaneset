@@ -2,12 +2,12 @@
 import Base from "../layouts/Base.astro";
 
 const team = [
-  { name: "Luis Gómez-Chova", role: "Principal Investigator", org: "Image and Signal Processing Group (ISP), Universitat de València" },
-  { name: "Cesar Aybar", role: "ML researcher", org: "Image and Signal Processing Group (ISP), Universitat de València" },
-  { name: "Julio Contreras", role: "ML researcher", org: "Image and Signal Processing Group (ISP), Universitat de València" },
-  { name: "Luis Guanter", role: "Co-Investigator", org: "Land and Atmosphere Remote Sensing (LARS), Universitat Politècnica de València" },
-  { name: "David Montero", role: "ML researcher", org: "Remote Sensing Centre for Earth System Research (RSC4Earth), Leipzig University" },
-  { name: "Miguel D. Mahecha", role: "Co-Investigator", org: "Remote Sensing Centre for Earth System Research (RSC4Earth), Leipzig University" },
+  { name: "Luis Gómez-Chova", role: "Principal Investigator", org: "Image and Signal Processing Group (ISP), Universitat de València", href: "https://www.uv.es/chovago" },
+  { name: "Cesar Aybar", role: "ML researcher", org: "Image and Signal Processing Group (ISP), Universitat de València", href: "https://csaybar.github.io" },
+  { name: "Julio Contreras", role: "ML researcher", org: "Image and Signal Processing Group (ISP), Universitat de València", href: "https://juliocontrerash.github.io" },
+  { name: "Luis Guanter", role: "Co-Investigator", org: "Land and Atmosphere Remote Sensing (LARS), Universitat Politècnica de València", href: "https://luiguapa.webs.upv.es" },
+  { name: "David Montero", role: "ML researcher", org: "Remote Sensing Centre for Earth System Research (RSC4Earth), Leipzig University", href: "https://www.uni-leipzig.de/personenprofil/mitarbeiter/david-montero" },
+  { name: "Miguel D. Mahecha", role: "Co-Investigator", org: "Remote Sensing Centre for Earth System Research (RSC4Earth), Leipzig University", href: "https://www.uni-leipzig.de/personenprofil/mitarbeiter/prof-dr-miguel-mahecha" },
 ];
 
 const outcomes = [
@@ -18,18 +18,18 @@ const outcomes = [
 ];
 
 const funders = [
-  { src: "uv.svg", alt: "Universitat de València" },
-  { src: "upv.svg", alt: "Universitat Politècnica de València" },
-  { src: "leipzig.svg", alt: "Leipzig University" },
-  { src: "gmh.png", alt: "Global Methane Hub" },
-  { src: "ccai.png", alt: "Climate Change AI" },
+  { src: "uv.svg", alt: "Universitat de València", href: "https://www.uv.es" },
+  { src: "upv.svg", alt: "Universitat Politècnica de València", href: "https://www.upv.es" },
+  { src: "leipzig.svg", alt: "Leipzig University", href: "https://www.uni-leipzig.de" },
+  { src: "gmh.png", alt: "Global Methane Hub", href: "https://www.globalmethanehub.org" },
+  { src: "ccai.png", alt: "Climate Change AI", href: "https://www.climatechange.ai" },
 ];
 
 const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 ---
 
 <Base
-  title="Project · MethaneSET"
+  title="Project | MethaneSET"
   description="Team, funding and acknowledgements for the MethaneSET dataset project."
 >
   <section class="section">
@@ -95,7 +95,7 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
           {
             team.map((t) => (
               <tr>
-                <td>{t.name}</td>
+                <td><a href={t.href} target="_blank" rel="noopener">{t.name}</a></td>
                 <td>{t.role}</td>
                 <td>{t.org}</td>
               </tr>
@@ -124,9 +124,9 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
       <div class="funders">
         {
           funders.map((f) => (
-            <div class="funder">
+            <a class="funder" href={f.href} target="_blank" rel="noopener" title={f.alt}>
               <img src={`${base}logos/${f.src}`} alt={f.alt} loading="lazy" />
-            </div>
+            </a>
           ))
         }
       </div>
@@ -155,18 +155,18 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
   .funder {
     background: #ffffff;
     border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 18px 22px;
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 96px;
-    min-width: 170px;
-    flex: 1 1 170px;
-    max-width: 260px;
+    height: 124px;
+    min-width: 210px;
+    flex: 1 1 210px;
+    max-width: 300px;
   }
   .funder img {
-    max-height: 52px;
+    max-height: 72px;
     max-width: 100%;
     object-fit: contain;
   }
