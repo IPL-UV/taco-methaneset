@@ -1,0 +1,27 @@
+[project]
+name = "methaneset"
+version = "0.1.0"
+description = "Processing code for the MethaneSET TACO datasets"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "xarray",
+    "netcdf4",
+    "rasterio",
+    "geopandas",
+    "shapely",
+    "requests",
+    "earthaccess",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = ["ruff", "pytest"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
