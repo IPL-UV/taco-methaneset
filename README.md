@@ -1,5 +1,12 @@
 # MethaneSET
 
+[![Website](https://img.shields.io/badge/website-taco--methaneset-6f42c1?logo=astro&logoColor=white)](https://ipl-uv.github.io/taco-methaneset/)
+[![Datasets](https://img.shields.io/badge/datasets-Hugging%20Face-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/datasets/tacofoundation/methaneset)
+[![Code](https://img.shields.io/badge/code-GitHub-181717?logo=github&logoColor=white)](https://github.com/IPL-UV/taco-methaneset)
+[![TACO](https://img.shields.io/badge/format-TACO%20v3-2dd4bf)](https://asterisk.coop/taco/spec)
+[![License: MIT](https://img.shields.io/badge/license-MIT-3DA639)](https://github.com/IPL-UV/taco-methaneset/blob/main/LICENSE)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/license-CC_BY--NC--SA_4.0-EF9421?logo=creativecommons&logoColor=white)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+
 Public repository of the MethaneSET project. It hosts the project website and the processing code
 that builds the datasets.
 
