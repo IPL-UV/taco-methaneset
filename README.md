@@ -1,7 +1,7 @@
 # MethaneSET
 
-Public repository of the MethaneSET project: the **website** and the **processing code** that
-builds the datasets.
+Public repository of the MethaneSET project. It hosts the project website and the processing code
+that builds the datasets.
 
 - Website: https://ipl-uv.github.io/taco-methaneset/
 - Datasets: https://huggingface.co/datasets/tacofoundation/methaneset
@@ -11,31 +11,16 @@ builds the datasets.
 
 ```
 taco-methaneset/
-├── src/                 Astro site (pages, components, styles)
-├── public/              static assets served by the site
-├── scripts/             site build helpers
-├── patches/             dependency patches applied on install
-└── methaneset-codes/    the pipelines that build the datasets
+├── src/, public/, patches/   the website (Astro)
+├── scripts/                  site helpers
+└── methaneset-codes/         the pipelines that build the datasets
 ```
 
-### The website
-
-A static Astro site with an interactive globe of the published plumes and a sample viewer that
-streams Cloud-Optimized GeoTIFFs from Hugging Face by byte range, with no backend.
-
-```bash
-npm install
-npm run dev       # http://localhost:4321/taco-methaneset/
-npm run build
-```
-
-### The processing code
-
-`methaneset-codes/` holds the pipelines that produce the seven TACO collections: EMIT, Sentinel-2,
-Landsat 8/9 and the synthetic plume bank. Start with
+The interesting part for other people is **`methaneset-codes/`**: the pipelines that produce the
+seven TACO collections, from the raw catalogs to the final datasets. Start with
 [`methaneset-codes/README.md`](methaneset-codes/README.md), and see
 [`methaneset-codes/docs/pipeline.md`](methaneset-codes/docs/pipeline.md) for the end-to-end
-description.
+description and the reasoning behind each decision.
 
 ```bash
 cd methaneset-codes
