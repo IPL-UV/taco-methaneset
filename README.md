@@ -59,6 +59,16 @@ All of them are TACO-compliant: Parquet catalogs with Cloud-Optimized GeoTIFFs.
 }
 ```
 
+## Acknowledgements
+
+This project was funded by the Climate Change AI (CCAI) Innovation Grants program, hosted by CCAI
+with the support of the Global Methane Hub (GMH), and by the Spanish Ministry of Science,
+Innovation and Universities (grants PID2023-148485OB-C21 / C22 funded by MCIU / AEI /
+10.13039 / 501100011033, ERDF, EU). We thank UNEP's International Methane Emissions Observatory
+(IMEO) for providing access to the MARS plume annotations and Carbon Mapper for making their plume
+detections publicly available. EMIT Level 1B radiance data were obtained from NASA's Land Processes
+Distributed Active Archive Center (LP DAAC).
+
 ## License
 
 Code is MIT. The datasets keep their own licenses, inherited from the upstream sources:
