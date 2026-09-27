@@ -67,7 +67,7 @@ export const datasets: Dataset[] = [
     sizeGB: 5.1,
     icon: "bank",
     abstract:
-      "Precomputed WRF-LES column enhancements across solar and wind geometry, at a reference rate of 3000 kg/h. Injected into any plume-free scene.",
+      "Precomputed WRF-LES column enhancements across solar and wind geometry, at a reference rate of 3000 kg/h. A quality-filtered subset of the simulation grid: the raw 3D cubes are published separately as methaneset-bank-les, so new observation geometries can be projected.",
   },
   {
     name: "methaneset-bank-les",
