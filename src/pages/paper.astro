@@ -5,31 +5,40 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
 const url = (p = "") => `${base}${p.replace(/^\/+/, "")}`;
 
 const tacoAuthors = [
-  "Cesar Aybar¹",
-  "Julio Contreras¹",
-  "Chen Ma²",
-  "Oscar J. Pellicer-Valero¹",
-  "Gonzalo Mateo-García¹",
-  "Luis Gómez-Chova¹",
-  "Gustau Camps-Valls¹",
-  "Nils Lehmann³",
-  "Mikolaj Czerkawski⁴",
-  "David Montero⁵",
-  "Miguel D. Mahecha⁵",
-  "Ingrid Aybar⁶",
-];
-
-const tacoAffiliations = [
-  "¹ Image Processing Laboratory, University of Valencia, Spain",
-  "² Research Center of Satellite Technology, Harbin Institute of Technology, China",
-  "³ Technical University of Munich (TUM), Germany",
-  "⁴ Asterisk Labs, London, UK",
-  "⁵ Institute for Earth System Science and Remote Sensing, Leipzig University, Germany",
-  "⁶ Facultad de Ingeniería, Universidad Privada del Norte, Lima, Peru",
+  "Cesar Aybar",
+  "Julio Contreras",
+  "Chen Ma",
+  "Oscar J. Pellicer-Valero",
+  "Gonzalo Mateo-García",
+  "Luis Gómez-Chova",
+  "Gustau Camps-Valls",
+  "Nils Lehmann",
+  "Mikolaj Czerkawski",
+  "David Montero",
+  "Miguel D. Mahecha",
+  "Ingrid Aybar",
 ];
 
 const tacoAbstract =
   "Geospatial communities have long relied on standardised formats for raster and vector data, enabling interoperability, stable tool development, and long-term data preservation. In contrast, Artificial Intelligence (AI)-ready datasets, particularly those derived from Earth Observation (EO), lack equivalent conventions. As a result, data producers often adopt ad hoc file structures, loosely defined formats, and inconsistent semantic encodings. This fragmentation hinders interoperability, complicates reuse, and undermines reproducibility. We argue that the lack of a standard format represents a structural bottleneck to scalable scientific progress, especially in the era of foundation models, where diverse datasets must be combined for effective training and performance evaluation in downstream tasks. To address this, we introduce TACO: a comprehensive specification that defines a formal data model, a cloud-optimized on-disk layout, and an API for creating and accessing AI-ready EO datasets.";
+
+const eguAuthors = [
+  "Oscar J. Pellicer-Valero",
+  "Cesar Aybar",
+  "Mikolaj Czerkawski",
+  "Carmen Oliver",
+  "Kevin Monsálvez",
+  "Julio Contreras",
+  "Gustau Camps-Valls",
+];
+
+const eguAbstract =
+  "The field of Artificial Intelligence for Earth Observation (AI4EO) currently suffers from significant data friction, especially when moving Petabyte-scale archives from cloud object storage to High Performance Computing (HPC) nodes. We present TACO (Transparent Access to Cloud-Optimized datasets), a production-grade standard designed to replace file-centric legacy workflows with a high-throughput streaming paradigm. We showcase the practical implications of this architecture for the deployment of geospatial Foundation Models (FMs), by running pretrained FMs on downstream inference tasks (such as semantic segmentation or land-cover classification) directly on arbitrary samples of arbitrary cloud-hosted datasets, quickly, and without the need for local staging or any specific preprocessing.";
+
+const isprsAuthors = ["David Montero", "César Aybar", "Miguel D. Mahecha", "Luis Gómez-Chova"];
+
+const isprsAbstract =
+  "Earth observation (EO) is essential to understanding the Earth system, enabling the transformation of planetary properties into measurable variables that can be analysed, compared, and modelled. In recent decades, EO capabilities have grown rapidly, accompanied by an even faster expansion in the number and variety of available EO instruments. However, despite this proliferation, users often lack a single, reliable source describing their existence and key characteristics. Here we present Awesome Earth Observation Instruments, an open, standardized, and community-oriented registry providing machine-readable metadata for EO instruments, hosted on GitHub and validated against a common schema.";
 
 const authors = [
   "Julio Contreras¹*",
@@ -65,14 +74,15 @@ const bibtex = `@article{contreras2026methaneset,
 
 <Base
   title="Papers | MethaneSET"
-  description="The TACO specification paper and the MethaneSET manuscript."
+  description="The papers behind MethaneSET: the TACO specification, the EGU abstract, the instrument registry and the dataset manuscript."
 >
   <section class="section">
     <div class="container prose">
-      <h1>Papers</h1>
+      <p class="eyebrow">Papers</p>
+      <h1 class="paper-title">Papers</h1>
       <p class="lead">
-        Two papers: the TACO specification this project is built on, and the MethaneSET
-        manuscript describing the datasets.
+        The papers behind the project, newest last: the TACO specification, its operational
+        follow-up, the Earth observation instrument registry, and the MethaneSET manuscript.
       </p>
     </div>
   </section>
@@ -81,18 +91,15 @@ const bibtex = `@article{contreras2026methaneset,
     <div class="container">
       <article class="paper">
         <div class="paper__head">
-          <p class="paper__kind">Specification</p>
+          <span class="paper__kind">Workshop paper · July 2025</span>
           <h2 class="paper__title">
             The Missing Piece: Standardising for AI-ready Earth Observation Datasets
           </h2>
-          <p class="venue">TerraBytes, ICML 2025 Workshop</p>
         </div>
 
         <div class="prose paper__body">
           <p class="authors">{tacoAuthors.join(", ")}</p>
-          <ul class="affils">
-            {tacoAffiliations.map((a) => <li>{a}</li>)}
-          </ul>
+          <p class="venue">TerraBytes, ICML 2025 Workshop</p>
 
           <h3>Abstract</h3>
           <p>{tacoAbstract}</p>
@@ -101,6 +108,9 @@ const bibtex = `@article{contreras2026methaneset,
         <div class="paper__links">
           <a class="btn btn--ghost" href={url("papers/taco-icml-2025.pdf")} target="_blank" rel="noopener">
             Paper (PDF)
+          </a>
+          <a class="btn btn--ghost" href="https://icml.cc/virtual/2025/47927" target="_blank" rel="noopener">
+            Abstract (TerraBytes)
           </a>
           <a class="btn btn--ghost" href="https://asterisk.coop/taco/spec" target="_blank" rel="noopener">
             Specification
@@ -117,16 +127,75 @@ const bibtex = `@article{contreras2026methaneset,
     <div class="container">
       <article class="paper">
         <div class="paper__head">
-          <p class="paper__kind">Manuscript</p>
+          <span class="paper__kind">Conference abstract · May 2026</span>
+          <h2 class="paper__title">TACO: Operationalizing AI-Ready EO datasets</h2>
+        </div>
+
+        <div class="prose paper__body">
+          <p class="authors">{eguAuthors.join(", ")}</p>
+          <p class="venue">EGU General Assembly 2026 · Vienna, Austria, 3-8 May 2026</p>
+
+          <h3>Abstract</h3>
+          <p>{eguAbstract}</p>
+        </div>
+
+        <div class="paper__links">
+          <a class="btn btn--ghost" href="https://meetingorganizer.copernicus.org/EGU26/EGU26-8000.html" target="_blank" rel="noopener">
+            Abstract (EGU)
+          </a>
+          <a class="btn btn--ghost" href="https://doi.org/10.5194/egusphere-egu26-8000" target="_blank" rel="noopener">
+            DOI
+          </a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section section--tight">
+    <div class="container">
+      <article class="paper">
+        <div class="paper__head">
+          <span class="paper__kind">Journal paper · August 2026</span>
+          <h2 class="paper__title">Towards an open registry of Earth observation instruments</h2>
+        </div>
+
+        <div class="prose paper__body">
+          <p class="authors">{isprsAuthors.join(", ")}</p>
+          <p class="venue">ISPRS Archives, L-4/W1-2026, 167-174</p>
+
+          <h3>Abstract</h3>
+          <p>{isprsAbstract}</p>
+        </div>
+
+        <div class="paper__links">
+          <a class="btn btn--ghost" href="https://isprs-archives.copernicus.org/articles/L-4-W1-2026/167/2026/" target="_blank" rel="noopener">
+            Paper (ISPRS)
+          </a>
+          <a class="btn btn--ghost" href="https://isprs-archives.copernicus.org/articles/L-4-W1-2026/167/2026/isprs-archives-L-4-W1-2026-167-2026.pdf" target="_blank" rel="noopener">
+            PDF
+          </a>
+          <a class="btn btn--ghost" href="https://doi.org/10.5194/isprs-archives-L-4-W1-2026-167-2026" target="_blank" rel="noopener">
+            DOI
+          </a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section section--tight">
+    <div class="container">
+      <article class="paper">
+        <div class="paper__head">
+          <span class="paper__kind">Manuscript · 2026</span>
           <h2 class="paper__title">
             MethaneSET: Unified Multi-Sensor AI-Ready Datasets for Satellite-Based Methane
             Plume Detection
           </h2>
-          <p class="venue">Scientific Data, under review</p>
         </div>
 
         <div class="prose paper__body">
           <p class="authors">{authors.join(", ")}</p>
+          <p class="venue">Scientific Data · in preparation</p>
           <ul class="affils">
             {affiliations.map((a) => <li>{a}</li>)}
             <li>* Equal contribution.</li>
@@ -180,8 +249,6 @@ const bibtex = `@article{contreras2026methaneset,
 </Base>
 
 <style>
-  /* A publications page, not a card wall: each entry is a rule, a kind, a
-     title, the people, then the text. */
   .paper {
     border-top: 1px solid var(--line-strong);
     padding-top: 26px;
@@ -236,7 +303,7 @@ const bibtex = `@article{contreras2026methaneset,
   .paper__links {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 32px;
+    gap: 12px;
+    margin-top: 28px;
   }
 </style>
