@@ -687,6 +687,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     let plumeData: any = null;
     let visibleFeatures: any[] = [];
     let basemapChoice = "auto";
+    let eventsBound = false;
 
     (window as any).__map = map;
 
@@ -777,6 +778,13 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
 
       const fmt = (v: number | null) => (v == null ? "n/a" : `${Math.round(v).toLocaleString()} kg/h`);
 
+      if (eventsBound) {
+        reAddAll(map);
+        applyFilters();
+        return;
+      }
+      eventsBound = true;
+
       map.on("mouseenter", "plumes", (e) => {
         map.getCanvas().style.cursor = "pointer";
         const f = (e.features && e.features[0]) as any;
@@ -813,12 +821,16 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         if (!root || !bodyEl || !layersRoot || !layersBody) return;
 
         const [lng, lat] = f.geometry.coordinates;
+        const sameSource = f.properties.source;
         const seen = new Set<string>();
         const cluster: any[] = [];
         for (const x of map.queryRenderedFeatures(e.point, { layers: ["plumes"] }) as any[]) {
           const g = x.geometry;
-          if (!g || g.coordinates[0] !== lng || g.coordinates[1] !== lat) continue;
           const p = x.properties;
+          const same = sameSource
+            ? p.source === sameSource
+            : !!g && g.coordinates[0] === lng && g.coordinates[1] === lat;
+          if (!same) continue;
           const key = p.id ?? `${p.sensor}|${p.date}|${p.dataset}`;
           if (seen.has(key)) continue;
           seen.add(key);
