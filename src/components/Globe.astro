@@ -51,10 +51,12 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
           <div class="field__checks">
             <label class="globe-check">
               <input type="checkbox" value="IMEO" checked data-system />
+              <span class="globe-dot" style="background:#f97316" />
               IMEO
             </label>
             <label class="globe-check">
               <input type="checkbox" value="Carbon Mapper" checked data-system />
+              <span class="globe-dot" style="background:#fb923c" />
               Carbon Mapper
             </label>
           </div>
@@ -642,6 +644,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     light: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
     satellite: {
       version: 8,
+      glyphs: "https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf",
       sources: {
         sat: {
           type: "raster",
@@ -718,20 +721,64 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       maxWidth: "280px",
     });
 
+    const CM_COLOR = "#fb923c";
+
     const colorExpr = [
-      "match",
-      ["get", "sensor"],
-      "EMIT", SENSOR_COLOR.EMIT,
-      "Sentinel-2", SENSOR_COLOR["Sentinel-2"],
-      "Landsat 8/9", SENSOR_COLOR["Landsat 8/9"],
+      "case",
+      ["==", ["get", "system"], "Carbon Mapper"], CM_COLOR,
+      [
+        "match",
+        ["get", "sensor"],
+        "EMIT", SENSOR_COLOR.EMIT,
+        "Sentinel-2", SENSOR_COLOR["Sentinel-2"],
+        "Landsat 8/9", SENSOR_COLOR["Landsat 8/9"],
+        "#94a3b8",
+      ],
+    ];
+
+    const clusterColor = [
+      "case",
+      ["==", ["get", "n_emit"], ["get", "point_count"]], SENSOR_COLOR.EMIT,
+      ["==", ["get", "n_s2"], ["get", "point_count"]], SENSOR_COLOR["Sentinel-2"],
+      ["==", ["get", "n_l89"], ["get", "point_count"]], SENSOR_COLOR["Landsat 8/9"],
       "#94a3b8",
+    ];
+
+    const clusterLabel = [
+      "case",
+      ["==", ["get", "n_emit"], ["get", "point_count"]],
+      [
+        "case",
+        ["all", [">", ["get", "n_imeo"], 0], [">", ["get", "n_cm"], 0]],
+        ["concat", ["to-string", ["get", "n_imeo"]], " IMEO\n", ["to-string", ["get", "n_cm"]], " CM"],
+        [
+          "case",
+          [">", ["get", "n_imeo"], 0],
+          ["concat", ["to-string", ["get", "n_imeo"]], " IMEO"],
+          ["concat", ["to-string", ["get", "n_cm"]], " CM"],
+        ],
+      ],
+      ["to-string", ["get", "point_count"]],
     ];
 
     const ensureLayers = () => {
       if (!plumeData || map.getLayer("plumes")) return;
 
       try {
-        map.addSource("plumes", { type: "geojson", data: plumeData });
+        map.addSource("plumes", {
+          type: "geojson",
+          data: plumeData,
+          cluster: true,
+          clusterRadius: 55,
+          clusterMaxZoom: 11,
+          clusterProperties: {
+            n_imeo: ["+", ["case", ["==", ["get", "system"], "IMEO"], 1, 0]],
+            n_cm: ["+", ["case", ["==", ["get", "system"], "Carbon Mapper"], 1, 0]],
+            n_emit: ["+", ["case", ["==", ["get", "sensor"], "EMIT"], 1, 0]],
+            n_s2: ["+", ["case", ["==", ["get", "sensor"], "Sentinel-2"], 1, 0]],
+            n_l89: ["+", ["case", ["==", ["get", "sensor"], "Landsat 8/9"], 1, 0]],
+          },
+        });
       } catch (e) {
         return;
       }
@@ -740,6 +787,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         id: "plumes-halo",
         type: "circle",
         source: "plumes",
+        filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-radius": [
             "interpolate",
@@ -759,6 +807,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         id: "plumes",
         type: "circle",
         source: "plumes",
+        filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-radius": [
             "interpolate",
@@ -775,6 +824,57 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         },
       });
 
+      map.addLayer({
+        id: "plumes-clusters",
+        type: "circle",
+        source: "plumes",
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-radius": ["step", ["get", "point_count"], 14, 10, 18, 100, 23, 1000, 28],
+          "circle-color": clusterColor as any,
+          "circle-opacity": 0.85,
+          "circle-stroke-color": "rgba(2,6,23,0.55)",
+          "circle-stroke-width": 1,
+        },
+      });
+
+      map.addLayer({
+        id: "plumes-cluster-count",
+        type: "symbol",
+        source: "plumes",
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": clusterLabel as any,
+          "text-font": ["Open Sans Regular"],
+          "text-size": 11,
+          "text-line-height": 1.15,
+          "text-allow-overlap": true,
+        },
+        paint: {
+          "text-color": "#ffffff",
+          "text-halo-color": "rgba(2,6,23,0.85)",
+          "text-halo-width": 1.2,
+        },
+      });
+
+      map.on("click", "plumes-clusters", (e) => {
+        const f = (e.features && e.features[0]) as any;
+        if (!f) return;
+        const source = map.getSource("plumes") as any;
+        source
+          .getClusterExpansionZoom(f.properties.cluster_id)
+          .then((zoom: number) => {
+            map.easeTo({ center: f.geometry.coordinates, zoom });
+          })
+          .catch(() => {});
+      });
+      map.on("mouseenter", "plumes-clusters", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", "plumes-clusters", () => {
+        map.getCanvas().style.cursor = "";
+      });
+
       const fmt = (v: number | null) => (v == null ? "n/a" : `${Math.round(v).toLocaleString()} kg/h`);
 
       map.on("mouseenter", "plumes", (e) => {
@@ -782,7 +882,10 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         const f = (e.features && e.features[0]) as any;
         if (!f) return;
         const p = f.properties;
-        const color = SENSOR_COLOR[p.sensor as keyof typeof SENSOR_COLOR] ?? "#94a3b8";
+        const color =
+          p.system === "Carbon Mapper"
+            ? CM_COLOR
+            : SENSOR_COLOR[p.sensor as keyof typeof SENSOR_COLOR] ?? "#94a3b8";
         const system = p.system ? `<div class="pp-row"><span>System</span><b>${p.system}</b></div>` : "";
         const sector = p.sector ? `<div class="pp-row"><span>Sector</span><b>${p.sector}</b></div>` : "";
         popup
@@ -918,20 +1021,6 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
 
             const systems = systemBoxes.filter((b) => b.checked).map((b) => b.value);
 
-            const filters: any[] = [["in", ["get", "sensor"], ["literal", sensors]]];
-            filters.push([
-              "any",
-              ["!=", ["get", "sensor"], "EMIT"],
-              ["in", ["get", "system"], ["literal", systems]],
-            ]);
-            if (country) filters.push(["==", ["get", "country"], country]);
-            filters.push([">=", ["slice", ["get", "date"], 0, 4], from]);
-            filters.push(["<=", ["slice", ["get", "date"], 0, 4], to]);
-            if (minFlux > 0) filters.push([">=", ["coalesce", ["get", "flux"], 0], minFlux]);
-
-            map.setFilter("plumes", ["all", ...filters]);
-            map.setFilter("plumes-halo", ["all", ...filters]);
-
             visibleFeatures = geojson.features.filter((f: any) => {
               const p = f.properties;
               const y = (p.date || "").slice(0, 4);
@@ -944,6 +1033,8 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
                 (minFlux === 0 || (p.flux ?? 0) >= minFlux)
               );
             });
+            const src = map.getSource("plumes") as any;
+            if (src) src.setData({ type: "FeatureCollection", features: visibleFeatures });
             if (count) count.textContent = `${visibleFeatures.length.toLocaleString()} samples shown`;
           };
 
