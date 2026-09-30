@@ -29,7 +29,6 @@ interface UiElements {
   layersRoot: HTMLElement;
   layersBody: HTMLElement;
   list?: Feature[];
-  picker?: boolean;
 }
 
 interface Rendered {
@@ -65,7 +64,7 @@ let uiRef: UiElements | null = null;
 let popup: any = null;
 let curList: Feature[] = [];
 let curIndex = 0;
-let curPicker = false;
+let closed = false;
 
 const keyOf = (id: string, asset: Asset) => `${id}:${asset}`;
 const ids = (key: string) => {
@@ -480,26 +479,18 @@ function render(): void {
   const ui = uiRef;
   const feature = current();
   renderLayersPanel();
-  if (!feature) {
+  if (!feature || closed) {
     ui.root.style.display = "none";
     return;
   }
   const p = feature.properties;
   ui.root.style.display = "block";
 
-  const nav =
-    curList.length > 1
-      ? `<div class="sv-nav">` +
-        `<button class="sv-nav__btn" data-move="-1" type="button" aria-label="Previous">‹</button>` +
-        `<span class="sv-nav__pos">${curIndex + 1} / ${curList.length}</span>` +
-        `<button class="sv-nav__btn" data-move="1" type="button" aria-label="Next">›</button>` +
-        `</div>`
-      : "";
-
   const head =
     `<p class="globe-panel__title">Sample</p>` +
+    `<button class="sv-close" type="button" aria-label="Close">×</button>` +
     `<p class="sv-title">${p.sensor}${p.system ? ` (${p.system})` : ""}, ${p.country ?? "Unknown"}</p>` +
-    `<p class="sv-status">${p.date || "n/a"}, ${p.dataset}${p.flux ? `, ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
+    `<p class="sv-status">${p.source ? `${p.source}, ` : ""}${p.date || "n/a"}, ${p.dataset}${p.flux ? `, ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
 
   let bodyHtml = "";
   if (p.viz === "multispectral") {
@@ -525,7 +516,7 @@ function render(): void {
   }
 
   const picks =
-    curPicker && curList.length > 1
+    curList.length > 1
       ? `<p class="sv-status">${curList.length} samples at this location</p>` +
         `<div class="sv-picks">` +
         curList
@@ -544,7 +535,7 @@ function render(): void {
         `</div>`
       : "";
 
-  ui.body.innerHTML = nav + head + picks + bodyHtml;
+  ui.body.innerHTML = head + picks + bodyHtml;
 
   ui.body.querySelectorAll<HTMLButtonElement>("[data-pick]").forEach((el) => {
     el.addEventListener("click", () => {
@@ -552,8 +543,9 @@ function render(): void {
       render();
     });
   });
-  ui.body.querySelectorAll<HTMLButtonElement>("[data-move]").forEach((el) => {
-    el.addEventListener("click", () => move(Number(el.dataset.move)));
+  ui.body.querySelector<HTMLButtonElement>(".sv-close")?.addEventListener("click", () => {
+    closed = true;
+    render();
   });
   const selected = ui.body.querySelector<HTMLElement>(".sv-pick.is-on");
   if (selected) selected.scrollIntoView({ block: "nearest" });
@@ -579,18 +571,10 @@ function render(): void {
   });
 }
 
-function move(delta: number): void {
-  if (curList.length < 2) return;
-  curIndex = (curIndex + delta + curList.length) % curList.length;
-  const f = current();
-  if (f) mapRef.easeTo({ center: f.geometry.coordinates, duration: 600 });
-  render();
-}
-
 export function openInspector(map: any, feature: Feature, ui: UiElements): void {
   mapRef = map;
   uiRef = ui;
-  curPicker = !!ui.picker;
+  closed = false;
   const source = ui.list && ui.list.length ? ui.list : [feature];
   curList = [...source].sort((a, b) => (a.properties.date || "").localeCompare(b.properties.date || ""));
   curIndex = Math.max(0, curList.findIndex((f) => f.properties.id === feature.properties.id));

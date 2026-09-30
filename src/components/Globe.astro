@@ -52,12 +52,15 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
             <label class="globe-check">
               <input type="checkbox" value="IMEO" checked data-system />
               IMEO
+              <span class="globe-check__count" data-count="IMEO"></span>
             </label>
             <label class="globe-check">
               <input type="checkbox" value="Carbon Mapper" checked data-system />
               Carbon Mapper
+              <span class="globe-check__count" data-count="Carbon Mapper"></span>
             </label>
           </div>
+          <p class="field__note">Two independent public catalogs, one point per source.</p>
         </div>
 
         <div class="field">
@@ -240,6 +243,18 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     accent-color: var(--teal);
     cursor: pointer;
   }
+  .globe-check__count {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--slate);
+  }
+  .field__note {
+    margin: 8px 0 0;
+    font-size: 0.68rem;
+    line-height: 1.4;
+    color: var(--slate);
+  }
   .globe-dot {
     width: 10px;
     height: 10px;
@@ -354,6 +369,28 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   .sample-viewer :global(.sv-status) {
     margin: 0 0 10px;
     font-size: 0.78rem;
+  }
+  .sample-viewer :global(.sv-close) {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 26px;
+    height: 26px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-xs);
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+  }
+  .sample-viewer :global(.sv-close:hover) {
+    color: var(--text);
+    border-color: var(--accent-line);
   }
   .sample-viewer :global(.sv-error) {
     color: var(--orange);
@@ -611,7 +648,21 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       max-height: 48%;
       font-size: 0.82rem;
     }
-    .sample-viewer,
+    .sample-viewer {
+      top: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: auto;
+      max-height: 55%;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
+    }
+    .sample-viewer :global(.sv-close) {
+      display: flex;
+    }
     .layer-panel {
       display: none !important;
     }
@@ -872,7 +923,6 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
           seen.add(key);
           cluster.push({ properties: p, geometry: g });
         }
-        const picker = cluster.length > 1;
         openInspector(
           map,
           { properties: f.properties, geometry: f.geometry },
@@ -881,8 +931,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
             body: bodyEl,
             layersRoot,
             layersBody,
-            list: picker ? cluster : visibleFeatures,
-            picker,
+            list: cluster,
           },
         );
       });
@@ -965,22 +1014,32 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
 
             const systems = systemBoxes.filter((b) => b.checked).map((b) => b.value);
 
-            visibleFeatures = geojson.features.filter((f: any) => {
-              const p = f.properties;
+            const matches = (p: any, withSystems: boolean) => {
               const y = (p.date || "").slice(0, 4);
               return (
                 sensors.includes(p.sensor) &&
-                (p.sensor !== "EMIT" || systems.includes(p.system)) &&
+                (!withSystems || p.sensor !== "EMIT" || systems.includes(p.system)) &&
                 (!country || p.country === country) &&
                 y >= from &&
                 y <= to &&
                 (minFlux === 0 || (p.flux ?? 0) >= minFlux)
               );
-            });
+            };
+
+            visibleFeatures = geojson.features.filter((f: any) => matches(f.properties, true));
             countStacked(visibleFeatures);
             const src = map.getSource("plumes") as any;
             if (src) src.setData({ type: "FeatureCollection", features: visibleFeatures });
             if (count) count.textContent = `${visibleFeatures.length.toLocaleString()} samples shown`;
+
+            for (const box of systemBoxes) {
+              const el = document.querySelector(`[data-count="${box.value}"]`);
+              if (!el) continue;
+              const n = geojson.features.filter(
+                (f: any) => f.properties.system === box.value && matches(f.properties, false),
+              ).length;
+              el.textContent = n.toLocaleString();
+            }
           };
 
           boxes.forEach((b) => b.addEventListener("change", applyFilters));
