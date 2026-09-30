@@ -498,8 +498,8 @@ function render(): void {
 
   const head =
     `<p class="globe-panel__title">Sample</p>` +
-    `<p class="sv-title">${p.sensor}, ${p.country ?? "Unknown"}</p>` +
-    `<p class="sv-status">${p.system ? `${p.system}, ` : ""}${p.date || "n/a"}, ${p.dataset}${p.flux ? `, ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
+    `<p class="sv-title">${p.sensor}${p.system ? ` (${p.system})` : ""}, ${p.country ?? "Unknown"}</p>` +
+    `<p class="sv-status">${p.date || "n/a"}, ${p.dataset}${p.flux ? `, ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
 
   let bodyHtml = "";
   if (p.viz === "multispectral") {
