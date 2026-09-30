@@ -728,6 +728,18 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       "#94a3b8",
     ];
 
+    const featureKey = (f: any) =>
+      f.properties.source ?? `${f.geometry.coordinates[0]}|${f.geometry.coordinates[1]}`;
+
+    const countStacked = (features: any[]) => {
+      const counts = new Map<string, number>();
+      for (const f of features) {
+        const k = featureKey(f);
+        counts.set(k, (counts.get(k) ?? 0) + 1);
+      }
+      for (const f of features) f.properties.n_same = counts.get(featureKey(f));
+    };
+
     const ensureLayers = () => {
       if (!plumeData || map.getLayer("plumes")) return;
 
@@ -776,6 +788,27 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         },
       });
 
+      map.addLayer({
+        id: "plumes-stacked",
+        type: "circle",
+        source: "plumes",
+        filter: [">", ["coalesce", ["get", "n_same"], 1], 1],
+        paint: {
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["coalesce", ["get", "flux"], 0],
+            0, 5.5,
+            5000, 8,
+            20000, 11,
+          ],
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-stroke-color": colorExpr as any,
+          "circle-stroke-width": 1.3,
+          "circle-stroke-opacity": 0.9,
+        },
+      });
+
       const fmt = (v: number | null) => (v == null ? "n/a" : `${Math.round(v).toLocaleString()} kg/h`);
 
       if (eventsBound) {
@@ -792,6 +825,8 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         const p = f.properties;
         const color = SENSOR_COLOR[p.sensor as keyof typeof SENSOR_COLOR] ?? "#94a3b8";
         const sector = p.sector ? `<div class="pp-row"><span>Sector</span><b>${p.sector}</b></div>` : "";
+        const stacked =
+          p.n_same > 1 ? `<div class="pp-row"><span>Plumes here</span><b>${p.n_same}</b></div>` : "";
         popup
           .setLngLat(f.geometry.coordinates)
           .setHTML(
@@ -800,6 +835,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
               `<div class="pp-row"><span>Dataset</span><b>${p.dataset}</b></div>` +
               `<div class="pp-row"><span>Date</span><b>${p.date || "n/a"}</b></div>` +
               `<div class="pp-row"><span>Flux</span><b>${fmt(p.flux)}</b></div>` +
+              stacked +
               sector +
               `</div>`,
           )
@@ -895,6 +931,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       .then((r) => r.json())
       .then((geojson) => {
         plumeData = geojson;
+        countStacked(geojson.features);
 
         if (controls) {
           const boxes = Array.from(document.querySelectorAll<HTMLInputElement>("[data-sensor]"));
@@ -940,6 +977,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
                 (minFlux === 0 || (p.flux ?? 0) >= minFlux)
               );
             });
+            countStacked(visibleFeatures);
             const src = map.getSource("plumes") as any;
             if (src) src.setData({ type: "FeatureCollection", features: visibleFeatures });
             if (count) count.textContent = `${visibleFeatures.length.toLocaleString()} samples shown`;
