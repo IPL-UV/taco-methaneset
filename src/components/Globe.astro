@@ -47,6 +47,20 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         </div>
 
         <div class="field">
+          <span class="field__label">EMIT annotations</span>
+          <div class="field__checks">
+            <label class="globe-check">
+              <input type="checkbox" value="IMEO" checked data-system />
+              IMEO
+            </label>
+            <label class="globe-check">
+              <input type="checkbox" value="Carbon Mapper" checked data-system />
+              Carbon Mapper
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
           <label class="field__label" for="country-select">Country</label>
           <select id="country-select" class="globe-select">
             <option value="">All countries</option>
@@ -769,11 +783,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         if (!f) return;
         const p = f.properties;
         const color = SENSOR_COLOR[p.sensor as keyof typeof SENSOR_COLOR] ?? "#94a3b8";
-        const extra =
-          p.n_imeo != null
-            ? `<div class="pp-row"><span>IMEO plumes</span><b>${p.n_imeo}</b></div>` +
-              `<div class="pp-row"><span>Carbon Mapper</span><b>${p.n_cm}</b></div>`
-            : "";
+        const system = p.system ? `<div class="pp-row"><span>System</span><b>${p.system}</b></div>` : "";
         const sector = p.sector ? `<div class="pp-row"><span>Sector</span><b>${p.sector}</b></div>` : "";
         popup
           .setLngLat(f.geometry.coordinates)
@@ -783,8 +793,8 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
               `<div class="pp-row"><span>Dataset</span><b>${p.dataset}</b></div>` +
               `<div class="pp-row"><span>Date</span><b>${p.date || "n/a"}</b></div>` +
               `<div class="pp-row"><span>Flux</span><b>${fmt(p.flux)}</b></div>` +
+              system +
               sector +
-              extra +
               `</div>`,
           )
           .addTo(map);
@@ -878,6 +888,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
 
         if (controls) {
           const boxes = Array.from(document.querySelectorAll<HTMLInputElement>("[data-sensor]"));
+          const systemBoxes = Array.from(document.querySelectorAll<HTMLInputElement>("[data-system]"));
           const countrySel = document.getElementById("country-select") as HTMLSelectElement | null;
           const yearFrom = document.getElementById("year-from") as HTMLSelectElement | null;
           const yearTo = document.getElementById("year-to") as HTMLSelectElement | null;
@@ -905,7 +916,14 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
             const to = yearTo?.value ?? "2025";
             const minFlux = Number(fluxMin?.value ?? 0);
 
+            const systems = systemBoxes.filter((b) => b.checked).map((b) => b.value);
+
             const filters: any[] = [["in", ["get", "sensor"], ["literal", sensors]]];
+            filters.push([
+              "any",
+              ["!=", ["get", "sensor"], "EMIT"],
+              ["in", ["get", "system"], ["literal", systems]],
+            ]);
             if (country) filters.push(["==", ["get", "country"], country]);
             filters.push([">=", ["slice", ["get", "date"], 0, 4], from]);
             filters.push(["<=", ["slice", ["get", "date"], 0, 4], to]);
@@ -919,6 +937,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
               const y = (p.date || "").slice(0, 4);
               return (
                 sensors.includes(p.sensor) &&
+                (p.sensor !== "EMIT" || systems.includes(p.system)) &&
                 (!country || p.country === country) &&
                 y >= from &&
                 y <= to &&
@@ -929,6 +948,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
           };
 
           boxes.forEach((b) => b.addEventListener("change", applyFilters));
+          systemBoxes.forEach((b) => b.addEventListener("change", applyFilters));
           [countrySel, yearFrom, yearTo, fluxMin].forEach((s) => s?.addEventListener("change", applyFilters));
           basemapSel?.addEventListener("change", () => setBasemap(basemapSel.value));
         }

@@ -74,34 +74,46 @@ def fetch(path: str) -> pd.DataFrame:
 def emit_points(df: pd.DataFrame, sensor: str) -> list[dict]:
     features = []
     for _, row in df.iterrows():
-        ids = as_list(row.get("detection:imeo_ids"))
-        points = wkt_points(row.get("spatial:imeo_points"))
-        fluxes = as_dict(row.get("detection:imeo_flux"))
-        if not points:
-            ids = as_list(row.get("detection:cm_ids"))
-            points = wkt_points(row.get("spatial:cm_points"))
-            fluxes = as_dict(row.get("detection:cm_flux"))
-        if not points:
-            continue
-        for i, (lon, lat) in enumerate(points):
-            source = ids[i] if i < len(ids) else ""
-            features.append(
-                {
-                    "type": "Feature",
-                    "geometry": {"type": "Point", "coordinates": [lon, lat]},
-                    "properties": {
-                        "dataset": "methaneset-emit",
-                        "sensor": sensor,
-                        "country": row.get("site:country"),
-                        "date": str(row.get("emit:time_start", ""))[:10],
-                        "flux": num(fluxes.get(source)),
-                        "flux_kind": "max",
-                        "id": f"{row['id']}:{source}" if source else str(row["id"]),
-                        "source": source,
-                        "sector": row.get("detection:sector"),
-                    },
-                }
-            )
+        matches = [
+            (
+                "IMEO",
+                as_list(row.get("detection:imeo_ids")),
+                wkt_points(row.get("spatial:imeo_points")),
+                as_dict(row.get("detection:imeo_flux")),
+            ),
+            (
+                "Carbon Mapper",
+                as_list(row.get("detection:cm_ids")),
+                wkt_points(row.get("spatial:cm_points")),
+                as_dict(row.get("detection:cm_flux")),
+            ),
+        ]
+        for system, ids, points, fluxes in matches:
+            seen = set()
+            for i, (lon, lat) in enumerate(points):
+                source = ids[i] if i < len(ids) else ""
+                key = source or (lon, lat)
+                if key in seen:
+                    continue
+                seen.add(key)
+                features.append(
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Point", "coordinates": [lon, lat]},
+                        "properties": {
+                            "dataset": "methaneset-emit",
+                            "sensor": sensor,
+                            "system": system,
+                            "country": row.get("site:country"),
+                            "date": str(row.get("emit:time_start", ""))[:10],
+                            "flux": num(fluxes.get(source)),
+                            "flux_kind": "max",
+                            "id": f"{row['id']}:{source}" if source else str(row["id"]),
+                            "source": source,
+                            "sector": row.get("detection:sector"),
+                        },
+                    }
+                )
     return features
 
 

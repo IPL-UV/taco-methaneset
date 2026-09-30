@@ -7,6 +7,7 @@ const HF = "https://huggingface.co/datasets/tacofoundation/methaneset/resolve/ma
 export interface SampleProps {
   dataset: string;
   sensor: string;
+  system?: string;
   country: string;
   date: string;
   id: string;
@@ -498,7 +499,7 @@ function render(): void {
   const head =
     `<p class="globe-panel__title">Sample</p>` +
     `<p class="sv-title">${p.sensor}, ${p.country ?? "Unknown"}</p>` +
-    `<p class="sv-status">${p.date || "n/a"}, ${p.dataset}${p.flux ? `, ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
+    `<p class="sv-status">${p.system ? `${p.system}, ` : ""}${p.date || "n/a"}, ${p.dataset}${p.flux ? `, ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
 
   let bodyHtml = "";
   if (p.viz === "multispectral") {
@@ -535,7 +536,7 @@ function render(): void {
               .join(", ");
             return (
               `<button class="sv-pick${i === curIndex ? " is-on" : ""}" data-pick="${i}" type="button">` +
-              `<b>${q.sensor}</b><span>${meta}</span>` +
+              `<b>${q.sensor}${q.system ? ` (${q.system})` : ""}</b><span>${meta}</span>` +
               `</button>`
             );
           })
