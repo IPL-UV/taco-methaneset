@@ -28,6 +28,7 @@ interface UiElements {
   layersRoot: HTMLElement;
   layersBody: HTMLElement;
   list?: Feature[];
+  picker?: boolean;
 }
 
 interface Rendered {
@@ -63,6 +64,7 @@ let uiRef: UiElements | null = null;
 let popup: any = null;
 let curList: Feature[] = [];
 let curIndex = 0;
+let curPicker = false;
 
 const keyOf = (id: string, asset: Asset) => `${id}:${asset}`;
 const ids = (key: string) => {
@@ -521,11 +523,39 @@ function render(): void {
     bodyHtml = `<p class="sv-status">EMIT is stored in sensor coordinates, so it cannot be drawn on the map yet.</p>`;
   }
 
-  ui.body.innerHTML = nav + head + bodyHtml;
+  const picks =
+    curPicker && curList.length > 1
+      ? `<p class="sv-status">${curList.length} samples at this location</p>` +
+        `<div class="sv-picks">` +
+        curList
+          .map((f, i) => {
+            const q = f.properties;
+            const meta = [q.date || "n/a", q.flux ? `${Math.round(q.flux).toLocaleString()} kg/h` : ""]
+              .filter(Boolean)
+              .join(", ");
+            return (
+              `<button class="sv-pick${i === curIndex ? " is-on" : ""}" data-pick="${i}" type="button">` +
+              `<b>${q.sensor}</b><span>${meta}</span>` +
+              `</button>`
+            );
+          })
+          .join("") +
+        `</div>`
+      : "";
 
+  ui.body.innerHTML = nav + head + picks + bodyHtml;
+
+  ui.body.querySelectorAll<HTMLButtonElement>("[data-pick]").forEach((el) => {
+    el.addEventListener("click", () => {
+      curIndex = Number(el.dataset.pick);
+      render();
+    });
+  });
   ui.body.querySelectorAll<HTMLButtonElement>("[data-move]").forEach((el) => {
     el.addEventListener("click", () => move(Number(el.dataset.move)));
   });
+  const selected = ui.body.querySelector<HTMLElement>(".sv-pick.is-on");
+  if (selected) selected.scrollIntoView({ block: "nearest" });
   ui.body.querySelectorAll<HTMLInputElement>("[data-asset]").forEach((el) => {
     el.addEventListener("change", async () => {
       const asset = el.dataset.asset as Asset;
@@ -559,6 +589,7 @@ function move(delta: number): void {
 export function openInspector(map: any, feature: Feature, ui: UiElements): void {
   mapRef = map;
   uiRef = ui;
+  curPicker = !!ui.picker;
   const source = ui.list && ui.list.length ? ui.list : [feature];
   curList = [...source].sort((a, b) => (a.properties.date || "").localeCompare(b.properties.date || ""));
   curIndex = Math.max(0, curList.findIndex((f) => f.properties.id === feature.properties.id));

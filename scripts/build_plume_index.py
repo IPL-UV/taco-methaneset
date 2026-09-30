@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import urllib.request
 
 import pandas as pd
@@ -34,6 +35,34 @@ def num(value):
     return float(value)
 
 
+POINT_RE = re.compile(r"-?\d+\.?\d*(?:[eE][-+]?\d+)?")
+
+
+def wkt_points(value) -> list[tuple[float, float]]:
+    if not isinstance(value, str):
+        return []
+    nums = [float(x) for x in POINT_RE.findall(value)]
+    return list(zip(nums[0::2], nums[1::2]))
+
+
+def as_list(value) -> list:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+    return list(value) if isinstance(value, (list, tuple)) else []
+
+
+def as_dict(value) -> dict:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+    return dict(value) if isinstance(value, dict) else {}
+
+
 def fetch(path: str) -> pd.DataFrame:
     CACHE.mkdir(parents=True, exist_ok=True)
     local = CACHE / path.replace("/", "__")
@@ -45,29 +74,34 @@ def fetch(path: str) -> pd.DataFrame:
 def emit_points(df: pd.DataFrame, sensor: str) -> list[dict]:
     features = []
     for _, row in df.iterrows():
-        west, east = num(row["spatial:bbox_west"]), num(row["spatial:bbox_east"])
-        south, north = num(row["spatial:bbox_south"]), num(row["spatial:bbox_north"])
-        if None in (west, east, south, north):
+        ids = as_list(row.get("detection:imeo_ids"))
+        points = wkt_points(row.get("spatial:imeo_points"))
+        fluxes = as_dict(row.get("detection:imeo_flux"))
+        if not points:
+            ids = as_list(row.get("detection:cm_ids"))
+            points = wkt_points(row.get("spatial:cm_points"))
+            fluxes = as_dict(row.get("detection:cm_flux"))
+        if not points:
             continue
-        fluxes = [num(row.get("detection:imeo_flux_max")), num(row.get("detection:cm_flux_max"))]
-        fluxes = [f for f in fluxes if f is not None]
-        features.append(
-            {
-                "type": "Feature",
-                "geometry": {"type": "Point", "coordinates": [(west + east) / 2, (south + north) / 2]},
-                "properties": {
-                    "dataset": "methaneset-emit",
-                    "sensor": sensor,
-                    "country": row.get("site:country"),
-                    "date": str(row.get("emit:time_start", ""))[:10],
-                    "flux": max(fluxes) if fluxes else None,
-                    "flux_kind": "max",
-                    "n_imeo": int(row["detection:n_imeo"]),
-                    "n_cm": int(row["detection:n_cm"]),
-                    "sector": row.get("detection:sector"),
-                },
-            }
-        )
+        for i, (lon, lat) in enumerate(points):
+            source = ids[i] if i < len(ids) else ""
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [lon, lat]},
+                    "properties": {
+                        "dataset": "methaneset-emit",
+                        "sensor": sensor,
+                        "country": row.get("site:country"),
+                        "date": str(row.get("emit:time_start", ""))[:10],
+                        "flux": num(fluxes.get(source)),
+                        "flux_kind": "max",
+                        "id": f"{row['id']}:{source}" if source else str(row["id"]),
+                        "source": source,
+                        "sector": row.get("detection:sector"),
+                    },
+                }
+            )
     return features
 
 

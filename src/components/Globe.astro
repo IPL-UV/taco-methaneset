@@ -464,6 +464,45 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     color: var(--teal-light);
     background: var(--accent-soft);
   }
+  .sample-viewer :global(.sv-picks) {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    max-height: 180px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin: 0 0 10px;
+    padding: 4px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .sample-viewer :global(.sv-pick) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-xs);
+    padding: 5px 7px;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease);
+  }
+  .sample-viewer :global(.sv-pick:hover),
+  .sample-viewer :global(.sv-pick.is-on) {
+    background: var(--accent-soft);
+  }
+  .sample-viewer :global(.sv-pick b) {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .sample-viewer :global(.sv-pick span) {
+    font-size: 0.7rem;
+    color: var(--slate);
+  }
   .layer-panel {
     position: absolute;
     bottom: 20px;
@@ -764,10 +803,31 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         const layersRoot = document.getElementById("layer-panel");
         const layersBody = document.getElementById("layer-panel-body");
         if (!root || !bodyEl || !layersRoot || !layersBody) return;
+
+        const [lng, lat] = f.geometry.coordinates;
+        const seen = new Set<string>();
+        const cluster: any[] = [];
+        for (const x of map.queryRenderedFeatures(e.point, { layers: ["plumes"] }) as any[]) {
+          const g = x.geometry;
+          if (!g || g.coordinates[0] !== lng || g.coordinates[1] !== lat) continue;
+          const p = x.properties;
+          const key = p.id ?? `${p.sensor}|${p.date}|${p.dataset}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          cluster.push({ properties: p, geometry: g });
+        }
+        const picker = cluster.length > 1;
         openInspector(
           map,
           { properties: f.properties, geometry: f.geometry },
-          { root, body: bodyEl, layersRoot, layersBody, list: visibleFeatures },
+          {
+            root,
+            body: bodyEl,
+            layersRoot,
+            layersBody,
+            list: picker ? cluster : visibleFeatures,
+            picker,
+          },
         );
       });
 
