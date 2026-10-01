@@ -16,7 +16,7 @@ export interface SampleProps {
   viz?: string;
 }
 
-type Asset = "target" | "ch4" | "plume";
+type Asset = "target" | "bg" | "ch4" | "ratio" | "ratio_bg" | "plume";
 
 interface Feature {
   properties: SampleProps;
@@ -47,11 +47,30 @@ interface Entry {
   visible: boolean;
 }
 
-const ASSETS: Asset[] = ["target", "ch4", "plume"];
+const ASSETS: Asset[] = ["target", "bg", "ch4", "ratio", "ratio_bg", "plume"];
 const ASSET_LABEL: Record<Asset, string> = {
   target: "RGB",
+  bg: "RGB bg",
   ch4: "CH₄",
+  ratio: "B12/B11",
+  ratio_bg: "B12/B11 bg",
   plume: "Mask",
+};
+const ASSET_LONG: Record<Asset, string> = {
+  target: "RGB",
+  bg: "RGB background",
+  ch4: "CH₄ enhancement",
+  ratio: "B12/B11 ratio",
+  ratio_bg: "B12/B11 background",
+  plume: "Plume mask",
+};
+const LEAF_OF: Record<Asset, string> = {
+  target: "target",
+  bg: "bg0",
+  ch4: "ch4",
+  ratio: "target",
+  ratio_bg: "bg0",
+  plume: "plume",
 };
 
 const cache = new Map<string, Rendered>();
@@ -96,23 +115,41 @@ function projFromGeoKeys(keys: Record<string, number | string>): string | null {
   return null;
 }
 
-const CH4_MAX = 2000;
-let ch4Threshold = 0;
+let ch4Min = 0;
+let ch4Max = 2000;
 
 function drawCh4Into(img: ImageData, band: ArrayLike<number>, width: number, height: number): void {
+  const span = Math.max(1, ch4Max - ch4Min);
   for (let i = 0; i < width * height; i++) {
     const v = band[i];
-    if (!isFinite(v) || v === 0 || (v > 0 && v < ch4Threshold)) {
+    if (!isFinite(v) || v === 0 || (v > 0 && v < ch4Min)) {
       img.data[i * 4 + 3] = 0;
       continue;
     }
-    const t = Math.max(0, Math.min(1, v / CH4_MAX));
+    const t = Math.max(0, Math.min(1, (v - ch4Min) / span));
     const [r, g, b] = colormap(t);
     img.data[i * 4] = r;
     img.data[i * 4 + 1] = g;
     img.data[i * 4 + 2] = b;
     img.data[i * 4 + 3] = 255;
   }
+}
+
+function updateCh4Labels(): void {
+  if (!uiRef) return;
+  const body = uiRef.body;
+  const set = (sel: string, text: string) => {
+    const el = body.querySelector<HTMLElement>(sel);
+    if (el) el.textContent = text;
+  };
+  set("[data-ch4-min-label]", String(ch4Min));
+  set("[data-ch4-max-label]", String(ch4Max));
+  set("[data-ch4-min-value]", `${ch4Min} ppb`);
+  set("[data-ch4-max-value]", `${ch4Max} ppb`);
+  const minInput = body.querySelector<HTMLInputElement>("[data-ch4-min]");
+  if (minInput) minInput.value = String(ch4Min);
+  const maxInput = body.querySelector<HTMLInputElement>("[data-ch4-max]");
+  if (maxInput) maxInput.value = String(ch4Max);
 }
 
 function redrawCh4(): void {
@@ -257,7 +294,7 @@ function percentiles(data: ArrayLike<number>): { lo: number; hi: number } {
   return { lo: at(0.02), hi: at(0.98) };
 }
 
-async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
+async function renderAsset(bytes: Uint8Array, asset: Asset, sensor: string): Promise<Rendered> {
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
   const image = await (await fromArrayBuffer(buffer)).getImage();
   const width = image.getWidth();
@@ -282,6 +319,30 @@ async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
         const v = s.hi === s.lo ? 0 : (band[i] - s.lo) / (s.hi - s.lo);
         img.data[i * 4 + c] = Math.max(0, Math.min(255, Math.round(v * 255)));
       }
+      img.data[i * 4 + 3] = 255;
+    }
+  } else if (asset === "ratio" || asset === "ratio_bg") {
+    const swir = sensor === "Landsat 8/9" ? [5, 6] : [11, 12];
+    const [b11, b12] = (await image.readRasters({ samples: swir })) as unknown as ArrayLike<number>[];
+    const ratio = new Float32Array(width * height);
+    const valid: number[] = [];
+    for (let i = 0; i < width * height; i++) {
+      const r = b11[i] > 0 ? b12[i] / b11[i] : NaN;
+      ratio[i] = r;
+      if (isFinite(r)) valid.push(r);
+    }
+    const { lo, hi } = percentiles(valid.length ? valid : [0, 1]);
+    for (let i = 0; i < width * height; i++) {
+      const r = ratio[i];
+      if (!isFinite(r)) {
+        img.data[i * 4 + 3] = 0;
+        continue;
+      }
+      const t = hi === lo ? 0 : Math.max(0, Math.min(1, (r - lo) / (hi - lo)));
+      const [cr, cg, cb] = colormap(t);
+      img.data[i * 4] = cr;
+      img.data[i * 4 + 1] = cg;
+      img.data[i * 4 + 2] = cb;
       img.data[i * 4 + 3] = 255;
     }
   } else {
@@ -404,8 +465,8 @@ async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
     const url = `${HF}/${props.dataset}/${props.file}`;
     let rendered = cache.get(key);
     if (!rendered) {
-      const bytes = await withRetry(() => extractTacozipEntry(url, `DATA/${props.id}/${asset}`));
-      rendered = await renderAsset(bytes, asset);
+      const bytes = await withRetry(() => extractTacozipEntry(url, `DATA/${props.id}/${LEAF_OF[asset]}`));
+      rendered = await renderAsset(bytes, asset, props.sensor);
       cache.set(key, rendered);
     }
     const entry: Entry = { key, asset, props, rendered, visible: true };
@@ -540,7 +601,7 @@ function render(): void {
         return (
           `<label class="sv-asset">` +
           `<input type="checkbox" data-asset="${a}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
-          `<span>${a === "target" ? "RGB" : a === "ch4" ? "CH₄ enhancement" : "Plume mask"}</span>` +
+          `<span>${ASSET_LONG[a]}</span>` +
           `<span class="sv-asset__state${err ? " is-error" : ""}" title="${err ? err.replace(/"/g, "&quot;") : ""}">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : err ? "error" : ""}</span>` +
           `</label>`
         );
@@ -554,10 +615,16 @@ function render(): void {
     ? `<div class="sv-legend">` +
       `<span class="sv-legend__label">ΔXCH₄ (ppb)</span>` +
       `<div class="sv-legend__bar"></div>` +
-      `<div class="sv-legend__scale"><span>0</span><span>${CH4_MAX.toLocaleString()}</span></div>` +
+      `<div class="sv-legend__scale"><span data-ch4-min-label>${ch4Min}</span><span data-ch4-max-label>${ch4Max}</span></div>` +
       `<div class="sv-legend__row">` +
-      `<input type="range" min="0" max="${CH4_MAX}" step="10" value="${ch4Threshold}" data-ch4-threshold />` +
-      `<span class="sv-legend__value" data-ch4-value>${ch4Threshold} ppb</span>` +
+      `<span class="sv-legend__tag">min</span>` +
+      `<input type="range" min="-2000" max="1900" step="10" value="${ch4Min}" data-ch4-min />` +
+      `<span class="sv-legend__value" data-ch4-min-value>${ch4Min} ppb</span>` +
+      `</div>` +
+      `<div class="sv-legend__row">` +
+      `<span class="sv-legend__tag">max</span>` +
+      `<input type="range" min="100" max="5000" step="10" value="${ch4Max}" data-ch4-max />` +
+      `<span class="sv-legend__value" data-ch4-max-value>${ch4Max} ppb</span>` +
       `</div>` +
       `</div>`
     : "";
@@ -594,11 +661,16 @@ function render(): void {
     closed = true;
     render();
   });
-  ui.body.querySelector<HTMLInputElement>("[data-ch4-threshold]")?.addEventListener("input", (ev) => {
-    const input = ev.target as HTMLInputElement;
-    ch4Threshold = Number(input.value);
-    const label = ui.body.querySelector<HTMLElement>("[data-ch4-value]");
-    if (label) label.textContent = `${ch4Threshold} ppb`;
+  ui.body.querySelector<HTMLInputElement>("[data-ch4-min]")?.addEventListener("input", (ev) => {
+    ch4Min = Number((ev.target as HTMLInputElement).value);
+    if (ch4Min >= ch4Max) ch4Max = Math.min(5000, ch4Min + 10);
+    updateCh4Labels();
+    redrawCh4();
+  });
+  ui.body.querySelector<HTMLInputElement>("[data-ch4-max]")?.addEventListener("input", (ev) => {
+    ch4Max = Number((ev.target as HTMLInputElement).value);
+    if (ch4Max <= ch4Min) ch4Min = Math.max(-2000, ch4Max - 10);
+    updateCh4Labels();
     redrawCh4();
   });
   const selected = ui.body.querySelector<HTMLElement>(".sv-pick.is-on");
