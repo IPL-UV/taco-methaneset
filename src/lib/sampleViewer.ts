@@ -474,6 +474,12 @@ async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
     entries.push(entry);
     addEntryLayers(mapRef, entry);
     zoomToGroup([entry]);
+    if (asset === "ch4" && rendered.range) {
+      ch4Min = Math.max(0, Math.floor(rendered.range.lo));
+      ch4Max = Math.min(2000, Math.ceil(rendered.range.hi));
+      if (ch4Min >= ch4Max) ch4Max = ch4Min + 10;
+      updateCh4Bounds();
+    }
     (window as any).__sampleLoaded = true;
     return entry;
   } catch (err) {
