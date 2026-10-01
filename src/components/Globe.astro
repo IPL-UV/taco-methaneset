@@ -660,6 +660,27 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     padding: 9px 0;
     border-top: 1px solid var(--line);
   }
+  .layer-panel :global(.lp-row) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+  }
+  .layer-panel :global(.lp-row__handle) {
+    cursor: grab;
+    color: var(--slate);
+    font-size: 0.9rem;
+    line-height: 1;
+    user-select: none;
+  }
+  .layer-panel :global(.lp-row.is-dragging) {
+    opacity: 0.45;
+  }
+  .layer-panel :global(.lp-row .lp-item__text) {
+    flex: 1;
+    min-width: 0;
+  }
   .layer-panel :global(.lp-item__text) {
     display: flex;
     flex-direction: column;
