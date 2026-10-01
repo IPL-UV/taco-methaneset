@@ -37,6 +37,7 @@ interface Rendered {
   width: number;
   height: number;
   band?: ArrayLike<number>;
+  range?: { lo: number; hi: number };
 }
 
 interface Entry {
@@ -108,6 +109,20 @@ function projFromGeoKeys(keys: Record<string, number | string>): string | null {
 
 let ch4Min = 0;
 let ch4Max = 2000;
+let ch4BoundsLo = -1000;
+let ch4BoundsHi = 2000;
+
+function updateCh4Bounds(): void {
+  const ranges = entries.filter((e) => e.asset === "ch4" && e.rendered.range).map((e) => e.rendered.range!);
+  if (ranges.length) {
+    const lo = Math.floor(Math.min(...ranges.map((r) => r.lo)) / 10) * 10;
+    const hi = Math.ceil(Math.max(...ranges.map((r) => r.hi)) / 10) * 10;
+    ch4BoundsLo = Math.min(0, Math.max(-3000, lo));
+    ch4BoundsHi = Math.max(2000, Math.min(10000, hi));
+  }
+  ch4Min = Math.max(ch4BoundsLo, Math.min(ch4Min, ch4BoundsHi - 10));
+  ch4Max = Math.min(ch4BoundsHi, Math.max(ch4Max, ch4BoundsLo + 10));
+}
 
 function drawCh4Into(img: ImageData, band: ArrayLike<number>, width: number, height: number): void {
   const span = Math.max(1, ch4Max - ch4Min);
@@ -138,9 +153,17 @@ function updateCh4Labels(): void {
   set("[data-ch4-min-value]", `${ch4Min} ppb`);
   set("[data-ch4-max-value]", `${ch4Max} ppb`);
   const minInput = body.querySelector<HTMLInputElement>("[data-ch4-min]");
-  if (minInput) minInput.value = String(ch4Min);
+  if (minInput) {
+    minInput.min = String(ch4BoundsLo);
+    minInput.max = String(ch4BoundsHi);
+    minInput.value = String(ch4Min);
+  }
   const maxInput = body.querySelector<HTMLInputElement>("[data-ch4-max]");
-  if (maxInput) maxInput.value = String(ch4Max);
+  if (maxInput) {
+    maxInput.min = String(ch4BoundsLo);
+    maxInput.max = String(ch4BoundsHi);
+    maxInput.value = String(ch4Max);
+  }
 }
 
 function redrawCh4(): void {
@@ -298,6 +321,7 @@ async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
   const ctx = canvas.getContext("2d")!;
   const img = ctx.createImageData(width, height);
   let rawBand: ArrayLike<number> | undefined;
+  let rawRange: { lo: number; hi: number } | undefined;
 
   if (asset === "target") {
     const samples = count >= 13 ? [11, 7, 3] : count >= 11 ? [6, 4, 3] : [0];
@@ -317,6 +341,10 @@ async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
     if (asset === "ch4") {
       drawCh4Into(img, band, width, height);
       rawBand = band;
+      const vals = Array.from(band).filter((v) => isFinite(v) && v !== 0);
+      vals.sort((a, b) => a - b);
+      const q = (p: number) => (vals.length ? vals[Math.min(vals.length - 1, Math.floor(vals.length * p))] : 0);
+      rawRange = { lo: q(0.01), hi: q(0.99) };
     } else {
       for (let i = 0; i < width * height; i++) {
         img.data[i * 4] = 249;
@@ -343,7 +371,7 @@ async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
     return [lng, lat] as [number, number];
   });
 
-  return { dataUrl: canvas.toDataURL("image/png"), coordinates, width, height, band: rawBand };
+  return { dataUrl: canvas.toDataURL("image/png"), coordinates, width, height, band: rawBand, range: rawRange };
 }
 
 function polygonOf(coordinates: [number, number][]) {
@@ -578,6 +606,7 @@ function render(): void {
     bodyHtml = `<p class="sv-status">EMIT is stored in sensor coordinates, so it cannot be drawn on the map yet.</p>`;
   }
 
+  updateCh4Bounds();
   const legend = entries.some((e) => e.asset === "ch4")
     ? `<div class="sv-legend">` +
       `<span class="sv-legend__label">ΔXCH₄ (ppb)</span>` +
@@ -585,12 +614,12 @@ function render(): void {
       `<div class="sv-legend__scale"><span data-ch4-min-label>${ch4Min}</span><span data-ch4-max-label>${ch4Max}</span></div>` +
       `<div class="sv-legend__row">` +
       `<span class="sv-legend__tag">min</span>` +
-      `<input type="range" min="-2000" max="1900" step="10" value="${ch4Min}" data-ch4-min />` +
+      `<input type="range" min="${ch4BoundsLo}" max="${ch4BoundsHi}" step="10" value="${ch4Min}" data-ch4-min />` +
       `<span class="sv-legend__value" data-ch4-min-value>${ch4Min} ppb</span>` +
       `</div>` +
       `<div class="sv-legend__row">` +
       `<span class="sv-legend__tag">max</span>` +
-      `<input type="range" min="100" max="5000" step="10" value="${ch4Max}" data-ch4-max />` +
+      `<input type="range" min="${ch4BoundsLo}" max="${ch4BoundsHi}" step="10" value="${ch4Max}" data-ch4-max />` +
       `<span class="sv-legend__value" data-ch4-max-value>${ch4Max} ppb</span>` +
       `</div>` +
       `</div>`
