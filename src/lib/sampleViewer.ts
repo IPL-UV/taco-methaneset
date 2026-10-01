@@ -133,8 +133,8 @@ function updateCh4Bounds(): void {
   if (ranges.length) {
     const lo = Math.floor(Math.min(...ranges.map((r) => r.lo)) / 10) * 10;
     const hi = Math.ceil(Math.max(...ranges.map((r) => r.hi)) / 10) * 10;
-    ch4BoundsLo = Math.min(0, Math.max(-3000, lo));
-    ch4BoundsHi = Math.max(2000, Math.min(10000, hi));
+    ch4BoundsLo = Math.max(-10000, lo);
+    ch4BoundsHi = Math.min(10000, hi);
   }
   ch4Min = Math.max(ch4BoundsLo, Math.min(ch4Min, ch4BoundsHi - 10));
   ch4Max = Math.min(ch4BoundsHi, Math.max(ch4Max, ch4BoundsLo + 10));
@@ -492,10 +492,11 @@ async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
     addEntryLayers(mapRef, entry);
     zoomToGroup([entry]);
     if (asset === "ch4" && rendered.range) {
-      ch4Min = Math.max(0, Math.floor(rendered.range.lo));
-      ch4Max = Math.min(2000, Math.ceil(rendered.range.hi));
-      if (ch4Min >= ch4Max) ch4Max = ch4Min + 10;
       updateCh4Bounds();
+      ch4Min = Math.min(Math.max(0, ch4BoundsLo), ch4BoundsHi - 10);
+      ch4Max = Math.max(Math.min(2000, ch4BoundsHi), ch4BoundsLo + 10);
+      updateCh4Labels();
+      redrawCh4();
     }
     (window as any).__sampleLoaded = true;
     return entry;
