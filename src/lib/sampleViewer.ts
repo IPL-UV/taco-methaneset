@@ -77,6 +77,22 @@ let popup: any = null;
 let curList: Feature[] = [];
 let curIndex = 0;
 let closed = false;
+let assetOrder: Asset[] = ["plume", "ch4", "target"];
+
+function sortEntries(): void {
+  const rank = new Map<Asset, number>();
+  [...assetOrder].reverse().forEach((a, i) => rank.set(a, i));
+  const sampleIdx = new Map<string, number>();
+  entries.forEach((e) => {
+    if (!sampleIdx.has(e.props.id)) sampleIdx.set(e.props.id, sampleIdx.size);
+  });
+  entries.sort((a, b) => {
+    const sa = sampleIdx.get(a.props.id)!;
+    const sb = sampleIdx.get(b.props.id)!;
+    if (sa !== sb) return sa - sb;
+    return (rank.get(a.asset) ?? 0) - (rank.get(b.asset) ?? 0);
+  });
+}
 
 const keyOf = (id: string, asset: Asset) => `${id}:${asset}`;
 const ids = (key: string) => {
@@ -472,6 +488,7 @@ async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
     }
     const entry: Entry = { key, asset, props, rendered, visible: true };
     entries.push(entry);
+    sortEntries();
     addEntryLayers(mapRef, entry);
     zoomToGroup([entry]);
     if (asset === "ch4" && rendered.range) {
@@ -525,22 +542,35 @@ function renderLayersPanel(): void {
   }
   layersRoot.style.display = "block";
 
-  const order = [...entries].reverse();
+  const groups = new Map<string, Entry[]>();
+  for (const e of entries) {
+    const g = groups.get(e.props.id) ?? [];
+    g.push(e);
+    groups.set(e.props.id, g);
+  }
+
   layersBody.innerHTML =
-    `<p class="globe-panel__title">On the map (${order.length})</p>` +
-    order
-      .map(
-        (e) =>
-          `<div class="lp-row" draggable="true" data-drag="${e.key}">` +
-          `<span class="lp-row__handle" aria-hidden="true">⠿</span>` +
-          `<div class="lp-item__text"><b>${ASSET_LABEL[e.asset]}</b><span>${e.props.sensor}, ${e.props.country}, ${e.props.date}</span></div>` +
-          `<button class="lp-chip ${e.visible ? "is-on" : ""}" data-chip="${e.key}" type="button" title="Show / hide">${e.visible ? "on" : "off"}</button>` +
+    `<p class="globe-panel__title">On the map (${groups.size})</p>` +
+    Array.from(groups.values())
+      .map((group) => {
+        const p = group[0].props;
+        const chips = ASSETS.filter((a) => group.some((e) => e.asset === a))
+          .map((a) => {
+            const e = group.find((x) => x.asset === a)!;
+            return `<button class="lp-chip ${e.visible ? "is-on" : ""}" data-chip="${e.key}" type="button">${ASSET_LABEL[a]}</button>`;
+          })
+          .join("");
+        return (
+          `<div class="lp-item">` +
+          `<div class="lp-item__text"><b>${p.sensor}</b><span>${p.country}, ${p.date}</span></div>` +
+          `<div class="lp-item__chips">${chips}</div>` +
           `<div class="lp-item__actions">` +
-          `<button class="lp-icon" data-zoom="${e.key}" type="button" aria-label="Zoom">⌕</button>` +
-          `<button class="lp-icon" data-remove="${e.key}" type="button" aria-label="Remove">×</button>` +
+          `<button class="lp-icon" data-zoom="${p.id}" type="button" aria-label="Zoom">⌕</button>` +
+          `<button class="lp-icon" data-remove="${p.id}" type="button" aria-label="Remove">×</button>` +
           `</div>` +
-          `</div>`,
-      )
+          `</div>`
+        );
+      })
       .join("");
 
   layersBody.querySelectorAll<HTMLButtonElement>("[data-chip]").forEach((el) => {
@@ -553,47 +583,20 @@ function renderLayersPanel(): void {
   });
   layersBody.querySelectorAll<HTMLButtonElement>("[data-zoom]").forEach((el) => {
     el.addEventListener("click", () => {
-      const entry = entries.find((e) => e.key === el.dataset.zoom);
-      if (entry) zoomToGroup([entry]);
+      const group = entries.filter((e) => e.props.id === el.dataset.zoom);
+      if (group.length) zoomToGroup(group);
     });
   });
   layersBody.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((el) => {
     el.addEventListener("click", () => {
-      const key = el.dataset.remove!;
-      const entry = entries.find((e) => e.key === key);
-      if (!entry) return;
-      removeEntryLayers(mapRef, entry.key);
-      cache.delete(entry.key);
-      const i = entries.findIndex((e) => e.key === key);
-      if (i >= 0) entries.splice(i, 1);
-      render();
-    });
-  });
-
-  let dragKey: string | null = null;
-  layersBody.querySelectorAll<HTMLElement>("[data-drag]").forEach((row) => {
-    row.addEventListener("dragstart", (ev) => {
-      dragKey = row.dataset.drag ?? null;
-      row.classList.add("is-dragging");
-      ev.dataTransfer?.setData("text/plain", dragKey ?? "");
-    });
-    row.addEventListener("dragend", () => {
-      dragKey = null;
-      row.classList.remove("is-dragging");
-    });
-    row.addEventListener("dragover", (ev) => ev.preventDefault());
-    row.addEventListener("drop", (ev) => {
-      ev.preventDefault();
-      const target = row.dataset.drag;
-      if (!dragKey || !target || dragKey === target) return;
-      const from = order.findIndex((e) => e.key === dragKey);
-      const to = order.findIndex((e) => e.key === target);
-      if (from < 0 || to < 0) return;
-      const [moved] = order.splice(from, 1);
-      order.splice(to, 0, moved);
-      entries.length = 0;
-      entries.push(...order.reverse());
-      applyLayerOrder();
+      const id = el.dataset.remove!;
+      for (const e of entries.filter((x) => x.props.id === id)) {
+        removeEntryLayers(mapRef, e.key);
+        cache.delete(e.key);
+      }
+      for (let i = entries.length - 1; i >= 0; i--) {
+        if (entries[i].props.id === id) entries.splice(i, 1);
+      }
       render();
     });
   });
@@ -621,20 +624,25 @@ function render(): void {
   if (p.viz === "multispectral") {
     bodyHtml =
       `<div class="sv-assets">` +
-      ASSETS.map((a) => {
-        const key = keyOf(p.id, a);
-        const entry = entries.find((e) => e.key === key);
-        const on = !!entry && entry.visible;
-        const busy = loading.has(key);
-        const err = failed.get(key);
-        return (
-          `<label class="sv-asset">` +
-          `<input type="checkbox" data-asset="${a}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
-          `<span>${ASSET_LONG[a]}</span>` +
-          `<span class="sv-asset__state${err ? " is-error" : ""}" title="${err ? err.replace(/"/g, "&quot;") : ""}">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : err ? "error" : ""}</span>` +
-          `</label>`
-        );
-      }).join("") +
+      assetOrder
+        .map((a) => {
+          const key = keyOf(p.id, a);
+          const entry = entries.find((e) => e.key === key);
+          const on = !!entry && entry.visible;
+          const busy = loading.has(key);
+          const err = failed.get(key);
+          return (
+            `<div class="sv-asset-row" draggable="true" data-asset-row="${a}">` +
+            `<span class="sv-asset-row__handle" aria-hidden="true">⠿</span>` +
+            `<label class="sv-asset">` +
+            `<input type="checkbox" data-asset="${a}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
+            `<span>${ASSET_LONG[a]}</span>` +
+            `<span class="sv-asset__state${err ? " is-error" : ""}" title="${err ? err.replace(/"/g, "&quot;") : ""}">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : err ? "error" : ""}</span>` +
+            `</label>` +
+            `</div>`
+          );
+        })
+        .join("") +
       `</div>`;
   } else {
     bodyHtml = `<p class="sv-status">EMIT is stored in sensor coordinates, so it cannot be drawn on the map yet.</p>`;
@@ -714,6 +722,32 @@ function render(): void {
     onCh4Max(Number((ev.target as HTMLInputElement).value));
   });
   updateCh4Labels();
+  let dragAsset: Asset | null = null;
+  ui.body.querySelectorAll<HTMLElement>("[data-asset-row]").forEach((row) => {
+    row.addEventListener("dragstart", (ev) => {
+      dragAsset = (row.dataset.assetRow as Asset) ?? null;
+      row.classList.add("is-dragging");
+      ev.dataTransfer?.setData("text/plain", dragAsset ?? "");
+    });
+    row.addEventListener("dragend", () => {
+      dragAsset = null;
+      row.classList.remove("is-dragging");
+    });
+    row.addEventListener("dragover", (ev) => ev.preventDefault());
+    row.addEventListener("drop", (ev) => {
+      ev.preventDefault();
+      const target = row.dataset.assetRow as Asset;
+      if (!dragAsset || dragAsset === target) return;
+      const from = assetOrder.indexOf(dragAsset);
+      const to = assetOrder.indexOf(target);
+      if (from < 0 || to < 0) return;
+      const [moved] = assetOrder.splice(from, 1);
+      assetOrder.splice(to, 0, moved);
+      sortEntries();
+      applyLayerOrder();
+      render();
+    });
+  });
   const selected = ui.body.querySelector<HTMLElement>(".sv-pick.is-on");
   if (selected) selected.scrollIntoView({ block: "nearest" });
   ui.body.querySelectorAll<HTMLInputElement>("[data-asset]").forEach((el) => {
