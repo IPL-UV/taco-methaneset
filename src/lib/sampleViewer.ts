@@ -16,7 +16,7 @@ export interface SampleProps {
   viz?: string;
 }
 
-type Asset = "target" | "bg" | "ch4" | "ratio" | "ratio_bg" | "plume";
+type Asset = "target" | "ch4" | "plume";
 
 interface Feature {
   properties: SampleProps;
@@ -47,29 +47,20 @@ interface Entry {
   visible: boolean;
 }
 
-const ASSETS: Asset[] = ["target", "bg", "ch4", "ratio", "ratio_bg", "plume"];
+const ASSETS: Asset[] = ["target", "ch4", "plume"];
 const ASSET_LABEL: Record<Asset, string> = {
   target: "RGB",
-  bg: "RGB bg",
   ch4: "CH₄",
-  ratio: "B12/B11",
-  ratio_bg: "B12/B11 bg",
   plume: "Mask",
 };
 const ASSET_LONG: Record<Asset, string> = {
   target: "RGB",
-  bg: "RGB background",
   ch4: "CH₄ enhancement",
-  ratio: "B12/B11 ratio",
-  ratio_bg: "B12/B11 background",
   plume: "Plume mask",
 };
 const LEAF_OF: Record<Asset, string> = {
   target: "target",
-  bg: "bg0",
   ch4: "ch4",
-  ratio: "target",
-  ratio_bg: "bg0",
   plume: "plume",
 };
 
@@ -294,7 +285,7 @@ function percentiles(data: ArrayLike<number>): { lo: number; hi: number } {
   return { lo: at(0.02), hi: at(0.98) };
 }
 
-async function renderAsset(bytes: Uint8Array, asset: Asset, sensor: string): Promise<Rendered> {
+async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
   const image = await (await fromArrayBuffer(buffer)).getImage();
   const width = image.getWidth();
@@ -319,30 +310,6 @@ async function renderAsset(bytes: Uint8Array, asset: Asset, sensor: string): Pro
         const v = s.hi === s.lo ? 0 : (band[i] - s.lo) / (s.hi - s.lo);
         img.data[i * 4 + c] = Math.max(0, Math.min(255, Math.round(v * 255)));
       }
-      img.data[i * 4 + 3] = 255;
-    }
-  } else if (asset === "ratio" || asset === "ratio_bg") {
-    const swir = sensor === "Landsat 8/9" ? [5, 6] : [11, 12];
-    const [b11, b12] = (await image.readRasters({ samples: swir })) as unknown as ArrayLike<number>[];
-    const ratio = new Float32Array(width * height);
-    const valid: number[] = [];
-    for (let i = 0; i < width * height; i++) {
-      const r = b11[i] > 0 ? b12[i] / b11[i] : NaN;
-      ratio[i] = r;
-      if (isFinite(r)) valid.push(r);
-    }
-    const { lo, hi } = percentiles(valid.length ? valid : [0, 1]);
-    for (let i = 0; i < width * height; i++) {
-      const r = ratio[i];
-      if (!isFinite(r)) {
-        img.data[i * 4 + 3] = 0;
-        continue;
-      }
-      const t = hi === lo ? 0 : Math.max(0, Math.min(1, (r - lo) / (hi - lo)));
-      const [cr, cg, cb] = colormap(t);
-      img.data[i * 4] = cr;
-      img.data[i * 4 + 1] = cg;
-      img.data[i * 4 + 2] = cb;
       img.data[i * 4 + 3] = 255;
     }
   } else {
@@ -466,7 +433,7 @@ async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
     let rendered = cache.get(key);
     if (!rendered) {
       const bytes = await withRetry(() => extractTacozipEntry(url, `DATA/${props.id}/${LEAF_OF[asset]}`));
-      rendered = await renderAsset(bytes, asset, props.sensor);
+      rendered = await renderAsset(bytes, asset);
       cache.set(key, rendered);
     }
     const entry: Entry = { key, asset, props, rendered, visible: true };
