@@ -144,25 +144,31 @@ function drawCh4Into(img: ImageData, band: ArrayLike<number>, width: number, hei
 function updateCh4Labels(): void {
   if (!uiRef) return;
   const body = uiRef.body;
-  const set = (sel: string, text: string) => {
-    const el = body.querySelector<HTMLElement>(sel);
-    if (el) el.textContent = text;
+  const setVal = (sel: string, value: number) => {
+    const el = body.querySelector<HTMLInputElement>(sel);
+    if (el) {
+      el.min = String(ch4BoundsLo);
+      el.max = String(ch4BoundsHi);
+      el.value = String(value);
+    }
   };
-  set("[data-ch4-min-label]", String(ch4Min));
-  set("[data-ch4-max-label]", String(ch4Max));
-  set("[data-ch4-min-value]", `${ch4Min} ppb`);
-  set("[data-ch4-max-value]", `${ch4Max} ppb`);
-  const minInput = body.querySelector<HTMLInputElement>("[data-ch4-min]");
-  if (minInput) {
-    minInput.min = String(ch4BoundsLo);
-    minInput.max = String(ch4BoundsHi);
-    minInput.value = String(ch4Min);
+  setVal("[data-ch4-min]", ch4Min);
+  setVal("[data-ch4-max]", ch4Max);
+  setVal("[data-ch4-min-num]", ch4Min);
+  setVal("[data-ch4-max-num]", ch4Max);
+  const span = Math.max(1, ch4BoundsHi - ch4BoundsLo);
+  const a = ((ch4Min - ch4BoundsLo) / span) * 100;
+  const b = ((ch4Max - ch4BoundsLo) / span) * 100;
+  const fill = body.querySelector<HTMLElement>("[data-ch4-fill]");
+  if (fill) {
+    fill.style.left = `${a}%`;
+    fill.style.width = `${Math.max(0, b - a)}%`;
   }
-  const maxInput = body.querySelector<HTMLInputElement>("[data-ch4-max]");
-  if (maxInput) {
-    maxInput.min = String(ch4BoundsLo);
-    maxInput.max = String(ch4BoundsHi);
-    maxInput.value = String(ch4Max);
+  const minEl = body.querySelector<HTMLElement>("[data-ch4-min]");
+  const maxEl = body.querySelector<HTMLElement>("[data-ch4-max]");
+  if (minEl && maxEl) {
+    minEl.style.zIndex = a > b - 12 ? "5" : "3";
+    maxEl.style.zIndex = "4";
   }
 }
 
@@ -611,16 +617,14 @@ function render(): void {
     ? `<div class="sv-legend">` +
       `<span class="sv-legend__label">ΔXCH₄ (ppb)</span>` +
       `<div class="sv-legend__bar"></div>` +
-      `<div class="sv-legend__scale"><span data-ch4-min-label>${ch4Min}</span><span data-ch4-max-label>${ch4Max}</span></div>` +
-      `<div class="sv-legend__row">` +
-      `<span class="sv-legend__tag">min</span>` +
+      `<div class="sv-legend__slider">` +
+      `<div class="sv-legend__fill" data-ch4-fill></div>` +
       `<input type="range" min="${ch4BoundsLo}" max="${ch4BoundsHi}" step="10" value="${ch4Min}" data-ch4-min />` +
-      `<span class="sv-legend__value" data-ch4-min-value>${ch4Min} ppb</span>` +
-      `</div>` +
-      `<div class="sv-legend__row">` +
-      `<span class="sv-legend__tag">max</span>` +
       `<input type="range" min="${ch4BoundsLo}" max="${ch4BoundsHi}" step="10" value="${ch4Max}" data-ch4-max />` +
-      `<span class="sv-legend__value" data-ch4-max-value>${ch4Max} ppb</span>` +
+      `</div>` +
+      `<div class="sv-legend__inputs">` +
+      `<input type="number" min="${ch4BoundsLo}" max="${ch4BoundsHi}" step="10" value="${ch4Min}" data-ch4-min-num />` +
+      `<input type="number" min="${ch4BoundsLo}" max="${ch4BoundsHi}" step="10" value="${ch4Max}" data-ch4-max-num />` +
       `</div>` +
       `</div>`
     : "";
@@ -657,18 +661,31 @@ function render(): void {
     closed = true;
     render();
   });
-  ui.body.querySelector<HTMLInputElement>("[data-ch4-min]")?.addEventListener("input", (ev) => {
-    ch4Min = Number((ev.target as HTMLInputElement).value);
-    if (ch4Min >= ch4Max) ch4Max = Math.min(5000, ch4Min + 10);
+  const onCh4Min = (value: number) => {
+    ch4Min = value;
+    if (ch4Min > ch4Max - 10) ch4Max = Math.min(ch4BoundsHi, ch4Min + 10);
     updateCh4Labels();
     redrawCh4();
+  };
+  const onCh4Max = (value: number) => {
+    ch4Max = value;
+    if (ch4Max < ch4Min + 10) ch4Min = Math.max(ch4BoundsLo, ch4Max - 10);
+    updateCh4Labels();
+    redrawCh4();
+  };
+  ui.body.querySelector<HTMLInputElement>("[data-ch4-min]")?.addEventListener("input", (ev) => {
+    onCh4Min(Number((ev.target as HTMLInputElement).value));
   });
   ui.body.querySelector<HTMLInputElement>("[data-ch4-max]")?.addEventListener("input", (ev) => {
-    ch4Max = Number((ev.target as HTMLInputElement).value);
-    if (ch4Max <= ch4Min) ch4Min = Math.max(-2000, ch4Max - 10);
-    updateCh4Labels();
-    redrawCh4();
+    onCh4Max(Number((ev.target as HTMLInputElement).value));
   });
+  ui.body.querySelector<HTMLInputElement>("[data-ch4-min-num]")?.addEventListener("change", (ev) => {
+    onCh4Min(Number((ev.target as HTMLInputElement).value));
+  });
+  ui.body.querySelector<HTMLInputElement>("[data-ch4-max-num]")?.addEventListener("change", (ev) => {
+    onCh4Max(Number((ev.target as HTMLInputElement).value));
+  });
+  updateCh4Labels();
   const selected = ui.body.querySelector<HTMLElement>(".sv-pick.is-on");
   if (selected) selected.scrollIntoView({ block: "nearest" });
   ui.body.querySelectorAll<HTMLInputElement>("[data-asset]").forEach((el) => {
