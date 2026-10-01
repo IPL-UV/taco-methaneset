@@ -554,6 +554,50 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     font-size: 0.7rem;
     color: var(--slate);
   }
+  .sample-viewer :global(.sv-legend) {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sample-viewer :global(.sv-legend__label) {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--slate);
+  }
+  .sample-viewer :global(.sv-legend__bar) {
+    height: 10px;
+    border-radius: var(--radius-xs);
+    background: linear-gradient(90deg, rgb(13, 8, 135) 0%, rgb(126, 3, 168) 25%, rgb(204, 71, 120) 50%, rgb(248, 149, 64) 75%, rgb(252, 255, 164) 100%);
+  }
+  .sample-viewer :global(.sv-legend__scale) {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    color: var(--slate);
+  }
+  .sample-viewer :global(.sv-legend__row) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sample-viewer :global(.sv-legend__row input[type="range"]) {
+    flex: 1;
+    accent-color: var(--teal);
+    cursor: pointer;
+  }
+  .sample-viewer :global(.sv-legend__value) {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--teal-light);
+    min-width: 64px;
+    text-align: right;
+  }
   .layer-panel {
     position: absolute;
     bottom: 20px;

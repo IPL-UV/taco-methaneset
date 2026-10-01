@@ -36,6 +36,7 @@ interface Rendered {
   coordinates: [number, number][];
   width: number;
   height: number;
+  band?: ArrayLike<number>;
 }
 
 interface Entry {
@@ -93,6 +94,44 @@ function projFromGeoKeys(keys: Record<string, number | string>): string | null {
   const geo = Number(keys.GeographicTypeGeoKey || 0);
   if (geo === 4326) return "EPSG:4326";
   return null;
+}
+
+const CH4_MAX = 2000;
+let ch4Threshold = 0;
+
+function drawCh4Into(img: ImageData, band: ArrayLike<number>, width: number, height: number): void {
+  for (let i = 0; i < width * height; i++) {
+    const v = band[i];
+    if (!isFinite(v) || v === 0 || (v > 0 && v < ch4Threshold)) {
+      img.data[i * 4 + 3] = 0;
+      continue;
+    }
+    const t = Math.max(0, Math.min(1, v / CH4_MAX));
+    const [r, g, b] = colormap(t);
+    img.data[i * 4] = r;
+    img.data[i * 4 + 1] = g;
+    img.data[i * 4 + 2] = b;
+    img.data[i * 4 + 3] = 255;
+  }
+}
+
+function redrawCh4(): void {
+  for (const entry of entries) {
+    if (entry.asset !== "ch4" || !entry.rendered.band) continue;
+    const canvas = document.createElement("canvas");
+    canvas.width = entry.rendered.width;
+    canvas.height = entry.rendered.height;
+    const ctx = canvas.getContext("2d")!;
+    const img = ctx.createImageData(canvas.width, canvas.height);
+    drawCh4Into(img, entry.rendered.band, canvas.width, canvas.height);
+    ctx.putImageData(img, 0, 0);
+    entry.rendered.dataUrl = canvas.toDataURL("image/png");
+    const { src } = ids(entry.key);
+    const source = mapRef.getSource(src) as any;
+    if (source && typeof source.updateImage === "function") {
+      source.updateImage({ url: entry.rendered.dataUrl });
+    }
+  }
 }
 
 function colormap(t: number): [number, number, number] {
@@ -230,6 +269,7 @@ async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
   const img = ctx.createImageData(width, height);
+  let rawBand: ArrayLike<number> | undefined;
 
   if (asset === "target") {
     const samples = count >= 13 ? [11, 7, 3] : count >= 11 ? [6, 4, 3] : [0];
@@ -246,16 +286,11 @@ async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
     }
   } else {
     const band = ((await image.readRasters()) as unknown as ArrayLike<number>[])[0];
-    const { hi } = percentiles(band);
-    for (let i = 0; i < width * height; i++) {
-      const t = hi === 0 ? 0 : band[i] / hi;
-      if (asset === "ch4") {
-        const [r, g, b] = colormap(t);
-        img.data[i * 4] = r;
-        img.data[i * 4 + 1] = g;
-        img.data[i * 4 + 2] = b;
-        img.data[i * 4 + 3] = Math.round(Math.min(1, Math.max(0, (t - 0.06) / 0.22)) * 170);
-      } else {
+    if (asset === "ch4") {
+      drawCh4Into(img, band, width, height);
+      rawBand = band;
+    } else {
+      for (let i = 0; i < width * height; i++) {
         img.data[i * 4] = 249;
         img.data[i * 4 + 1] = 115;
         img.data[i * 4 + 2] = 22;
@@ -280,7 +315,7 @@ async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
     return [lng, lat] as [number, number];
   });
 
-  return { dataUrl: canvas.toDataURL("image/png"), coordinates, width, height };
+  return { dataUrl: canvas.toDataURL("image/png"), coordinates, width, height, band: rawBand };
 }
 
 function polygonOf(coordinates: [number, number][]) {
@@ -515,6 +550,18 @@ function render(): void {
     bodyHtml = `<p class="sv-status">EMIT is stored in sensor coordinates, so it cannot be drawn on the map yet.</p>`;
   }
 
+  const legend = entries.some((e) => e.asset === "ch4")
+    ? `<div class="sv-legend">` +
+      `<span class="sv-legend__label">ΔXCH₄ (ppb)</span>` +
+      `<div class="sv-legend__bar"></div>` +
+      `<div class="sv-legend__scale"><span>0</span><span>${CH4_MAX.toLocaleString()}</span></div>` +
+      `<div class="sv-legend__row">` +
+      `<input type="range" min="0" max="${CH4_MAX}" step="10" value="${ch4Threshold}" data-ch4-threshold />` +
+      `<span class="sv-legend__value" data-ch4-value>${ch4Threshold} ppb</span>` +
+      `</div>` +
+      `</div>`
+    : "";
+
   const picks =
     curList.length > 1
       ? `<p class="sv-status">${curList.length} samples at this location</p>` +
@@ -535,7 +582,7 @@ function render(): void {
         `</div>`
       : "";
 
-  ui.body.innerHTML = head + picks + bodyHtml;
+  ui.body.innerHTML = head + picks + bodyHtml + legend;
 
   ui.body.querySelectorAll<HTMLButtonElement>("[data-pick]").forEach((el) => {
     el.addEventListener("click", () => {
@@ -546,6 +593,13 @@ function render(): void {
   ui.body.querySelector<HTMLButtonElement>(".sv-close")?.addEventListener("click", () => {
     closed = true;
     render();
+  });
+  ui.body.querySelector<HTMLInputElement>("[data-ch4-threshold]")?.addEventListener("input", (ev) => {
+    const input = ev.target as HTMLInputElement;
+    ch4Threshold = Number(input.value);
+    const label = ui.body.querySelector<HTMLElement>("[data-ch4-value]");
+    if (label) label.textContent = `${ch4Threshold} ppb`;
+    redrawCh4();
   });
   const selected = ui.body.querySelector<HTMLElement>(".sv-pick.is-on");
   if (selected) selected.scrollIntoView({ block: "nearest" });
