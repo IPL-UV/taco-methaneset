@@ -16,6 +16,17 @@ const {
 
 const path = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : `${Astro.url.pathname}/`;
 const canonical = new URL(path, Astro.site ?? Astro.url).href;
+
+const fontFaces = [
+  { family: "Inter", file: "fonts/inter-latin.woff2", weight: "100 900" },
+  { family: "JetBrains Mono", file: "fonts/jetbrainsmono-latin.woff2", weight: "100 900" },
+  { family: "Newsreader", file: "fonts/newsreader-latin.woff2", weight: "200 800" },
+]
+  .map(
+    (f) =>
+      `@font-face{font-family:"${f.family}";font-style:normal;font-weight:${f.weight};font-display:swap;src:url("${url(f.file)}") format("woff2");}`,
+  )
+  .join("");
 ---
 
 <!doctype html>
@@ -34,12 +45,7 @@ const canonical = new URL(path, Astro.site ?? Astro.url).href;
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary" />
     <link rel="icon" href={url("favicon.svg")} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
+    <style is:inline set:html={fontFaces}></style>
     <script is:inline>
       (function () {
         try {
