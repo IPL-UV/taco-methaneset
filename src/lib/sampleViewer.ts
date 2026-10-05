@@ -1,4 +1,4 @@
-import { fromArrayBuffer } from "geotiff";
+import { BaseClient, BaseResponse, fromArrayBuffer, fromCustomClient } from "geotiff";
 import maplibregl from "maplibre-gl";
 import proj4 from "proj4";
 
@@ -14,9 +14,10 @@ export interface SampleProps {
   file: string;
   flux?: number | null;
   viz?: string;
+  point?: [number, number];
 }
 
-type Asset = "target" | "ch4" | "plume";
+type Asset = "target" | "ch4" | "plume" | "radiance" | "imeo" | "cm";
 
 interface Feature {
   properties: SampleProps;
@@ -48,22 +49,30 @@ interface Entry {
   visible: boolean;
 }
 
-const ASSETS: Asset[] = ["target", "ch4", "plume"];
+const MULTI_ASSETS: Asset[] = ["target", "ch4", "plume"];
+const EMIT_ASSETS: Asset[] = ["radiance", "imeo", "cm"];
 const ASSET_LABEL: Record<Asset, string> = {
   target: "RGB",
   ch4: "CH₄",
   plume: "Mask",
+  radiance: "RGB",
+  imeo: "IME-O",
+  cm: "CM",
 };
 const ASSET_LONG: Record<Asset, string> = {
   target: "RGB",
   ch4: "CH₄ enhancement",
   plume: "Plume mask",
+  radiance: "RGB (radiance)",
+  imeo: "IME-O plume mask",
+  cm: "Carbon Mapper mask",
 };
-const LEAF_OF: Record<Asset, string> = {
+const LEAF_OF: Record<string, string> = {
   target: "target",
   ch4: "ch4",
   plume: "plume",
 };
+const EMIT_SET = new Set<Asset>(["radiance", "imeo", "cm"]);
 
 const cache = new Map<string, Rendered>();
 const entries: Entry[] = [];
@@ -78,10 +87,14 @@ let curList: Feature[] = [];
 let curIndex = 0;
 let closed = false;
 let assetOrder: Asset[] = ["plume", "ch4", "target"];
+let emitOrder: Asset[] = ["cm", "imeo", "radiance"];
+const orderFor = (asset: Asset): Asset[] => (EMIT_SET.has(asset) ? emitOrder : assetOrder);
 
 function sortEntries(): void {
   const rank = new Map<Asset, number>();
-  [...assetOrder].reverse().forEach((a, i) => rank.set(a, i));
+  for (const list of [assetOrder, emitOrder]) {
+    [...list].reverse().forEach((a, i) => rank.set(a, i));
+  }
   const sampleIdx = new Map<string, number>();
   entries.forEach((e) => {
     if (!sampleIdx.has(e.props.id)) sampleIdx.set(e.props.id, sampleIdx.size);
@@ -330,6 +343,256 @@ function percentiles(data: ArrayLike<number>): { lo: number; hi: number } {
   return { lo: at(0.02), hi: at(0.98) };
 }
 
+function paintCanvas(width: number, height: number, paint: (img: ImageData) => void): string {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d")!;
+  const img = ctx.createImageData(width, height);
+  paint(img);
+  ctx.putImageData(img, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+const HEAD_BYTES = 4 << 20;
+const SMALL_FILE = 16 << 20;
+
+class BufferedResponse extends BaseResponse {
+  constructor(
+    private code: number,
+    private data: ArrayBuffer,
+    private start: number,
+    private total: number,
+  ) {
+    super();
+  }
+  get ok(): boolean {
+    return true;
+  }
+  get status(): number {
+    return this.code;
+  }
+  getHeader(name: string): string | undefined {
+    const key = name.toLowerCase();
+    if (key === "content-range") {
+      return `bytes ${this.start}-${this.start + this.data.byteLength - 1}/${this.total}`;
+    }
+    if (key === "content-type") return "application/octet-stream";
+    return undefined;
+  }
+  async getData(): Promise<ArrayBuffer> {
+    return this.data;
+  }
+}
+
+/**
+ * Remote client for the EMIT folder files. The radiance is 1.48 GB, but its TIFF
+ * directory and its pyramids live at the two ends of the file, and geotiff.js
+ * would otherwise issue hundreds of tiny ranged reads. This prefetches the head
+ * (directory) and the tail (pyramids), serves those slices from memory and only
+ * hits the network for anything in between.
+ */
+class PrefetchClient extends BaseClient {
+  private chunks: { start: number; data: ArrayBuffer }[] = [];
+  private total = 0;
+  private ready: Promise<void>;
+
+  constructor(url: string) {
+    super(url);
+    this.ready = this.prefetch();
+  }
+
+  private async prefetch(): Promise<void> {
+    try {
+      const head = await fetch(this.url, { headers: { Range: `bytes=0-${HEAD_BYTES - 1}` } });
+      if (!head.ok) return;
+      const cr = head.headers.get("content-range");
+      this.total = cr ? Number(cr.split("/")[1]) : HEAD_BYTES;
+      const headData = await head.arrayBuffer();
+      this.chunks.push({ start: 0, data: headData });
+      if (this.total <= SMALL_FILE) {
+        if (headData.byteLength < this.total) {
+          const rest = await fetch(this.url, { headers: { Range: `bytes=${headData.byteLength}-${this.total - 1}` } });
+          if (rest.ok) this.chunks.push({ start: headData.byteLength, data: await rest.arrayBuffer() });
+        }
+      } else {
+        const start = Math.max(HEAD_BYTES, this.total - (8 << 20));
+        const tail = await fetch(this.url, { headers: { Range: `bytes=${start}-${this.total - 1}` } });
+        if (tail.ok) this.chunks.push({ start, data: await tail.arrayBuffer() });
+      }
+    } catch {
+      /* on-demand requests still work */
+    }
+  }
+
+  private buffered(start: number, length: number): ArrayBuffer | null {
+    for (const chunk of this.chunks) {
+      if (start >= chunk.start && start + length <= chunk.start + chunk.data.byteLength) {
+        return chunk.data.slice(start - chunk.start, start - chunk.start + length);
+      }
+    }
+    return null;
+  }
+
+  async request({ headers, signal }: { headers?: Record<string, string>; signal?: AbortSignal } = {}): Promise<BaseResponse> {
+    await this.ready;
+    const range = headers?.Range ?? headers?.range;
+    if (range) {
+      const match = /bytes=(\d+)-(\d+)/.exec(range);
+      if (match) {
+        const start = Number(match[1]);
+        const length = Number(match[2]) - start + 1;
+        const data = this.buffered(start, length);
+        if (data) return new BufferedResponse(206, data, start, this.total || start + length);
+      }
+    }
+    const response = await fetch(this.url, { headers, signal });
+    return {
+      ok: response.ok,
+      status: response.status,
+      getHeader: (name: string) => response.headers.get(name) ?? undefined,
+      getData: () => response.arrayBuffer(),
+    } as unknown as BaseResponse;
+  }
+}
+
+async function emitTiff(url: string) {
+  return fromCustomClient(new PrefetchClient(url), { blockSize: 65536, cacheSize: 256 });
+}
+
+type Corners = [number, number][];
+
+function bilinear(corners: Corners, u: number, v: number): [number, number] {
+  const [tl, tr, br, bl] = corners;
+  const lon = (1 - u) * (1 - v) * tl[0] + u * (1 - v) * tr[0] + u * v * br[0] + (1 - u) * v * bl[0];
+  const lat = (1 - u) * (1 - v) * tl[1] + u * (1 - v) * tr[1] + u * v * br[1] + (1 - u) * v * bl[1];
+  return [lon, lat];
+}
+
+function invertBilinear(corners: Corners, target: [number, number]): [number, number] {
+  let u = 0.5;
+  let v = 0.5;
+  for (let i = 0; i < 12; i++) {
+    const [lon, lat] = bilinear(corners, u, v);
+    const e = 1e-4;
+    const [lonU, latU] = bilinear(corners, u + e, v);
+    const [lonV, latV] = bilinear(corners, u, v + e);
+    const f0 = lon - target[0];
+    const f1 = lat - target[1];
+    const j00 = (lonU - lon) / e;
+    const j01 = (lonV - lon) / e;
+    const j10 = (latU - lat) / e;
+    const j11 = (latV - lat) / e;
+    const det = j00 * j11 - j01 * j10;
+    if (Math.abs(det) < 1e-12) break;
+    u -= (j11 * f0 - j01 * f1) / det;
+    v -= (-j10 * f0 + j00 * f1) / det;
+    u = Math.max(0, Math.min(1, u));
+    v = Math.max(0, Math.min(1, v));
+  }
+  return [u, v];
+}
+
+async function emitCoordinates(latlonUrl: string): Promise<[number, number][]> {
+  const tiff = await emitTiff(latlonUrl);
+  const image = await tiff.getImage(0);
+  const w = image.getWidth();
+  const h = image.getHeight();
+  const corners: [number, number][] = [
+    [0, 0],
+    [w - 1, 0],
+    [w - 1, h - 1],
+    [0, h - 1],
+  ];
+  const out: [number, number][] = [];
+  for (const [x, y] of corners) {
+    const [latBand, lonBand] = (await image.readRasters({ window: [x, y, x + 1, y + 1] })) as unknown as ArrayLike<number>[];
+    out.push([Number(lonBand[0]), Number(latBand[0])]);
+  }
+  return out;
+}
+
+function paintRgb(bands: ArrayLike<number>[], width: number, height: number): string {
+  const scales = bands.map(percentiles);
+  return paintCanvas(width, height, (img) => {
+    for (let i = 0; i < width * height; i++) {
+      for (let c = 0; c < 3; c++) {
+        const band = bands[Math.min(c, bands.length - 1)];
+        const s = scales[Math.min(c, scales.length - 1)];
+        const v = s.hi === s.lo ? 0 : (band[i] - s.lo) / (s.hi - s.lo);
+        img.data[i * 4 + c] = Math.max(0, Math.min(255, Math.round(v * 255)));
+      }
+      img.data[i * 4 + 3] = 255;
+    }
+  });
+}
+
+async function renderEmitRadiance(base: string, latlon: string, point?: [number, number]): Promise<Rendered> {
+  const tiff = await emitTiff(`${base}/radiance.tif`);
+  const levels = await tiff.getImageCount();
+  const scene = await emitCoordinates(latlon);
+  if (levels > 1) {
+    const image = await tiff.getImage(1);
+    const width = image.getWidth();
+    const height = image.getHeight();
+    const bands = (await image.readRasters({ samples: [35, 23, 12] })) as unknown as ArrayLike<number>[];
+    return { dataUrl: paintRgb(bands, width, height), coordinates: scene, width, height };
+  }
+  const image = await tiff.getImage(0);
+  const fullWidth = image.getWidth();
+  const fullHeight = image.getHeight();
+  const [u, v] = point ? invertBilinear(scene, point) : [0.5, 0.5];
+  const cx = Math.round(u * (fullWidth - 1));
+  const cy = Math.round(v * (fullHeight - 1));
+  const winW = Math.min(640, fullWidth);
+  const winH = Math.min(640, fullHeight);
+  const x0 = Math.max(0, Math.min(fullWidth - winW, cx - Math.floor(winW / 2)));
+  const y0 = Math.max(0, Math.min(fullHeight - winH, cy - Math.floor(winH / 2)));
+  const bands = (await image.readRasters({
+    samples: [35, 23, 12],
+    window: [x0, y0, x0 + winW, y0 + winH],
+  })) as unknown as ArrayLike<number>[];
+  const ux = (x: number) => x / (fullWidth - 1);
+  const vy = (y: number) => y / (fullHeight - 1);
+  const coordinates: Corners = [
+    bilinear(scene, ux(x0), vy(y0)),
+    bilinear(scene, ux(x0 + winW - 1), vy(y0)),
+    bilinear(scene, ux(x0 + winW - 1), vy(y0 + winH - 1)),
+    bilinear(scene, ux(x0), vy(y0 + winH - 1)),
+  ];
+  return { dataUrl: paintRgb(bands, winW, winH), coordinates, width: winW, height: winH };
+}
+
+async function renderEmitMask(url: string, latlon: string, color: [number, number, number]): Promise<Rendered> {
+  const tiff = await emitTiff(url);
+  const image = await tiff.getImage(0);
+  const width = image.getWidth();
+  const height = image.getHeight();
+  const mask = ((await image.readRasters({ samples: [0] })) as unknown as BigUint64Array[])[0];
+  const dataUrl = paintCanvas(width, height, (img) => {
+    for (let i = 0; i < width * height; i++) {
+      if (mask[i] !== 0n) {
+        img.data[i * 4] = color[0];
+        img.data[i * 4 + 1] = color[1];
+        img.data[i * 4 + 2] = color[2];
+        img.data[i * 4 + 3] = 210;
+      }
+    }
+  });
+  const coordinates = await emitCoordinates(latlon);
+  return { dataUrl, coordinates, width, height };
+}
+
+async function renderEmitAsset(props: SampleProps, asset: Asset): Promise<Rendered> {
+  const granule = props.id.split(":")[0];
+  const base = `${HF}/${props.dataset}/DATA/${granule}`;
+  const latlon = `${base}/latlon.tif`;
+  if (asset === "radiance") return renderEmitRadiance(base, latlon, props.point);
+  if (asset === "imeo") return renderEmitMask(`${base}/plume_imeo.tif`, latlon, [15, 118, 110]);
+  if (asset === "cm") return renderEmitMask(`${base}/plume_cm.tif`, latlon, [142, 36, 170]);
+  throw new Error(`unsupported EMIT asset: ${asset}`);
+}
+
 async function renderAsset(bytes: Uint8Array, asset: Asset): Promise<Rendered> {
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
   const image = await (await fromArrayBuffer(buffer)).getImage();
@@ -479,11 +742,15 @@ async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
   failed.delete(key);
   render();
   try {
-    const url = `${HF}/${props.dataset}/${props.file}`;
     let rendered = cache.get(key);
     if (!rendered) {
-      const bytes = await withRetry(() => extractTacozipEntry(url, `DATA/${props.id}/${LEAF_OF[asset]}`));
-      rendered = await renderAsset(bytes, asset);
+      if (props.dataset === "methaneset-emit") {
+        rendered = await renderEmitAsset(props, asset);
+      } else {
+        const url = `${HF}/${props.dataset}/${props.file}`;
+        const bytes = await withRetry(() => extractTacozipEntry(url, `DATA/${props.id}/${LEAF_OF[asset]}`));
+        rendered = await renderAsset(bytes, asset);
+      }
       cache.set(key, rendered);
     }
     const entry: Entry = { key, asset, props, rendered, visible: true };
@@ -555,7 +822,7 @@ function renderLayersPanel(): void {
     Array.from(groups.values())
       .map((group) => {
         const p = group[0].props;
-        const chips = ASSETS.filter((a) => group.some((e) => e.asset === a))
+        const chips = [...MULTI_ASSETS, ...EMIT_ASSETS].filter((a) => group.some((e) => e.asset === a))
           .map((a) => {
             const e = group.find((x) => x.asset === a)!;
             return `<button class="lp-chip ${e.visible ? "is-on" : ""}" data-chip="${e.key}" type="button">${ASSET_LABEL[a]}</button>`;
@@ -621,33 +888,29 @@ function render(): void {
     `<p class="sv-title">${p.sensor}${p.system ? ` (${p.system})` : ""}, ${p.country ?? "Unknown"}</p>` +
     `<p class="sv-status">${p.source ? `${p.source}, ` : ""}${p.date || "n/a"}, ${p.dataset}${p.flux ? `, ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
 
-  let bodyHtml = "";
-  if (p.viz === "multispectral") {
-    bodyHtml =
-      `<div class="sv-assets">` +
-      assetOrder
-        .map((a) => {
-          const key = keyOf(p.id, a);
-          const entry = entries.find((e) => e.key === key);
-          const on = !!entry && entry.visible;
-          const busy = loading.has(key);
-          const err = failed.get(key);
-          return (
-            `<div class="sv-asset-row" draggable="true" data-asset-row="${a}">` +
-            `<span class="sv-asset-row__handle" aria-hidden="true">⠿</span>` +
-            `<label class="sv-asset">` +
-            `<input type="checkbox" data-asset="${a}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
-            `<span>${ASSET_LONG[a]}</span>` +
-            `<span class="sv-asset__state${err ? " is-error" : ""}" title="${err ? err.replace(/"/g, "&quot;") : ""}">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : err ? "error" : ""}</span>` +
-            `</label>` +
-            `</div>`
-          );
-        })
-        .join("") +
-      `</div>`;
-  } else {
-    bodyHtml = `<p class="sv-status">EMIT is stored in sensor coordinates, so it cannot be drawn on the map yet.</p>`;
-  }
+  const sampleAssets = p.dataset === "methaneset-emit" ? emitOrder : assetOrder;
+  const bodyHtml =
+    `<div class="sv-assets">` +
+    sampleAssets
+      .map((a) => {
+        const key = keyOf(p.id, a);
+        const entry = entries.find((e) => e.key === key);
+        const on = !!entry && entry.visible;
+        const busy = loading.has(key);
+        const err = failed.get(key);
+        return (
+          `<div class="sv-asset-row" draggable="true" data-asset-row="${a}">` +
+          `<span class="sv-asset-row__handle" aria-hidden="true">⠿</span>` +
+          `<label class="sv-asset">` +
+          `<input type="checkbox" data-asset="${a}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
+          `<span>${ASSET_LONG[a]}</span>` +
+          `<span class="sv-asset__state${err ? " is-error" : ""}" title="${err ? err.replace(/"/g, "&quot;") : ""}">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : err ? "error" : ""}</span>` +
+          `</label>` +
+          `</div>`
+        );
+      })
+      .join("") +
+    `</div>`;
 
   updateCh4Bounds();
   const legend = entries.some((e) => e.asset === "ch4")
@@ -739,11 +1002,12 @@ function render(): void {
       ev.preventDefault();
       const target = row.dataset.assetRow as Asset;
       if (!dragAsset || dragAsset === target) return;
-      const from = assetOrder.indexOf(dragAsset);
-      const to = assetOrder.indexOf(target);
+      const orderList = orderFor(dragAsset);
+      const from = orderList.indexOf(dragAsset);
+      const to = orderList.indexOf(target);
       if (from < 0 || to < 0) return;
-      const [moved] = assetOrder.splice(from, 1);
-      assetOrder.splice(to, 0, moved);
+      const [moved] = orderList.splice(from, 1);
+      orderList.splice(to, 0, moved);
       sortEntries();
       applyLayerOrder();
       render();
@@ -778,6 +1042,9 @@ export function openInspector(map: any, feature: Feature, ui: UiElements): void 
   uiRef = ui;
   closed = false;
   const source = ui.list && ui.list.length ? ui.list : [feature];
+  for (const f of source) {
+    if (!f.properties.point) f.properties.point = f.geometry.coordinates;
+  }
   curList = [...source].sort((a, b) => (a.properties.date || "").localeCompare(b.properties.date || ""));
   curIndex = Math.max(0, curList.findIndex((f) => f.properties.id === feature.properties.id));
   render();

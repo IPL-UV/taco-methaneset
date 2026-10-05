@@ -1,3 +1,56 @@
+diff --git a/node_modules/geotiff/dist-module/geotiffimage.js b/node_modules/geotiff/dist-module/geotiffimage.js
+index d26aef4..0c90974 100644
+--- a/node_modules/geotiff/dist-module/geotiffimage.js
++++ b/node_modules/geotiff/dist-module/geotiffimage.js
+@@ -44,6 +44,9 @@ function arrayForType(format, bitsPerSample, sizeOrData) {
+             else if (bitsPerSample <= 32) {
+                 TypedArrayConstructor = Uint32Array;
+             }
++            else if (bitsPerSample <= 64) {
++                TypedArrayConstructor = BigUint64Array;
++            }
+             break;
+         case 2: // twos complement signed integer data
+             if (bitsPerSample === 8) {
+@@ -55,6 +58,9 @@ function arrayForType(format, bitsPerSample, sizeOrData) {
+             else if (bitsPerSample === 32) {
+                 TypedArrayConstructor = Int32Array;
+             }
++            else if (bitsPerSample === 64) {
++                TypedArrayConstructor = BigInt64Array;
++            }
+             break;
+         case 3: // floating point data
+             switch (bitsPerSample) {
+@@ -88,7 +94,7 @@ function arrayForType(format, bitsPerSample, sizeOrData) {
+  * @returns {boolean}
+  */
+ function needsNormalization(format, bitsPerSample) {
+-    if ((format === 1 || format === 2) && bitsPerSample <= 32 && bitsPerSample % 8 === 0) {
++    if ((format === 1 || format === 2) && bitsPerSample <= 64 && bitsPerSample % 8 === 0) {
+         return false;
+     }
+     else if (format === 3 && (bitsPerSample === 16 || bitsPerSample === 32 || bitsPerSample === 64)) {
+@@ -325,6 +331,9 @@ class GeoTIFFImage {
+                 else if (bitsPerSample <= 32) {
+                     return DataView.prototype.getUint32;
+                 }
++                else if (bitsPerSample <= 64) {
++                    return DataView.prototype.getBigUint64;
++                }
+                 break;
+             case 2: // twos complement signed integer data
+                 if (bitsPerSample <= 8) {
+@@ -336,6 +345,9 @@ class GeoTIFFImage {
+                 else if (bitsPerSample <= 32) {
+                     return DataView.prototype.getInt32;
+                 }
++                else if (bitsPerSample <= 64) {
++                    return DataView.prototype.getBigInt64;
++                }
+                 break;
+             case 3:
+                 switch (bitsPerSample) {
 diff --git a/node_modules/geotiff/dist-module/predictor.js b/node_modules/geotiff/dist-module/predictor.js
 index ef52987..59986f6 100644
 --- a/node_modules/geotiff/dist-module/predictor.js
