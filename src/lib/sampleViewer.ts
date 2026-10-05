@@ -39,6 +39,10 @@ interface Rendered {
   height: number;
   band?: ArrayLike<number>;
   range?: { lo: number; hi: number };
+  readRect?: [number, number, number, number];
+  scene?: [number, number][];
+  fullSize?: [number, number];
+  zoomRead?: (rect: [number, number, number, number]) => Promise<Rendered | null>;
 }
 
 interface Entry {
@@ -405,15 +409,35 @@ class PrefetchClient extends BaseClient {
   private chunks: { start: number; data: ArrayBuffer }[] = [];
   private total = 0;
   private ready: Promise<void>;
+  private resolved: string | null = null;
 
   constructor(url: string) {
     super(url);
     this.ready = this.prefetch();
   }
 
+  /**
+   * Hugging Face answers each ranged read with a redirect to its CDN, which doubles
+   * the round trips. The first response reveals the final URL; reuse it, and fall
+   * back to the resolve URL if the signed link has expired.
+   */
+  private async fetchRange(headers: Record<string, string>, signal?: AbortSignal): Promise<Response> {
+    const target = this.resolved ?? this.url;
+    let response = await fetch(target, { headers, signal });
+    if (response.ok || response.status === 206) {
+      if (!this.resolved && response.url && response.url !== this.url) this.resolved = response.url;
+      return response;
+    }
+    if (this.resolved) {
+      this.resolved = null;
+      response = await fetch(this.url, { headers, signal });
+    }
+    return response;
+  }
+
   private async prefetch(): Promise<void> {
     try {
-      const head = await fetch(this.url, { headers: { Range: `bytes=0-${HEAD_BYTES - 1}` } });
+      const head = await this.fetchRange({ Range: `bytes=0-${HEAD_BYTES - 1}` });
       if (head.status !== 206) return;
       const cr = head.headers.get("content-range");
       const total = cr ? Number(cr.split("/")[1]) : NaN;
@@ -423,12 +447,12 @@ class PrefetchClient extends BaseClient {
       this.chunks.push({ start: 0, data: headData });
       if (this.total <= SMALL_FILE) {
         if (headData.byteLength < this.total) {
-          const rest = await fetch(this.url, { headers: { Range: `bytes=${headData.byteLength}-${this.total - 1}` } });
+          const rest = await this.fetchRange({ Range: `bytes=${headData.byteLength}-${this.total - 1}` });
           if (rest.ok) this.chunks.push({ start: headData.byteLength, data: await rest.arrayBuffer() });
         }
       } else {
         const start = Math.max(HEAD_BYTES, this.total - (8 << 20));
-        const tail = await fetch(this.url, { headers: { Range: `bytes=${start}-${this.total - 1}` } });
+        const tail = await this.fetchRange({ Range: `bytes=${start}-${this.total - 1}` });
         if (tail.ok) this.chunks.push({ start, data: await tail.arrayBuffer() });
       }
     } catch {
@@ -457,7 +481,7 @@ class PrefetchClient extends BaseClient {
         if (data) return new BufferedResponse(206, data, start, this.total || start + length);
       }
     }
-    const response = await fetch(this.url, { headers, signal });
+    const response = await this.fetchRange(headers ?? {}, signal);
     return {
       ok: response.ok,
       status: response.status,
@@ -480,7 +504,7 @@ function bilinear(corners: Corners, u: number, v: number): [number, number] {
   return [lon, lat];
 }
 
-function invertBilinear(corners: Corners, target: [number, number]): [number, number] {
+function invertBilinearRaw(corners: Corners, target: [number, number]): [number, number] | null {
   let u = 0.5;
   let v = 0.5;
   for (let i = 0; i < 12; i++) {
@@ -501,17 +525,16 @@ function invertBilinear(corners: Corners, target: [number, number]): [number, nu
   }
   const [lon, lat] = bilinear(corners, u, v);
   const residual = Math.hypot(lon - target[0], lat - target[1]);
-  if (
-    !Number.isFinite(residual) ||
-    residual > 0.05 ||
-    u < -0.05 ||
-    u > 1.05 ||
-    v < -0.05 ||
-    v > 1.05
-  ) {
+  if (!Number.isFinite(residual) || residual > 0.05) return null;
+  return [u, v];
+}
+
+function invertBilinear(corners: Corners, target: [number, number]): [number, number] {
+  const uv = invertBilinearRaw(corners, target);
+  if (!uv || uv[0] < -0.05 || uv[0] > 1.05 || uv[1] < -0.05 || uv[1] > 1.05) {
     return [0.5, 0.5];
   }
-  return [Math.max(0, Math.min(1, u)), Math.max(0, Math.min(1, v))];
+  return [Math.max(0, Math.min(1, uv[0])), Math.max(0, Math.min(1, uv[1]))];
 }
 
 async function emitCoordinates(latlonUrl: string): Promise<[number, number][]> {
@@ -565,19 +588,50 @@ function paintRgb(bands: ArrayLike<number>[], width: number, height: number): st
 async function renderEmitRadiance(base: string, latlon: string, point?: [number, number]): Promise<Rendered> {
   const tiff = await emitTiff(`${base}/radiance.tif`);
   const levels = await tiff.getImageCount();
+  const full = await tiff.getImage(0);
+  if (full.getSamplesPerPixel() < 36) throw new Error("unexpected EMIT radiance layout");
+  const fullWidth = full.getWidth();
+  const fullHeight = full.getHeight();
   const scene = await emitCoordinates(latlon);
+  const ux = (x: number) => x / (fullWidth - 1);
+  const vy = (y: number) => y / (fullHeight - 1);
+  const rectCoordinates = (rect: [number, number, number, number]): Corners => [
+    bilinear(scene, ux(rect[0]), vy(rect[1])),
+    bilinear(scene, ux(rect[2] - 1), vy(rect[1])),
+    bilinear(scene, ux(rect[2] - 1), vy(rect[3] - 1)),
+    bilinear(scene, ux(rect[0]), vy(rect[3] - 1)),
+  ];
+  const readFullRect = async (rect: [number, number, number, number]): Promise<Rendered> => {
+    const bands = (await full.readRasters({ samples: [35, 23, 12], window: rect })) as unknown as ArrayLike<number>[];
+    const width = rect[2] - rect[0];
+    const height = rect[3] - rect[1];
+    return {
+      dataUrl: paintRgb(bands, width, height),
+      coordinates: rectCoordinates(rect),
+      width,
+      height,
+      readRect: rect,
+      scene,
+      fullSize: [fullWidth, fullHeight],
+      zoomRead,
+    };
+  };
+  const zoomRead = (rect: [number, number, number, number]) => readFullRect(rect);
   if (levels > 1) {
     const image = await tiff.getImage(1);
-    if (image.getSamplesPerPixel() < 36) throw new Error("unexpected EMIT radiance layout");
     const width = image.getWidth();
     const height = image.getHeight();
     const bands = (await image.readRasters({ samples: [35, 23, 12] })) as unknown as ArrayLike<number>[];
-    return { dataUrl: paintRgb(bands, width, height), coordinates: scene, width, height };
+    return {
+      dataUrl: paintRgb(bands, width, height),
+      coordinates: scene,
+      width,
+      height,
+      scene,
+      fullSize: [fullWidth, fullHeight],
+      zoomRead,
+    };
   }
-  const image = await tiff.getImage(0);
-  if (image.getSamplesPerPixel() < 36) throw new Error("unexpected EMIT radiance layout");
-  const fullWidth = image.getWidth();
-  const fullHeight = image.getHeight();
   const [u, v] = point ? invertBilinear(scene, point) : [0.5, 0.5];
   const cx = Math.round(u * (fullWidth - 1));
   const cy = Math.round(v * (fullHeight - 1));
@@ -585,19 +639,7 @@ async function renderEmitRadiance(base: string, latlon: string, point?: [number,
   const winH = Math.min(640, fullHeight);
   const x0 = Math.max(0, Math.min(fullWidth - winW, cx - Math.floor(winW / 2)));
   const y0 = Math.max(0, Math.min(fullHeight - winH, cy - Math.floor(winH / 2)));
-  const bands = (await image.readRasters({
-    samples: [35, 23, 12],
-    window: [x0, y0, x0 + winW, y0 + winH],
-  })) as unknown as ArrayLike<number>[];
-  const ux = (x: number) => x / (fullWidth - 1);
-  const vy = (y: number) => y / (fullHeight - 1);
-  const coordinates: Corners = [
-    bilinear(scene, ux(x0), vy(y0)),
-    bilinear(scene, ux(x0 + winW - 1), vy(y0)),
-    bilinear(scene, ux(x0 + winW - 1), vy(y0 + winH - 1)),
-    bilinear(scene, ux(x0), vy(y0 + winH - 1)),
-  ];
-  return { dataUrl: paintRgb(bands, winW, winH), coordinates, width: winW, height: winH };
+  return readFullRect([x0, y0, x0 + winW, y0 + winH]);
 }
 
 async function renderEmitMask(url: string, latlon: string, color: [number, number, number]): Promise<Rendered> {
@@ -1099,5 +1141,84 @@ export function reAddAll(map: any): void {
     applyLayerOrder();
   } catch (e) {
     /* style not ready */
+  }
+}
+
+let zoomBound = false;
+let zoomToken = 0;
+
+export function attachEmitZoom(map: any): void {
+  if (zoomBound) return;
+  zoomBound = true;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  map.on("moveend", () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => void refreshEmitWindows(map), 700);
+  });
+}
+
+function visibleRect(entry: Entry, map: any): [number, number, number, number] | null {
+  const scene = entry.rendered.scene;
+  const fullSize = entry.rendered.fullSize;
+  if (!scene || !fullSize) return null;
+  const bounds = map.getBounds();
+  const pts: [number, number][] = [
+    [bounds.getWest(), bounds.getNorth()],
+    [bounds.getEast(), bounds.getNorth()],
+    [bounds.getEast(), bounds.getSouth()],
+    [bounds.getWest(), bounds.getSouth()],
+  ];
+  let minU = 1;
+  let minV = 1;
+  let maxU = 0;
+  let maxV = 0;
+  for (const p of pts) {
+    const uv = invertBilinearRaw(scene, p);
+    if (!uv) return null;
+    minU = Math.min(minU, uv[0]);
+    maxU = Math.max(maxU, uv[0]);
+    minV = Math.min(minV, uv[1]);
+    maxV = Math.max(maxV, uv[1]);
+  }
+  if (maxU < 0 || maxV < 0 || minU > 1 || minV > 1) return null;
+  const [fw, fh] = fullSize;
+  const mx = (maxU - minU) * 0.1;
+  const my = (maxV - minV) * 0.1;
+  const x0 = Math.max(0, Math.floor((minU - mx) * (fw - 1)));
+  const y0 = Math.max(0, Math.floor((minV - my) * (fh - 1)));
+  const x1 = Math.min(fw, Math.ceil((maxU + mx) * (fw - 1)) + 1);
+  const y1 = Math.min(fh, Math.ceil((maxV + my) * (fh - 1)) + 1);
+  if (x1 - x0 < 32 || y1 - y0 < 32) return null;
+  if ((x1 - x0) * (y1 - y0) > 1024 * 1024) return null;
+  return [x0, y0, x1, y1];
+}
+
+async function refreshEmitWindows(map: any): Promise<void> {
+  if (map.getZoom() < 12) return;
+  const token = ++zoomToken;
+  for (const entry of entries) {
+    if (entry.asset !== "radiance" || !entry.visible || !entry.rendered.zoomRead) continue;
+    const rect = visibleRect(entry, map);
+    if (!rect) continue;
+    const loaded = entry.rendered.readRect;
+    if (
+      loaded &&
+      rect[0] >= loaded[0] &&
+      rect[1] >= loaded[1] &&
+      rect[2] <= loaded[2] &&
+      rect[3] <= loaded[3]
+    ) {
+      continue;
+    }
+    const zoomRead = entry.rendered.zoomRead;
+    const result = await zoomRead(rect).catch(() => null);
+    if (token !== zoomToken) return;
+    if (!result) continue;
+    entry.rendered = result;
+    const { src } = ids(entry.key);
+    const source = map.getSource(src) as any;
+    if (source && typeof source.updateImage === "function") {
+      source.updateImage({ url: result.dataUrl, coordinates: result.coordinates });
+    }
   }
 }

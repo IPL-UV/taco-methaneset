@@ -796,7 +796,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { url } from "../lib/url";
-  import { openInspector, reAddAll } from "../lib/sampleViewer";
+  import { attachEmitZoom, openInspector, reAddAll } from "../lib/sampleViewer";
 
   const SENSOR_COLOR = {
     EMIT: "#f97316",
@@ -1032,6 +1032,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       });
 
       reAddAll(map);
+      attachEmitZoom(map);
       applyFilters();
     };
 
