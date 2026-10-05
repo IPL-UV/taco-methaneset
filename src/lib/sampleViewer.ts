@@ -337,8 +337,17 @@ async function inflateRaw(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-function percentiles(data: ArrayLike<number>): { lo: number; hi: number } {
-  const arr = Array.from(data).sort((a, b) => a - b);
+function percentiles(data: ArrayLike<number>, dropFill = false): { lo: number; hi: number } {
+  const step = data.length > 150000 ? Math.ceil(data.length / 150000) : 1;
+  const arr: number[] = [];
+  for (let i = 0; i < data.length; i += step) {
+    const v = data[i];
+    if (!isFinite(v)) continue;
+    if (dropFill && v <= -9990) continue;
+    arr.push(v);
+  }
+  if (!arr.length) return { lo: 0, hi: 1 };
+  arr.sort((a, b) => a - b);
   const at = (q: number) => arr[Math.min(arr.length - 1, Math.max(0, Math.floor(arr.length * q)))];
   return { lo: at(0.02), hi: at(0.98) };
 }
@@ -405,9 +414,11 @@ class PrefetchClient extends BaseClient {
   private async prefetch(): Promise<void> {
     try {
       const head = await fetch(this.url, { headers: { Range: `bytes=0-${HEAD_BYTES - 1}` } });
-      if (!head.ok) return;
+      if (head.status !== 206) return;
       const cr = head.headers.get("content-range");
-      this.total = cr ? Number(cr.split("/")[1]) : HEAD_BYTES;
+      const total = cr ? Number(cr.split("/")[1]) : NaN;
+      if (!Number.isFinite(total) || total <= 0) return;
+      this.total = total;
       const headData = await head.arrayBuffer();
       this.chunks.push({ start: 0, data: headData });
       if (this.total <= SMALL_FILE) {
@@ -487,10 +498,20 @@ function invertBilinear(corners: Corners, target: [number, number]): [number, nu
     if (Math.abs(det) < 1e-12) break;
     u -= (j11 * f0 - j01 * f1) / det;
     v -= (-j10 * f0 + j00 * f1) / det;
-    u = Math.max(0, Math.min(1, u));
-    v = Math.max(0, Math.min(1, v));
   }
-  return [u, v];
+  const [lon, lat] = bilinear(corners, u, v);
+  const residual = Math.hypot(lon - target[0], lat - target[1]);
+  if (
+    !Number.isFinite(residual) ||
+    residual > 0.05 ||
+    u < -0.05 ||
+    u > 1.05 ||
+    v < -0.05 ||
+    v > 1.05
+  ) {
+    return [0.5, 0.5];
+  }
+  return [Math.max(0, Math.min(1, u)), Math.max(0, Math.min(1, v))];
 }
 
 async function emitCoordinates(latlonUrl: string): Promise<[number, number][]> {
@@ -506,23 +527,37 @@ async function emitCoordinates(latlonUrl: string): Promise<[number, number][]> {
   ];
   const out: [number, number][] = [];
   for (const [x, y] of corners) {
-    const [latBand, lonBand] = (await image.readRasters({ window: [x, y, x + 1, y + 1] })) as unknown as ArrayLike<number>[];
-    out.push([Number(lonBand[0]), Number(latBand[0])]);
+    const [band0, band1] = (await image.readRasters({ samples: [0, 1], window: [x, y, x + 1, y + 1] })) as unknown as ArrayLike<number>[];
+    let lat = Number(band0[0]);
+    let lon = Number(band1[0]);
+    if (Math.abs(lat) > 90 && Math.abs(lon) <= 90) {
+      [lat, lon] = [lon, lat];
+    }
+    if (!isFinite(lat) || !isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+      throw new Error("cannot georeference this EMIT sample");
+    }
+    out.push([lon, lat]);
   }
   return out;
 }
 
 function paintRgb(bands: ArrayLike<number>[], width: number, height: number): string {
-  const scales = bands.map(percentiles);
+  const scales = bands.map((band) => percentiles(band, true));
   return paintCanvas(width, height, (img) => {
     for (let i = 0; i < width * height; i++) {
+      let fill = false;
       for (let c = 0; c < 3; c++) {
         const band = bands[Math.min(c, bands.length - 1)];
+        const raw = band[i];
+        if (!isFinite(raw) || raw <= -9990) {
+          fill = true;
+          break;
+        }
         const s = scales[Math.min(c, scales.length - 1)];
-        const v = s.hi === s.lo ? 0 : (band[i] - s.lo) / (s.hi - s.lo);
+        const v = s.hi === s.lo ? 0 : (raw - s.lo) / (s.hi - s.lo);
         img.data[i * 4 + c] = Math.max(0, Math.min(255, Math.round(v * 255)));
       }
-      img.data[i * 4 + 3] = 255;
+      img.data[i * 4 + 3] = fill ? 0 : 255;
     }
   });
 }
@@ -533,12 +568,14 @@ async function renderEmitRadiance(base: string, latlon: string, point?: [number,
   const scene = await emitCoordinates(latlon);
   if (levels > 1) {
     const image = await tiff.getImage(1);
+    if (image.getSamplesPerPixel() < 36) throw new Error("unexpected EMIT radiance layout");
     const width = image.getWidth();
     const height = image.getHeight();
     const bands = (await image.readRasters({ samples: [35, 23, 12] })) as unknown as ArrayLike<number>[];
     return { dataUrl: paintRgb(bands, width, height), coordinates: scene, width, height };
   }
   const image = await tiff.getImage(0);
+  if (image.getSamplesPerPixel() < 36) throw new Error("unexpected EMIT radiance layout");
   const fullWidth = image.getWidth();
   const fullHeight = image.getHeight();
   const [u, v] = point ? invertBilinear(scene, point) : [0.5, 0.5];
@@ -568,10 +605,10 @@ async function renderEmitMask(url: string, latlon: string, color: [number, numbe
   const image = await tiff.getImage(0);
   const width = image.getWidth();
   const height = image.getHeight();
-  const mask = ((await image.readRasters({ samples: [0] })) as unknown as BigUint64Array[])[0];
+  const mask = ((await image.readRasters({ samples: [0] })) as unknown as ArrayLike<number | bigint>[])[0];
   const dataUrl = paintCanvas(width, height, (img) => {
     for (let i = 0; i < width * height; i++) {
-      if (mask[i] !== 0n) {
+      if (Number(mask[i]) !== 0) {
         img.data[i * 4] = color[0];
         img.data[i * 4 + 1] = color[1];
         img.data[i * 4 + 2] = color[2];
