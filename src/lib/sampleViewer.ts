@@ -1385,7 +1385,6 @@ function render(): void {
       if (p && p.dataset === "methaneset-emit" && point) {
         flyToPlume(point);
         void ensureEmitWindow(p.id, point);
-        void autoloadEmit(p);
       }
       sortEntries();
       applyLayerOrder();
@@ -1507,12 +1506,6 @@ async function ensureEmitWindow(id: string, point: [number, number]): Promise<vo
   }
 }
 
-async function autoloadEmit(p: SampleProps): Promise<void> {
-  const own: Asset = p.system === "Carbon Mapper" ? "cm" : "imeo";
-  await Promise.allSettled([ensureLoaded(p, "radiance"), ensureLoaded(p, own)]);
-  render();
-}
-
 export function openInspector(map: any, feature: Feature, ui: UiElements): void {
   mapRef = map;
   uiRef = ui;
@@ -1528,7 +1521,6 @@ export function openInspector(map: any, feature: Feature, ui: UiElements): void 
   if (p.dataset === "methaneset-emit") {
     flyToPlume(point);
     void ensureEmitWindow(p.id, point);
-    void autoloadEmit(p);
   }
   sortEntries();
   applyLayerOrder();

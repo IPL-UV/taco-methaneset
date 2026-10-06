@@ -75,15 +75,20 @@ const settled = (pg) => pg.waitForFunction(() => !Array.from(document.querySelec
   await clickPoint(pg, isr.coords, 9);
   const picks = await pg.$$(".sv-pick");
   if (picks.length) await picks[0].click();
+  let r = await rows(pg);
+  check("pair: rows listed but not loaded on click", r.length === 2 && r[0].asset === "imeo" && r[0].state === "" && r[1].asset === "radiance" && r[1].state === "", JSON.stringify(r));
+  await pg.check('[data-asset="imeo"]');
   await settled(pg);
+  await pg.check('[data-asset="radiance"]');
+  await settled(pg);
+  r = await rows(pg);
+  check("pair: checkboxes load the layers", r[0].state === "shown" && r[1].state === "shown", JSON.stringify(r));
   const lay = await pg.evaluate(() => {
     const sv = document.getElementById("sample-viewer");
     const lp = document.getElementById("layer-panel");
     return { maxH: sv.style.maxHeight, gap: Math.round(lp.getBoundingClientRect().top - sv.getBoundingClientRect().bottom), lpDisplay: lp.style.display };
   });
   check("desktop: inspector capped above the layers panel", lay.maxH !== "" && lay.lpDisplay === "block" && lay.gap >= 0, JSON.stringify(lay));
-  let r = await rows(pg);
-  check("pair: own mask + RGB rows, autoloaded", r.length === 2 && r[0].asset === "imeo" && r[0].state === "shown" && r[1].asset === "radiance" && r[1].state === "shown", JSON.stringify(r));
   check("pair: Show button", (await pg.$eval("[data-pair]", (e) => e.textContent)).includes("Show"));
   await pg.click("[data-pair]");
   await pg.waitForFunction(() => Array.from(document.querySelectorAll(".sv-asset-row")).some((x) => x.textContent.includes("CM plume (pair)")) && !Array.from(document.querySelectorAll(".sv-asset__state")).some((s) => s.textContent === "loading…"), null, { timeout: 180000 });
@@ -108,10 +113,12 @@ const settled = (pg) => pg.waitForFunction(() => !Array.from(document.querySelec
 
   const orphan = gj.find((f) => f.match === "orphan" && f.system === "IMEO" && gj.filter((x) => x.coords.join() === f.coords.join()).length === 1);
   await clickPoint(pg, orphan.coords, 12);
-  await settled(pg);
   r = await rows(pg);
-  check("orphan: own mask + RGB, no button", r.length === 2 && r[0].asset === "imeo" && !(await pg.$("[data-pair]")), JSON.stringify(r));
+  check("orphan: own mask + RGB, no button, not loaded", r.length === 2 && r[0].asset === "imeo" && r[0].state === "" && !(await pg.$("[data-pair]")), JSON.stringify(r));
   check("orphan: text", (await pg.$eval(".sv-pair", (e) => e.textContent)).includes("Orphan: only in the IMEO catalog"));
+  await pg.check('[data-asset="imeo"]');
+  await settled(pg);
+  check("orphan: mask loads on demand", (await rows(pg))[0].state === "shown");
 
   await pg.evaluate(async (gran) => {
     const data = await (await fetch("/taco-methaneset/data/plumes.geojson")).json();
@@ -122,6 +129,7 @@ const settled = (pg) => pg.waitForFunction(() => !Array.from(document.querySelec
   const expected = { 1: 37, 2: 1151, 3: 221, 4: 523 };
   for (const plume of plumes) {
     await clickPoint(pg, plume.coords, 13.5);
+    await pg.check('[data-asset="imeo"]');
     await settled(pg);
     const stats = await pg.evaluate(() => window.__maskStats ?? {});
     check(`bit ${plume.bit} (${plume.source}) paints ${expected[plume.bit]} px`, stats[`${GRAN}:imeo:${plume.bit}`] === expected[plume.bit], String(stats[`${GRAN}:imeo:${plume.bit}`]));
@@ -140,14 +148,15 @@ const settled = (pg) => pg.waitForFunction(() => !Array.from(document.querySelec
   }, granule);
   const before = await chipsOfGroup(other.id.split(":")[0]);
   await clickPoint(pg, otherPlumes[0].coords, 13.5);
-  await clickPoint(pg, otherPlumes[1].coords, 13.5);
+  await pg.check('[data-asset="radiance"]');
   await settled(pg);
-  await pg.waitForTimeout(1500);
+  await clickPoint(pg, otherPlumes[1].coords, 13.5);
+  const shared = await rows(pg);
+  check("two plumes of one granule share the RGB entry", shared.find((x) => x.asset === "radiance")?.state === "shown", JSON.stringify(shared));
   const after = await chipsOfGroup(other.id.split(":")[0]);
-  const imeoBefore = before.filter((l) => l.startsWith("IMEO")).length;
   check(
-    "rapid clicks: two plumes in one group, a single RGB entry",
-    after.filter((l) => l.startsWith("IMEO")).length === imeoBefore + 2 && after.filter((l) => l.startsWith("RGB")).length === 1,
+    "two plumes of one granule: a single RGB entry",
+    after.filter((l) => l.startsWith("RGB")).length === 1,
     JSON.stringify({ before, after }),
   );
 
