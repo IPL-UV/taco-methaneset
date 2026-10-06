@@ -3,28 +3,34 @@ import Base from "../layouts/Base.astro";
 
 const examples = [
   {
-    title: "Detect plumes in Sentinel-2",
-    body: "Load the finetune subset, read the plume masks and train a change-detection baseline.",
+    title: "Sentinel-2: catalog to a pixel baseline",
+    body: "Open the two subsets, reproduce the MBMP enhancement and train a minimal pixel classifier.",
     tag: "Multispectral",
-    href: "https://colab.research.google.com/github/IPL-UV/taco-methaneset/blob/main/methaneset-codes/notebooks/01_multispectral.ipynb",
+    href: "https://colab.research.google.com/github/IPL-UV/taco-methaneset/blob/main/methaneset-codes/notebooks/01_s2.ipynb",
   },
   {
-    title: "Detect plumes in EMIT",
-    body: "Stream radiance hypercubes, compare the two matched-filter products and the independent masks.",
+    title: "Landsat 8/9: the same tour",
+    body: "The Landsat counterpart: schema, EDA, B6/B7 enhancement and the baseline.",
+    tag: "Multispectral",
+    href: "https://colab.research.google.com/github/IPL-UV/taco-methaneset/blob/main/methaneset-codes/notebooks/02_l89.ipynb",
+  },
+  {
+    title: "EMIT: radiance, matched filters, masks",
+    body: "Stream the 285-band cube, decode the uint64 bitmask plumes and measure IMEO vs Carbon Mapper IoU.",
     tag: "Hyperspectral",
-    href: "https://colab.research.google.com/github/IPL-UV/taco-methaneset/blob/main/methaneset-codes/notebooks/02_hyperspectral.ipynb",
+    href: "https://colab.research.google.com/github/IPL-UV/taco-methaneset/blob/main/methaneset-codes/notebooks/03_emit.ipynb",
+  },
+  {
+    title: "Plume bank and synthetic injection",
+    body: "Query the bank by solar geometry and wind, scale a map to any rate and inspect the LES cubes.",
+    tag: "Bank",
+    href: "https://colab.research.google.com/github/IPL-UV/taco-methaneset/blob/main/methaneset-codes/notebooks/04_bank.ipynb",
   },
   {
     title: "Query the catalog",
     body: "Filter samples by country, date or flux with SQL over the Parquet index, before downloading imagery.",
     tag: "Metadata",
     href: "https://huggingface.co/datasets/tacofoundation/methaneset",
-  },
-  {
-    title: "Inject synthetic plumes",
-    body: "Combine a plume-free pretraining scene with an enhancement from the plume bank.",
-    tag: "Bank",
-    href: "https://huggingface.co/datasets/tacofoundation/methaneset/tree/main/methaneset-bank",
   },
 ];
 ---
@@ -41,13 +47,13 @@ const examples = [
         what you need, then fetch only those pixels by byte range.
       </p>
 
-      <pre class="code"><span class="tok-com"># pip install taco-eo</span>
-<span class="tok-key">import</span> taco
+      <pre class="code"><span class="tok-com"># pip install tacoreader</span>
+<span class="tok-key">import</span> tacoreader
 
-ds = taco.load(
-  <span class="tok-str">"hf://datasets/tacofoundation/methaneset/methaneset-emit"</span>
+ds = tacoreader.load(
+  <span class="tok-str">"https://huggingface.co/datasets/tacofoundation/methaneset/resolve/main/methaneset-emit/"</span>
 )
-df = ds.metadata()
+df = ds.data.to_pandas()
 df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Turkmenistan"</span>]</pre>
     </div>
   </section>
@@ -82,7 +88,7 @@ df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Tur
           <tr><th scope="col">Language</th><th scope="col">Install</th></tr>
         </thead>
         <tbody>
-          <tr><td>Python</td><td><code>pip install taco-eo</code></td></tr>
+          <tr><td>Python</td><td><code>pip install tacoreader</code></td></tr>
           <tr><td>R</td><td><code>install.packages("taco", repos = "https://asterisk-labs.r-universe.dev")</code></td></tr>
           <tr><td>Julia</td><td><code>Pkg.add("Taco")</code></td></tr>
           <tr><td>JavaScript</td><td><code>npm install @asterisk-labs/taco</code></td></tr>
@@ -90,7 +96,7 @@ df[df[<span class="tok-str">"site:country"</span>] == <span class="tok-str">"Tur
       </table>
       <p>
         The Python client is the reference implementation and the only one that writes.
-        See <a href="https://pypi.org/project/taco-eo" target="_blank" rel="noopener">taco-eo</a> on PyPI.
+        See <a href="https://pypi.org/project/tacoreader" target="_blank" rel="noopener">tacoreader</a> on PyPI.
       </p>
 
       <span class="src">
