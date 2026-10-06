@@ -1,5 +1,6 @@
 import { BaseClient, BaseResponse, fromArrayBuffer, fromCustomClient } from "geotiff";
 import maplibregl from "maplibre-gl";
+import { sensorColor } from "./palette";
 import proj4 from "proj4";
 
 const HF = "https://huggingface.co/datasets/tacofoundation/methaneset/resolve/main";
@@ -19,6 +20,8 @@ export interface SampleProps {
   match?: string | null;
   pair_source?: string | null;
   pair_id?: string | null;
+  bit?: number;
+  pair_bit?: number | null;
 }
 
 type Asset = "target" | "ch4" | "plume" | "radiance" | "imeo" | "cm";
@@ -46,6 +49,7 @@ interface Rendered {
   readRect?: [number, number, number, number];
   scene?: [number, number][];
   fullSize?: [number, number];
+  painted?: number;
   zoomRead?: (rect: [number, number, number, number]) => Promise<Rendered | null>;
 }
 
@@ -59,8 +63,6 @@ interface Entry {
   pending?: Promise<Rendered | null> | null;
 }
 
-const MULTI_ASSETS: Asset[] = ["target", "ch4", "plume"];
-const EMIT_ASSETS: Asset[] = ["radiance", "imeo", "cm"];
 const ASSET_LABEL: Record<Asset, string> = {
   target: "RGB",
   ch4: "CH₄",
@@ -107,8 +109,8 @@ export function setVisibleIds(ids: Set<string> | null): void {
   visibleIds = ids;
 }
 
-export function refreshPairLine(): void {
-  updatePairLine(current());
+export function refreshInspector(): void {
+  render();
 }
 
 function updatePairLine(feature: Feature | undefined): void {
@@ -170,11 +172,43 @@ function drawPairLine(feature: Feature | undefined): void {
   if (mapRef.getLayer(layerId)) mapRef.moveLayer(layerId);
 }
 let assetOrder: Asset[] = ["plume", "ch4", "target"];
-let emitOrder: Asset[] = ["cm", "imeo", "radiance"];
+let emitOrder: Asset[] = ["imeo", "cm", "radiance"];
 const orderFor = (asset: Asset): Asset[] => (EMIT_SET.has(asset) ? emitOrder : assetOrder);
 
 const groupIdOf = (entry: Entry): string =>
-  EMIT_SET.has(entry.asset) ? entry.key.slice(0, entry.key.lastIndexOf(":")) : entry.props.id;
+  EMIT_SET.has(entry.asset) ? entry.key.split(":")[0] : entry.props.id;
+
+function mateOf(p: SampleProps): SampleProps {
+  const granule = p.id.split(":")[0];
+  const mate = p.pair_id ? plumeIndex.get(`${granule}:${p.pair_id}`) : undefined;
+  if (mate) return { ...mate.properties, point: mate.geometry.coordinates };
+  return {
+    ...p,
+    system: p.pair_source ?? p.system,
+    id: `${granule}:${p.pair_id ?? ""}`,
+    source: p.pair_id ?? "",
+    bit: p.pair_bit ?? undefined,
+    pair_bit: undefined,
+  };
+}
+
+function emitRows(p: SampleProps): { asset: Asset; props: SampleProps; key: string; label: string }[] {
+  const own: Asset = p.system === "Carbon Mapper" ? "cm" : "imeo";
+  const pairAsset: Asset | null =
+    p.match === "pair" && p.pair_id ? (p.system === "Carbon Mapper" ? "imeo" : "cm") : null;
+  const rows: { asset: Asset; props: SampleProps; key: string; label: string }[] = [
+    { asset: own, props: p, key: keyOf(p.id, own), label: ASSET_LONG[own] },
+  ];
+  if (pairAsset) {
+    const mate = mateOf(p);
+    const key = keyOf(mate.id, pairAsset);
+    if (entries.some((e) => e.key === key)) {
+      rows.push({ asset: pairAsset, props: mate, key, label: `${ASSET_LONG[pairAsset]} (pair)` });
+    }
+  }
+  rows.push({ asset: "radiance", props: p, key: keyOf(p.id, "radiance"), label: ASSET_LONG.radiance });
+  return rows;
+}
 
 const MAX_EMIT_GRANULES = 6;
 
@@ -203,6 +237,7 @@ function evictEmitGranules(): void {
       cache.delete(e.key);
       entries.splice(i, 1);
     }
+    purgeCoordinates(g);
   }
 }
 
@@ -216,17 +251,39 @@ function sortEntries(): void {
     const g = groupIdOf(e);
     if (!sampleIdx.has(g)) sampleIdx.set(g, sampleIdx.size);
   });
+  const cur = current();
+  const mateId =
+    cur && cur.properties.dataset === "methaneset-emit" && cur.properties.match === "pair" && cur.properties.pair_id
+      ? mateOf(cur.properties).id
+      : null;
+  const maskClass = (e: Entry) => {
+    if (!EMIT_SET.has(e.asset) || e.asset === "radiance") return 0;
+    return mateId !== null && e.props.id === mateId ? 1 : 2;
+  };
   entries.sort((a, b) => {
     const sa = sampleIdx.get(groupIdOf(a))!;
     const sb = sampleIdx.get(groupIdOf(b))!;
     if (sa !== sb) return sa - sb;
+    const ma = maskClass(a);
+    const mb = maskClass(b);
+    if (ma !== mb) return ma - mb;
     return (rank.get(a.asset) ?? 0) - (rank.get(b.asset) ?? 0);
   });
 }
 
-const keyOf = (id: string, asset: Asset) => `${EMIT_SET.has(asset) ? id.split(":")[0] : id}:${asset}`;
+const keyOf = (id: string, asset: Asset) => {
+  if (!EMIT_SET.has(asset)) return `${id}:${asset}`;
+  const [granule, source] = id.split(":");
+  return asset === "radiance" ? `${granule}:radiance` : `${granule}:${asset}:${source ?? ""}`;
+};
 const esc = (s: unknown): string =>
   String(s ?? "").replace(/[&<>"']/g, (c) => (({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }) as Record<string, string>)[c]);
+export const systemSpan = (s: unknown): string =>
+  s === "IMEO"
+    ? `<span style="color:var(--imeo)">IMEO</span>`
+    : s === "Carbon Mapper"
+      ? `<span style="color:var(--cm)">Carbon Mapper</span>`
+      : esc(s);
 const ids = (key: string) => {
   const s = key.replace(/[^a-zA-Z0-9]/g, "-");
   return { src: `ssrc-${s}`, img: `simg-${s}`, osrc: `osrc-${s}`, fill: `sfill-${s}` };
@@ -652,7 +709,24 @@ function invertBilinear(corners: Corners, target: [number, number]): [number, nu
   return [Math.max(0, Math.min(1, uv[0])), Math.max(0, Math.min(1, uv[1]))];
 }
 
-async function emitCoordinates(latlonUrl: string): Promise<[number, number][]> {
+const cornerCache = new Map<string, Promise<[number, number][]>>();
+
+function emitCoordinates(latlonUrl: string): Promise<[number, number][]> {
+  const hit = cornerCache.get(latlonUrl);
+  if (hit) return hit;
+  const task = readCoordinates(latlonUrl);
+  cornerCache.set(latlonUrl, task);
+  task.catch(() => cornerCache.delete(latlonUrl));
+  return task;
+}
+
+function purgeCoordinates(granule: string): void {
+  for (const key of [...cornerCache.keys()]) {
+    if (key.includes(granule)) cornerCache.delete(key);
+  }
+}
+
+async function readCoordinates(latlonUrl: string): Promise<[number, number][]> {
   const tiff = await emitTiff(latlonUrl);
   const image = await tiff.getImage(0);
   const w = image.getWidth();
@@ -757,24 +831,40 @@ async function renderEmitRadiance(base: string, latlon: string, point?: [number,
   return readFullRect([x0, y0, x0 + winW, y0 + winH]);
 }
 
-async function renderEmitMask(url: string, latlon: string, color: [number, number, number]): Promise<Rendered> {
-  const tiff = await emitTiff(url);
+const MASK_COLORS: Record<string, [number, number, number]> = {
+  imeo: [15, 118, 110],
+  cm: [142, 36, 170],
+};
+const MASK_FILE: Record<string, string> = {
+  imeo: "plume_imeo.tif",
+  cm: "plume_cm.tif",
+};
+async function renderEmitMask(granule: string, asset: Asset, latlon: string, bit?: number): Promise<Rendered> {
+  const tiff = await emitTiff(`${HF}/methaneset-emit/DATA/${granule}/${MASK_FILE[asset]}`);
   const image = await tiff.getImage(0);
   const width = image.getWidth();
   const height = image.getHeight();
   const mask = ((await image.readRasters({ samples: [0] })) as unknown as ArrayLike<number | bigint>[])[0];
+  const color = MASK_COLORS[asset] ?? MASK_COLORS.imeo;
+  const probe = bit ? 1n << BigInt(bit - 1) : null;
+  let painted = 0;
   const dataUrl = paintCanvas(width, height, (img) => {
     for (let i = 0; i < width * height; i++) {
-      if (Number(mask[i]) !== 0) {
+      const raw = mask[i];
+      const v = typeof raw === "bigint" ? raw : BigInt(Math.trunc(Number(raw)));
+      const hit = probe === null ? v !== 0n : (v & probe) !== 0n;
+      if (hit) {
         img.data[i * 4] = color[0];
         img.data[i * 4 + 1] = color[1];
         img.data[i * 4 + 2] = color[2];
         img.data[i * 4 + 3] = 210;
+        painted++;
       }
     }
   });
   const coordinates = await emitCoordinates(latlon);
-  return { dataUrl, coordinates, width, height };
+  (window as any).__maskStats = Object.assign((window as any).__maskStats ?? {}, { [`${granule}:${asset}:${bit ?? "all"}`]: painted });
+  return { dataUrl, coordinates, width, height, painted };
 }
 
 async function renderEmitAsset(props: SampleProps, asset: Asset): Promise<Rendered> {
@@ -782,8 +872,8 @@ async function renderEmitAsset(props: SampleProps, asset: Asset): Promise<Render
   const base = `${HF}/${props.dataset}/DATA/${granule}`;
   const latlon = `${base}/latlon.tif`;
   if (asset === "radiance") return renderEmitRadiance(base, latlon, props.point);
-  if (asset === "imeo") return renderEmitMask(`${base}/plume_imeo.tif`, latlon, [15, 118, 110]);
-  if (asset === "cm") return renderEmitMask(`${base}/plume_cm.tif`, latlon, [142, 36, 170]);
+  if (asset === "imeo") return renderEmitMask(granule, "imeo", latlon, props.bit);
+  if (asset === "cm") return renderEmitMask(granule, "cm", latlon, props.bit);
   throw new Error(`unsupported EMIT asset: ${asset}`);
 }
 
@@ -862,7 +952,7 @@ function polygonOf(coordinates: [number, number][]) {
 }
 
 function popupHTML(p: SampleProps, asset?: Asset): string {
-  const color = p.sensor === "EMIT" ? "#f97316" : p.sensor === "Sentinel-2" ? "#2dd4bf" : "#fde047";
+  const color = sensorColor(p.sensor);
   return (
     `<div class="pp"><span class="pp-sensor" style="color:${color}">${esc(p.sensor)}${asset ? ` (${ASSET_LABEL[asset]})` : ""}</span>` +
     `<h4>${esc(p.country ?? "Unknown")}</h4>` +
@@ -942,11 +1032,24 @@ function setVisible(entry: Entry, visible: boolean): void {
   }
 }
 
+const inflight = new Map<string, Promise<Entry>>();
+
 async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
   const key = keyOf(props.id, asset);
   const existing = entries.find((e) => e.key === key);
   if (existing) return existing;
+  const running = inflight.get(key);
+  if (running) return running;
+  const task = loadEntry(props, asset, key);
+  inflight.set(key, task);
+  try {
+    return await task;
+  } finally {
+    inflight.delete(key);
+  }
+}
 
+async function loadEntry(props: SampleProps, asset: Asset, key: string): Promise<Entry> {
   loading.add(key);
   failed.delete(key);
   render();
@@ -1051,15 +1154,25 @@ function renderLayersPanel(): void {
     groups.set(id, g);
   }
 
+  const cur = current();
+  const mateId =
+    cur && cur.properties.dataset === "methaneset-emit" && cur.properties.match === "pair" && cur.properties.pair_id
+      ? mateOf(cur.properties).id
+      : null;
+
   layersBody.innerHTML =
     `<p class="globe-panel__title">On the map (${groups.size})</p>` +
     Array.from(groups.values())
       .map((group) => {
         const p = group[0].props;
-        const chips = [...MULTI_ASSETS, ...EMIT_ASSETS].filter((a) => group.some((e) => e.asset === a))
-          .map((a) => {
-            const e = group.find((x) => x.asset === a)!;
-            return `<button class="lp-chip ${e.visible ? "is-on" : ""}" data-chip="${esc(e.key)}" type="button">${ASSET_LABEL[a]}</button>`;
+        const chips = [...group]
+          .reverse()
+          .map((e) => {
+            const mask = e.asset === "imeo" || e.asset === "cm";
+            const isPair = mask && mateId !== null && e.props.id === mateId;
+            const label = isPair ? `${ASSET_LABEL[e.asset]} (pair)` : ASSET_LABEL[e.asset];
+            const title = mask ? ` title="${esc(e.props.source ?? "")}"` : "";
+            return `<button class="lp-chip ${e.visible ? "is-on" : ""}" data-chip="${esc(e.key)}"${title} type="button">${label}</button>`;
           })
           .join("");
         const groupId = groupIdOf(group[0]);
@@ -1112,9 +1225,24 @@ function renderLayersPanel(): void {
       for (let i = entries.length - 1; i >= 0; i--) {
         if (groupIdOf(entries[i]) === id) entries.splice(i, 1);
       }
+      purgeCoordinates(id);
       render();
     });
   });
+}
+
+function fitPanels(): void {
+  if (!uiRef || !mapRef) return;
+  const { root, layersRoot } = uiRef;
+  if (getComputedStyle(root).getPropertyValue("--sv-fit").trim() !== "1") {
+    root.style.maxHeight = "";
+    return;
+  }
+  const container = mapRef.getContainer().getBoundingClientRect();
+  const top = root.getBoundingClientRect().top - container.top;
+  const layersH = layersRoot.style.display === "none" ? 0 : layersRoot.offsetHeight;
+  const max = Math.max(200, container.height - top - 20 - layersH - 12);
+  root.style.maxHeight = `${max}px`;
 }
 
 function render(): void {
@@ -1124,6 +1252,7 @@ function render(): void {
   renderLayersPanel();
   if (!feature || closed) {
     ui.root.style.display = "none";
+    fitPanels();
     updatePairLine(undefined);
     return;
   }
@@ -1134,36 +1263,48 @@ function render(): void {
   const head =
     `<p class="globe-panel__title">Sample</p>` +
     `<button class="sv-close" type="button" aria-label="Close">×</button>` +
-    `<p class="sv-title">${esc(p.sensor)}${p.system ? ` (${esc(p.system)})` : ""}, ${esc(p.country ?? "Unknown")}</p>` +
+    `<p class="sv-title">${esc(p.sensor)}${p.system ? ` (${systemSpan(p.system)})` : ""}, ${esc(p.country ?? "Unknown")}</p>` +
     `<p class="sv-status">${p.source ? `${esc(p.source)}, ` : ""}${esc(p.date || "n/a")}, ${esc(p.dataset)}${p.flux ? `, ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
 
   const isEmit = p.dataset === "methaneset-emit";
+  const pairAsset: Asset | null =
+    isEmit && p.match === "pair" && p.pair_id ? (p.system === "Carbon Mapper" ? "imeo" : "cm") : null;
+  const pairKey = pairAsset ? keyOf(mateOf(p).id, pairAsset) : null;
+  const pairEntry = pairKey ? entries.find((e) => e.key === pairKey) : undefined;
+  const pairName = p.pair_source === "IMEO" ? "IMEO" : "CM";
+  const mateVisible = !visibleIds || (pairAsset !== null && visibleIds.has(String(mateOf(p).id)));
   const pairBlock =
     isEmit && p.match && (p.match !== "pair" || p.pair_id)
       ? `<div class="sv-pair">` +
         (p.match === "pair"
-          ? `<span>1:1 pair with ${esc(p.pair_source)}: <b>${esc(p.pair_id)}</b></span>` +
-            `<button class="sv-pair__btn" data-pair="${esc(p.pair_source)}" type="button">Show ${p.pair_source === "IMEO" ? "IMEO" : "CM"} mask</button>`
-          : `<span>Orphan: only in the ${esc(p.system)} catalog</span>`) +
+          ? `<span>1:1 pair with ${systemSpan(p.pair_source)}: <b>${esc(p.pair_id)}</b></span>` +
+            (mateVisible
+              ? `<button class="sv-pair__btn" data-pair="${esc(p.pair_source)}" type="button">${pairEntry?.visible ? "Hide" : "Show"} ${pairName} mask</button>`
+              : "")
+          : `<span>Orphan: only in the ${systemSpan(p.system)} catalog</span>`) +
         `</div>`
       : "";
-  const sampleAssets = isEmit ? emitOrder : assetOrder;
+  const rows = isEmit
+    ? emitRows(p)
+    : assetOrder.map((a) => ({ asset: a, props: p, key: keyOf(p.id, a), label: ASSET_LONG[a] }));
   const bodyHtml =
     `<div class="sv-assets">` +
-    sampleAssets
-      .map((a) => {
-        const key = keyOf(p.id, a);
-        const entry = entries.find((e) => e.key === key);
+    rows
+      .map((row) => {
+        const a = row.asset;
+        const entry = entries.find((e) => e.key === row.key);
         const on = !!entry && entry.visible;
-        const busy = loading.has(key);
-        const err = failed.get(key);
+        const busy = loading.has(row.key);
+        const err = failed.get(row.key);
+        const dot = a === "imeo" || a === "cm" ? `<span class="sv-asset__dot" style="background: var(--${a})"></span>` : "";
         return (
-          `<div class="sv-asset-row" draggable="true" data-asset-row="${a}">` +
-          `<span class="sv-asset-row__handle" aria-hidden="true">⠿</span>` +
+          `<div class="sv-asset-row" draggable="${isEmit ? "false" : "true"}" data-asset-row="${a}">` +
+          (isEmit ? "" : `<span class="sv-asset-row__handle" aria-hidden="true">⠿</span>`) +
           `<label class="sv-asset">` +
-          `<input type="checkbox" data-asset="${a}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
-          `<span>${ASSET_LONG[a]}</span>` +
-          `<span class="sv-asset__state${err ? " is-error" : ""}" title="${esc(err ?? "")}">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : err ? "error" : ""}</span>` +
+          `<input type="checkbox" data-asset="${a}" data-key="${esc(row.key)}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
+          dot +
+          `<span>${row.label}</span>` +
+          `<span class="sv-asset__state${err ? " is-error" : ""}" title="${esc(err ?? "")}">${busy ? "loading…" : entry ? (entry.visible ? (entry.rendered.painted === 0 ? "empty" : "shown") : "hidden") : err ? "error" : ""}</span>` +
           `</label>` +
           `</div>`
         );
@@ -1200,7 +1341,7 @@ function render(): void {
               .join(", ");
             return (
               `<button class="sv-pick${i === curIndex ? " is-on" : ""}" data-pick="${i}" type="button">` +
-              `<b>${esc(q.sensor)}${q.system ? ` (${esc(q.system)})` : ""}</b><span>${esc(meta)}</span>` +
+              `<b>${esc(q.sensor)}${q.system ? ` (${systemSpan(q.system)})` : ""}</b><span>${esc(meta)}</span>` +
               `</button>`
             );
           })
@@ -1209,21 +1350,25 @@ function render(): void {
       : "";
 
   ui.body.innerHTML = head + pairBlock + picks + bodyHtml + legend;
+  fitPanels();
 
   ui.body.querySelector<HTMLButtonElement>("[data-pair]")?.addEventListener("click", async (ev) => {
     const btn = ev.currentTarget as HTMLButtonElement;
     if (btn.disabled) return;
-    btn.disabled = true;
     const f = current();
     const q = f?.properties;
     if (!f || !q?.pair_id) return;
     const asset: Asset = q.pair_source === "IMEO" ? "imeo" : "cm";
-    const granule = q.id.split(":")[0];
-    const mate = plumeIndex.get(`${granule}:${q.pair_id}`);
-    const mateProps: SampleProps = mate
-      ? { ...mate.properties, point: mate.geometry.coordinates }
-      : { ...q, system: q.pair_source ?? q.system, id: `${granule}:${q.pair_id}`, source: q.pair_id };
-    if (loading.has(keyOf(mateProps.id, asset))) return;
+    const mateProps = mateOf(q);
+    const key = keyOf(mateProps.id, asset);
+    const existing = entries.find((e) => e.key === key);
+    if (existing) {
+      setVisible(existing, !existing.visible);
+      render();
+      return;
+    }
+    btn.disabled = true;
+    if (loading.has(key)) return;
     try {
       const entry = await ensureLoaded(mateProps, asset);
       setVisible(entry, true);
@@ -1240,7 +1385,10 @@ function render(): void {
       if (p && p.dataset === "methaneset-emit" && point) {
         flyToPlume(point);
         void ensureEmitWindow(p.id, point);
+        void autoloadEmit(p);
       }
+      sortEntries();
+      applyLayerOrder();
       render();
     });
   });
@@ -1307,12 +1455,16 @@ function render(): void {
       const asset = el.dataset.asset as Asset;
       const f = current();
       if (!f) return;
+      const key = el.dataset.key ?? keyOf(f.properties.id, asset);
+      const row =
+        emitRows(f.properties).find((r) => r.key === key) ??
+        ({ asset, props: f.properties, key } as { asset: Asset; props: SampleProps; key: string });
       try {
         if (el.checked) {
-          const entry = await ensureLoaded(f.properties, asset);
+          const entry = await ensureLoaded(row.props, row.asset);
           setVisible(entry, true);
         } else {
-          const entry = entries.find((e) => e.key === keyOf(f.properties.id, asset));
+          const entry = entries.find((e) => e.key === row.key);
           if (entry) setVisible(entry, false);
         }
       } catch (err) {
@@ -1355,6 +1507,12 @@ async function ensureEmitWindow(id: string, point: [number, number]): Promise<vo
   }
 }
 
+async function autoloadEmit(p: SampleProps): Promise<void> {
+  const own: Asset = p.system === "Carbon Mapper" ? "cm" : "imeo";
+  await Promise.allSettled([ensureLoaded(p, "radiance"), ensureLoaded(p, own)]);
+  render();
+}
+
 export function openInspector(map: any, feature: Feature, ui: UiElements): void {
   mapRef = map;
   uiRef = ui;
@@ -1370,7 +1528,10 @@ export function openInspector(map: any, feature: Feature, ui: UiElements): void 
   if (p.dataset === "methaneset-emit") {
     flyToPlume(point);
     void ensureEmitWindow(p.id, point);
+    void autoloadEmit(p);
   }
+  sortEntries();
+  applyLayerOrder();
   render();
 }
 
@@ -1398,6 +1559,10 @@ let zoomBound = false;
 let zoomToken = 0;
 
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("resize", () => fitPanels());
+}
 
 function scheduleEmitRefresh(map: any): void {
   if (refreshTimer) clearTimeout(refreshTimer);

@@ -3,8 +3,9 @@
 
    Two rules keep this coherent:
    1. Colour is information. Teal means "you can act on this" (links, focus,
-      active state). Orange / yellow / emerald belong to the map, where they
-      identify sensors. Everything else is ink on navy.
+      active state). The map palette (--emit, --s2, --l89, --imeo, --cm) comes
+      from the paper figures and is the only place those hues belong.
+      Everything else is ink on navy.
    2. Two radii, two shadows, one type scale. Nothing else.
    ========================================================================== */
 
@@ -18,6 +19,13 @@
   --orange: #f97316;
   --yellow: #fde047;
   --red: #dc2626;
+
+  /* map palette, from the paper (07-paper/assets/paper-figures/codes/paperstyle.py) */
+  --emit: #818cf8;
+  --s2: #1a9850;
+  --l89: #d95f02;
+  --imeo: #14b8a6;
+  --cm: #ba68c8;
 
   /* ink */
   --text: #f4f7fb;
@@ -95,6 +103,12 @@
   --emerald: #15803d;
   --orange: #c2410c;
   --yellow: #a16207;
+
+  --emit: #3730a3;
+  --s2: #1a9850;
+  --l89: #d95f02;
+  --imeo: #0f766e;
+  --cm: #8e24aa;
 
   --text: #101a2b;
   --muted: #475569;

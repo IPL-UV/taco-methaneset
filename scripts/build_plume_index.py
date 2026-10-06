@@ -76,9 +76,24 @@ def fetch(path: str) -> pd.DataFrame:
     return pd.read_parquet(local)
 
 
+def bit_map(row: pd.Series, column: str) -> dict[str, int]:
+    bits = as_dict(row.get(column))
+    out = {}
+    for bit, plume in bits.items():
+        try:
+            out[str(plume)] = int(bit)
+        except (TypeError, ValueError):
+            raise SystemExit(f"bad bit {bit!r} in {column} of {row.get('id')}")
+    return out
+
+
 def emit_points(df: pd.DataFrame, sensor: str) -> list[dict]:
     features = []
     for _, row in df.iterrows():
+        bit_maps = {
+            "IMEO": bit_map(row, "detection:imeo_bits"),
+            "Carbon Mapper": bit_map(row, "detection:cm_bits"),
+        }
         pair_map = {}
         for pair in as_list(row.get("match:pairs")):
             if not isinstance(pair, dict):
@@ -124,6 +139,12 @@ def emit_points(df: pd.DataFrame, sensor: str) -> list[dict]:
                     match, pair_source, pair_id = "orphan", None, None
                 else:
                     match, pair_source, pair_id = None, None, None
+                bit = bit_maps[system].get(source)
+                if source and bit is None:
+                    raise SystemExit(f"plume {source} has no bit in {row.get('id')}")
+                pair_bit = bit_maps[mate[0]].get(mate[1]) if mate else None
+                if mate and pair_bit is None:
+                    raise SystemExit(f"pair {mate[1]} has no bit in {row.get('id')}")
                 features.append(
                     {
                         "type": "Feature",
@@ -141,6 +162,8 @@ def emit_points(df: pd.DataFrame, sensor: str) -> list[dict]:
                             "match": match,
                             "pair_source": pair_source,
                             "pair_id": pair_id,
+                            "bit": bit,
+                            "pair_bit": pair_bit,
                             "sector": row.get("detection:sector"),
                         },
                     }
@@ -180,7 +203,7 @@ def main() -> None:
     for dataset, sensor, path in SOURCES:
         df = fetch(path)
         if dataset == "methaneset-emit":
-            for column in ("match:pairs", "match:orphans"):
+            for column in ("match:pairs", "match:orphans", "detection:imeo_bits", "detection:cm_bits"):
                 if column not in df.columns:
                     raise SystemExit(
                         f"{path} has no {column}: it is a stale cache, remove "

@@ -8,9 +8,9 @@ interface Props {
 const { scrollZoom = false, controls = false, rotate = false, focusRight = false } = Astro.props;
 
 const sensors = [
-  { id: "EMIT", color: "#f97316", label: "EMIT (hyperspectral)" },
-  { id: "Sentinel-2", color: "#2dd4bf", label: "Sentinel-2 (multispectral)" },
-  { id: "Landsat 8/9", color: "#fde047", label: "Landsat 8/9 (multispectral)" },
+  { id: "EMIT", token: "emit", label: "EMIT (hyperspectral)" },
+  { id: "Sentinel-2", token: "s2", label: "Sentinel-2 (multispectral)" },
+  { id: "Landsat 8/9", token: "l89", label: "Landsat 8/9 (multispectral)" },
 ];
 
 const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
@@ -38,7 +38,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
               sensors.map((s) => (
                 <label class="globe-check">
                   <input type="checkbox" value={s.id} checked data-sensor />
-                  <span class="globe-dot" style={`background:${s.color}`} />
+                  <span class="globe-dot" style={`background:var(--${s.token})`} />
                   {s.label}
                 </label>
               ))
@@ -61,6 +61,25 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
             </label>
           </div>
           <p class="field__note">Two independent public catalogs, one point per source.</p>
+        </div>
+
+        <div class="field">
+          <span class="field__label">Matches</span>
+          <div class="field__checks">
+            <label class="globe-check">
+              <input type="checkbox" value="pair" checked data-match />
+              <span class="globe-dot globe-dot--pair" />
+              Paired
+              <span class="globe-check__count" data-count-match="pair"></span>
+            </label>
+            <label class="globe-check">
+              <input type="checkbox" value="orphan" checked data-match />
+              <span class="globe-dot globe-dot--ring" />
+              Orphans
+              <span class="globe-check__count" data-count-match="orphan"></span>
+            </label>
+          </div>
+          <p class="field__note">A pair is two points, one per catalog.</p>
         </div>
 
         <div class="field">
@@ -263,6 +282,14 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     flex: none;
     box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.12);
   }
+  .globe-dot--pair {
+    background: var(--emit);
+  }
+  .globe-dot--ring {
+    background: transparent;
+    border: 1.5px solid var(--emit);
+    box-shadow: none;
+  }
   .globe-select {
     width: 100%;
     background: var(--panel-solid);
@@ -336,12 +363,13 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   }
   .globe-legend__circle {
     border-radius: 50%;
-    border: 1px solid var(--orange);
+    border: 1px solid var(--slate);
     display: inline-block;
     flex: none;
   }
   .sample-viewer {
     position: absolute;
+    --sv-fit: 1;
     top: 80px;
     right: 20px;
     width: 288px;
@@ -570,6 +598,12 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     font-size: 0.7rem;
     color: var(--slate);
   }
+  .sample-viewer :global(.sv-asset__dot) {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex: none;
+  }
   .sample-viewer :global(.sv-pair) {
     display: flex;
     align-items: center;
@@ -796,6 +830,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       font-size: 0.82rem;
     }
     .sample-viewer {
+      --sv-fit: 0;
       top: auto;
       bottom: 0;
       left: 0;
@@ -826,21 +861,27 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
 <script>
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
+  import { paletteColor, sensorColor } from "../lib/palette";
   import { url } from "../lib/url";
   import {
     attachEmitZoom,
     openInspector,
     reAddAll,
-    refreshPairLine,
+    refreshInspector,
     setPlumeIndex,
     setVisibleIds,
+    systemSpan,
   } from "../lib/sampleViewer";
 
-  const SENSOR_COLOR = {
-    EMIT: "#f97316",
-    "Sentinel-2": "#2dd4bf",
-    "Landsat 8/9": "#fde047",
-  };
+  const colorExprNow = () => [
+    "match",
+    ["get", "sensor"],
+    "EMIT", paletteColor("emit"),
+    "Sentinel-2", paletteColor("s2"),
+    "Landsat 8/9", paletteColor("l89"),
+    "#94a3b8",
+  ];
+  const strokeExprNow = () => ["case", ["==", ["get", "match"], "orphan"], colorExprNow(), "rgba(2,6,23,0.6)"];
 
   const BASEMAPS: Record<string, any> = {
     dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
@@ -924,15 +965,6 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       maxWidth: "280px",
     });
 
-    const colorExpr = [
-      "match",
-      ["get", "sensor"],
-      "EMIT", SENSOR_COLOR.EMIT,
-      "Sentinel-2", SENSOR_COLOR["Sentinel-2"],
-      "Landsat 8/9", SENSOR_COLOR["Landsat 8/9"],
-      "#94a3b8",
-    ];
-
     const featureKey = (f: any) =>
       f.properties.source ?? `${f.geometry.coordinates[0]}|${f.geometry.coordinates[1]}`;
 
@@ -967,7 +999,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
             5000, 14,
             20000, 22,
           ],
-          "circle-color": colorExpr as any,
+          "circle-color": colorExprNow() as any,
           "circle-opacity": 0.14,
           "circle-blur": 1,
         },
@@ -986,17 +1018,16 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
             5000, 4.5,
             20000, 7.5,
           ],
-          "circle-color": colorExpr as any,
-          "circle-opacity": 0.92,
-          "circle-stroke-color": "rgba(2,6,23,0.6)",
-          "circle-stroke-width": 0.4,
+          "circle-color": colorExprNow() as any,
+          "circle-opacity": ["case", ["==", ["get", "match"], "orphan"], 0.15, 0.92],
+          "circle-stroke-color": strokeExprNow() as any,
+          "circle-stroke-width": ["case", ["==", ["get", "match"], "orphan"], 1.2, 0.4],
         },
       });
 
       const fmt = (v: number | null) => (v == null ? "n/a" : `${Math.round(v).toLocaleString()} kg/h`);
       const esc = (s: unknown): string =>
         String(s ?? "").replace(/[&<>"']/g, (c) => (({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }) as Record<string, string>)[c]);
-
       if (eventsBound) {
         reAddAll(map);
         applyFilters();
@@ -1009,7 +1040,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         const f = (e.features && e.features[0]) as any;
         if (!f) return;
         const p = f.properties;
-        const color = SENSOR_COLOR[p.sensor as keyof typeof SENSOR_COLOR] ?? "#94a3b8";
+        const color = sensorColor(p.sensor);
         const sector = p.sector ? `<div class="pp-row"><span>Sector</span><b>${esc(p.sector)}</b></div>` : "";
         const pair =
           p.match === "pair" && p.pair_id
@@ -1022,7 +1053,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         popup
           .setLngLat(f.geometry.coordinates)
           .setHTML(
-            `<div class="pp"><span class="pp-sensor" style="color:${color}">${esc(p.sensor)}${p.system ? ` (${esc(p.system)})` : ""}</span>` +
+            `<div class="pp"><span class="pp-sensor" style="color:${color}">${esc(p.sensor)}${p.system ? ` (${systemSpan(p.system)})` : ""}</span>` +
               `<h4>${esc(p.country ?? "Unknown")}</h4>` +
               `<div class="pp-row"><span>Dataset</span><b>${esc(p.dataset)}</b></div>` +
               `<div class="pp-row"><span>Date</span><b>${esc(p.date || "n/a")}</b></div>` +
@@ -1113,8 +1144,18 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       });
     }
 
+    const repaint = () => {
+      const expr = colorExprNow();
+      if (map.getLayer("plumes")) {
+        map.setPaintProperty("plumes", "circle-color", expr as any);
+        map.setPaintProperty("plumes", "circle-stroke-color", strokeExprNow() as any);
+      }
+      if (map.getLayer("plumes-halo")) map.setPaintProperty("plumes-halo", "circle-color", expr as any);
+    };
+
     new MutationObserver(() => {
       if (basemapChoice === "auto") setBasemap("auto");
+      repaint();
     }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
     let applyFilters = () => {};
@@ -1129,6 +1170,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         if (controls) {
           const boxes = Array.from(document.querySelectorAll<HTMLInputElement>("[data-sensor]"));
           const systemBoxes = Array.from(document.querySelectorAll<HTMLInputElement>("[data-system]"));
+          const matchBoxes = Array.from(document.querySelectorAll<HTMLInputElement>("[data-match]"));
           const countrySel = document.getElementById("country-select") as HTMLSelectElement | null;
           const yearFrom = document.getElementById("year-from") as HTMLSelectElement | null;
           const yearTo = document.getElementById("year-to") as HTMLSelectElement | null;
@@ -1157,12 +1199,14 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
             const minFlux = Number(fluxMin?.value ?? 0);
 
             const systems = systemBoxes.filter((b) => b.checked).map((b) => b.value);
+            const matchKinds = matchBoxes.filter((b) => b.checked).map((b) => b.value);
 
-            const matches = (p: any, withSystems: boolean) => {
+            const matches = (p: any, withSystems: boolean, withMatches = true) => {
               const y = (p.date || "").slice(0, 4);
               return (
                 sensors.includes(p.sensor) &&
                 (!withSystems || p.sensor !== "EMIT" || systems.includes(p.system)) &&
+                (!withMatches || p.sensor !== "EMIT" || p.match == null || matchKinds.includes(p.match)) &&
                 (!country || p.country === country) &&
                 y >= from &&
                 y <= to &&
@@ -1184,12 +1228,22 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
               ).length;
               el.textContent = n.toLocaleString();
             }
+
+            for (const box of matchBoxes) {
+              const el = document.querySelector(`[data-count-match="${box.value}"]`);
+              if (!el) continue;
+              const n = geojson.features.filter(
+                (f: any) => f.properties.match === box.value && matches(f.properties, true, false),
+              ).length;
+              el.textContent = n.toLocaleString();
+            }
             setVisibleIds(new Set(visibleFeatures.map((f: any) => String(f.properties.id))));
-            refreshPairLine();
+            refreshInspector();
           };
 
           boxes.forEach((b) => b.addEventListener("change", applyFilters));
           systemBoxes.forEach((b) => b.addEventListener("change", applyFilters));
+          matchBoxes.forEach((b) => b.addEventListener("change", applyFilters));
           [countrySel, yearFrom, yearTo, fluxMin].forEach((s) => s?.addEventListener("change", applyFilters));
           basemapSel?.addEventListener("change", () => setBasemap(basemapSel.value));
         }
