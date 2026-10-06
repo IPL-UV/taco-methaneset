@@ -11,10 +11,14 @@ export interface SampleProps {
   country: string;
   date: string;
   id: string;
-  file: string;
+  file?: string;
   flux?: number | null;
   viz?: string;
   point?: [number, number];
+  source?: string;
+  match?: string | null;
+  pair_source?: string | null;
+  pair_id?: string | null;
 }
 
 type Asset = "target" | "ch4" | "plume" | "radiance" | "imeo" | "cm";
@@ -50,7 +54,9 @@ interface Entry {
   asset: Asset;
   props: SampleProps;
   rendered: Rendered;
+  base?: Rendered;
   visible: boolean;
+  pending?: Promise<Rendered | null> | null;
 }
 
 const MULTI_ASSETS: Asset[] = ["target", "ch4", "plume"];
@@ -60,16 +66,16 @@ const ASSET_LABEL: Record<Asset, string> = {
   ch4: "CH₄",
   plume: "Mask",
   radiance: "RGB",
-  imeo: "IME-O",
+  imeo: "IMEO",
   cm: "CM",
 };
 const ASSET_LONG: Record<Asset, string> = {
   target: "RGB",
   ch4: "CH₄ enhancement",
   plume: "Plume mask",
-  radiance: "RGB (radiance)",
-  imeo: "IME-O plume mask",
-  cm: "Carbon Mapper mask",
+  radiance: "RGB",
+  imeo: "IMEO plume",
+  cm: "CM plume",
 };
 const LEAF_OF: Record<string, string> = {
   target: "target",
@@ -82,7 +88,7 @@ const cache = new Map<string, Rendered>();
 const entries: Entry[] = [];
 const loading = new Set<string>();
 const failed = new Map<string, string>();
-const bound = new Set<string>();
+const bound = new Map<string, { enter: (e: any) => void; leave: () => void }>();
 
 let mapRef: any = null;
 let uiRef: UiElements | null = null;
@@ -90,9 +96,115 @@ let popup: any = null;
 let curList: Feature[] = [];
 let curIndex = 0;
 let closed = false;
+let plumeIndex = new Map<string, Feature>();
+let visibleIds: Set<string> | null = null;
+
+export function setPlumeIndex(features: Feature[]): void {
+  plumeIndex = new Map(features.map((f) => [f.properties.id, f]));
+}
+
+export function setVisibleIds(ids: Set<string> | null): void {
+  visibleIds = ids;
+}
+
+export function refreshPairLine(): void {
+  updatePairLine(current());
+}
+
+function updatePairLine(feature: Feature | undefined): void {
+  if (!mapRef) return;
+  try {
+    drawPairLine(feature);
+  } catch (e) {
+    /* style not ready */
+  }
+}
+
+function drawPairLine(feature: Feature | undefined): void {
+  const srcId = "pair-line-src";
+  const layerId = "pair-line";
+  const clear = () => {
+    const src = mapRef.getSource(srcId) as any;
+    if (src) src.setData({ type: "FeatureCollection", features: [] });
+  };
+  const p = feature?.properties;
+  if (!p || p.dataset !== "methaneset-emit" || p.match !== "pair" || !p.pair_id || !feature) {
+    clear();
+    return;
+  }
+  if (visibleIds && !visibleIds.has(String(p.id))) {
+    clear();
+    return;
+  }
+  const granule = p.id.split(":")[0];
+  const mate = plumeIndex.get(`${granule}:${p.pair_id}`);
+  if (!mate) {
+    clear();
+    return;
+  }
+  if (visibleIds && !visibleIds.has(String(mate.properties.id))) {
+    clear();
+    return;
+  }
+  const data = {
+    type: "Feature",
+    geometry: { type: "LineString", coordinates: [feature.geometry.coordinates, mate.geometry.coordinates] },
+    properties: {},
+  };
+  if (!mapRef.getSource(srcId)) {
+    mapRef.addSource(srcId, { type: "geojson", data });
+    mapRef.addLayer({
+      id: layerId,
+      type: "line",
+      source: srcId,
+      paint: {
+        "line-color": "#94a3b8",
+        "line-width": 1.4,
+        "line-dasharray": [2, 2],
+        "line-opacity": 0.85,
+      },
+    });
+  } else {
+    (mapRef.getSource(srcId) as any).setData(data);
+  }
+  if (mapRef.getLayer(layerId)) mapRef.moveLayer(layerId);
+}
 let assetOrder: Asset[] = ["plume", "ch4", "target"];
 let emitOrder: Asset[] = ["cm", "imeo", "radiance"];
 const orderFor = (asset: Asset): Asset[] => (EMIT_SET.has(asset) ? emitOrder : assetOrder);
+
+const groupIdOf = (entry: Entry): string =>
+  EMIT_SET.has(entry.asset) ? entry.key.slice(0, entry.key.lastIndexOf(":")) : entry.props.id;
+
+const MAX_EMIT_GRANULES = 6;
+
+function evictEmitGranules(): void {
+  const order: string[] = [];
+  for (const e of entries) {
+    if (!EMIT_SET.has(e.asset)) continue;
+    const g = groupIdOf(e);
+    const i = order.indexOf(g);
+    if (i >= 0) order.splice(i, 1);
+    order.push(g);
+  }
+  const cur = current();
+  const curGranule =
+    cur && cur.properties.dataset === "methaneset-emit" ? String(cur.properties.id).split(":")[0] : null;
+  while (order.length > MAX_EMIT_GRANULES) {
+    const g = order.shift()!;
+    if (g === curGranule) {
+      order.push(g);
+      continue;
+    }
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const e = entries[i];
+      if (!EMIT_SET.has(e.asset) || groupIdOf(e) !== g) continue;
+      removeEntryLayers(mapRef, e.key);
+      cache.delete(e.key);
+      entries.splice(i, 1);
+    }
+  }
+}
 
 function sortEntries(): void {
   const rank = new Map<Asset, number>();
@@ -101,17 +213,20 @@ function sortEntries(): void {
   }
   const sampleIdx = new Map<string, number>();
   entries.forEach((e) => {
-    if (!sampleIdx.has(e.props.id)) sampleIdx.set(e.props.id, sampleIdx.size);
+    const g = groupIdOf(e);
+    if (!sampleIdx.has(g)) sampleIdx.set(g, sampleIdx.size);
   });
   entries.sort((a, b) => {
-    const sa = sampleIdx.get(a.props.id)!;
-    const sb = sampleIdx.get(b.props.id)!;
+    const sa = sampleIdx.get(groupIdOf(a))!;
+    const sb = sampleIdx.get(groupIdOf(b))!;
     if (sa !== sb) return sa - sb;
     return (rank.get(a.asset) ?? 0) - (rank.get(b.asset) ?? 0);
   });
 }
 
-const keyOf = (id: string, asset: Asset) => `${id}:${asset}`;
+const keyOf = (id: string, asset: Asset) => `${EMIT_SET.has(asset) ? id.split(":")[0] : id}:${asset}`;
+const esc = (s: unknown): string =>
+  String(s ?? "").replace(/[&<>"']/g, (c) => (({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }) as Record<string, string>)[c]);
 const ids = (key: string) => {
   const s = key.replace(/[^a-zA-Z0-9]/g, "-");
   return { src: `ssrc-${s}`, img: `simg-${s}`, osrc: `osrc-${s}`, fill: `sfill-${s}` };
@@ -749,9 +864,9 @@ function polygonOf(coordinates: [number, number][]) {
 function popupHTML(p: SampleProps, asset?: Asset): string {
   const color = p.sensor === "EMIT" ? "#f97316" : p.sensor === "Sentinel-2" ? "#2dd4bf" : "#fde047";
   return (
-    `<div class="pp"><span class="pp-sensor" style="color:${color}">${p.sensor}${asset ? ` (${ASSET_LABEL[asset]})` : ""}</span>` +
-    `<h4>${p.country ?? "Unknown"}</h4>` +
-    `<div class="pp-row"><span>Date</span><b>${p.date || "n/a"}</b></div>` +
+    `<div class="pp"><span class="pp-sensor" style="color:${color}">${esc(p.sensor)}${asset ? ` (${ASSET_LABEL[asset]})` : ""}</span>` +
+    `<h4>${esc(p.country ?? "Unknown")}</h4>` +
+    `<div class="pp-row"><span>Date</span><b>${esc(p.date || "n/a")}</b></div>` +
     (p.flux ? `<div class="pp-row"><span>Flux</span><b>${Math.round(p.flux).toLocaleString()} kg/h</b></div>` : "") +
     `</div>`
   );
@@ -760,18 +875,20 @@ function popupHTML(p: SampleProps, asset?: Asset): string {
 function attachHover(map: any, entry: Entry): void {
   const { fill } = ids(entry.key);
   if (bound.has(fill)) return;
-  bound.add(fill);
-  map.on("mouseenter", fill, (e: any) => {
+  const enter = (e: any) => {
     if (!popup) {
       popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10, className: "plume-popup", maxWidth: "280px" });
     }
     popup.setLngLat(e.lngLat).setHTML(popupHTML(entry.props, entry.asset)).addTo(map);
     map.getCanvas().style.cursor = "pointer";
-  });
-  map.on("mouseleave", fill, () => {
+  };
+  const leave = () => {
     if (popup) popup.remove();
     map.getCanvas().style.cursor = "";
-  });
+  };
+  bound.set(fill, { enter, leave });
+  map.on("mouseenter", fill, enter);
+  map.on("mouseleave", fill, leave);
 }
 
 function addEntryLayers(map: any, entry: Entry): void {
@@ -781,8 +898,15 @@ function addEntryLayers(map: any, entry: Entry): void {
     map.addSource(src, { type: "image", url: entry.rendered.dataUrl, coordinates: entry.rendered.coordinates });
     map.addSource(osrc, { type: "geojson", data: polygonOf(entry.rendered.coordinates) });
   }
+  const mask = entry.asset === "plume" || entry.asset === "imeo" || entry.asset === "cm";
   if (!map.getLayer(img)) {
-    map.addLayer({ id: img, type: "raster", source: src, paint: { "raster-opacity": 0.95 }, layout: { visibility: vis } });
+    map.addLayer({
+      id: img,
+      type: "raster",
+      source: src,
+      paint: { "raster-opacity": 0.95, "raster-resampling": mask ? "nearest" : "linear" },
+      layout: { visibility: vis },
+    });
     map.addLayer({
       id: fill,
       type: "fill",
@@ -799,6 +923,12 @@ function addEntryLayers(map: any, entry: Entry): void {
 
 function removeEntryLayers(map: any, key: string): void {
   const { src, img, osrc, fill } = ids(key);
+  const handlers = bound.get(fill);
+  if (handlers) {
+    map.off("mouseenter", fill, handlers.enter);
+    map.off("mouseleave", fill, handlers.leave);
+    bound.delete(fill);
+  }
   for (const id of [img, fill]) if (map.getLayer(id)) map.removeLayer(id);
   for (const id of [src, osrc]) if (map.getSource(id)) map.removeSource(id);
 }
@@ -833,10 +963,25 @@ async function ensureLoaded(props: SampleProps, asset: Asset): Promise<Entry> {
       cache.set(key, rendered);
     }
     const entry: Entry = { key, asset, props, rendered, visible: true };
+    if (rendered.zoomRead) entry.base = rendered;
     entries.push(entry);
     sortEntries();
     addEntryLayers(mapRef, entry);
-    zoomToGroup([entry]);
+    try {
+      applyLayerOrder();
+    } catch (e) {
+      /* style not ready */
+    }
+    if (props.dataset !== "methaneset-emit") {
+      zoomToGroup([entry]);
+    } else {
+      try {
+        evictEmitGranules();
+      } catch (e) {
+        /* style not ready */
+      }
+      if (entry.asset === "radiance") scheduleEmitRefresh(mapRef);
+    }
     if (asset === "ch4" && rendered.range) {
       updateCh4Bounds();
       ch4Min = Math.min(Math.max(0, ch4BoundsLo), ch4BoundsHi - 10);
@@ -859,7 +1004,16 @@ function current(): Feature | undefined {
   return curList[curIndex];
 }
 
+function flyToPlume(point: [number, number]): void {
+  mapRef.easeTo({ center: point, zoom: Math.max(mapRef.getZoom(), 13.5), offset: [-40, 0], duration: 800 });
+}
+
 function zoomToGroup(group: Entry[]): void {
+  const first = group[0];
+  if (first && first.props.dataset === "methaneset-emit" && first.props.point) {
+    flyToPlume(first.props.point);
+    return;
+  }
   const coords = group.flatMap((e) => e.rendered.coordinates);
   const lngs = coords.map((c) => c[0]);
   const lats = coords.map((c) => c[1]);
@@ -891,9 +1045,10 @@ function renderLayersPanel(): void {
 
   const groups = new Map<string, Entry[]>();
   for (const e of entries) {
-    const g = groups.get(e.props.id) ?? [];
+    const id = groupIdOf(e);
+    const g = groups.get(id) ?? [];
     g.push(e);
-    groups.set(e.props.id, g);
+    groups.set(id, g);
   }
 
   layersBody.innerHTML =
@@ -904,16 +1059,17 @@ function renderLayersPanel(): void {
         const chips = [...MULTI_ASSETS, ...EMIT_ASSETS].filter((a) => group.some((e) => e.asset === a))
           .map((a) => {
             const e = group.find((x) => x.asset === a)!;
-            return `<button class="lp-chip ${e.visible ? "is-on" : ""}" data-chip="${e.key}" type="button">${ASSET_LABEL[a]}</button>`;
+            return `<button class="lp-chip ${e.visible ? "is-on" : ""}" data-chip="${esc(e.key)}" type="button">${ASSET_LABEL[a]}</button>`;
           })
           .join("");
+        const groupId = groupIdOf(group[0]);
         return (
           `<div class="lp-item">` +
-          `<div class="lp-item__text"><b>${p.sensor}</b><span>${p.country}, ${p.date}</span></div>` +
+          `<div class="lp-item__text"><b>${esc(p.sensor)}</b><span>${esc(p.country)}, ${esc(p.date)}</span></div>` +
           `<div class="lp-item__chips">${chips}</div>` +
           `<div class="lp-item__actions">` +
-          `<button class="lp-icon" data-zoom="${p.id}" type="button" aria-label="Zoom">⌕</button>` +
-          `<button class="lp-icon" data-remove="${p.id}" type="button" aria-label="Remove">×</button>` +
+          `<button class="lp-icon" data-zoom="${esc(groupId)}" type="button" aria-label="Zoom">⌕</button>` +
+          `<button class="lp-icon" data-remove="${esc(groupId)}" type="button" aria-label="Remove">×</button>` +
           `</div>` +
           `</div>`
         );
@@ -930,19 +1086,31 @@ function renderLayersPanel(): void {
   });
   layersBody.querySelectorAll<HTMLButtonElement>("[data-zoom]").forEach((el) => {
     el.addEventListener("click", () => {
-      const group = entries.filter((e) => e.props.id === el.dataset.zoom);
-      if (group.length) zoomToGroup(group);
+      const group = entries.filter((e) => groupIdOf(e) === el.dataset.zoom);
+      if (!group.length) return;
+      const f = current();
+      const curGroup = f
+        ? f.properties.dataset === "methaneset-emit"
+          ? f.properties.id.split(":")[0]
+          : f.properties.id
+        : null;
+      const p = f && curGroup === el.dataset.zoom ? f.properties : group[0].props;
+      if (p.dataset === "methaneset-emit" && p.point) {
+        flyToPlume(p.point);
+        return;
+      }
+      zoomToGroup(group);
     });
   });
   layersBody.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((el) => {
     el.addEventListener("click", () => {
       const id = el.dataset.remove!;
-      for (const e of entries.filter((x) => x.props.id === id)) {
+      for (const e of entries.filter((x) => groupIdOf(x) === id)) {
         removeEntryLayers(mapRef, e.key);
         cache.delete(e.key);
       }
       for (let i = entries.length - 1; i >= 0; i--) {
-        if (entries[i].props.id === id) entries.splice(i, 1);
+        if (groupIdOf(entries[i]) === id) entries.splice(i, 1);
       }
       render();
     });
@@ -956,18 +1124,30 @@ function render(): void {
   renderLayersPanel();
   if (!feature || closed) {
     ui.root.style.display = "none";
+    updatePairLine(undefined);
     return;
   }
   const p = feature.properties;
   ui.root.style.display = "block";
+  updatePairLine(feature);
 
   const head =
     `<p class="globe-panel__title">Sample</p>` +
     `<button class="sv-close" type="button" aria-label="Close">×</button>` +
-    `<p class="sv-title">${p.sensor}${p.system ? ` (${p.system})` : ""}, ${p.country ?? "Unknown"}</p>` +
-    `<p class="sv-status">${p.source ? `${p.source}, ` : ""}${p.date || "n/a"}, ${p.dataset}${p.flux ? `, ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
+    `<p class="sv-title">${esc(p.sensor)}${p.system ? ` (${esc(p.system)})` : ""}, ${esc(p.country ?? "Unknown")}</p>` +
+    `<p class="sv-status">${p.source ? `${esc(p.source)}, ` : ""}${esc(p.date || "n/a")}, ${esc(p.dataset)}${p.flux ? `, ${Math.round(p.flux).toLocaleString()} kg/h` : ""}</p>`;
 
-  const sampleAssets = p.dataset === "methaneset-emit" ? emitOrder : assetOrder;
+  const isEmit = p.dataset === "methaneset-emit";
+  const pairBlock =
+    isEmit && p.match && (p.match !== "pair" || p.pair_id)
+      ? `<div class="sv-pair">` +
+        (p.match === "pair"
+          ? `<span>1:1 pair with ${esc(p.pair_source)}: <b>${esc(p.pair_id)}</b></span>` +
+            `<button class="sv-pair__btn" data-pair="${esc(p.pair_source)}" type="button">Show ${p.pair_source === "IMEO" ? "IMEO" : "CM"} mask</button>`
+          : `<span>Orphan: only in the ${esc(p.system)} catalog</span>`) +
+        `</div>`
+      : "";
+  const sampleAssets = isEmit ? emitOrder : assetOrder;
   const bodyHtml =
     `<div class="sv-assets">` +
     sampleAssets
@@ -983,7 +1163,7 @@ function render(): void {
           `<label class="sv-asset">` +
           `<input type="checkbox" data-asset="${a}" ${on ? "checked" : ""} ${busy ? "disabled" : ""}>` +
           `<span>${ASSET_LONG[a]}</span>` +
-          `<span class="sv-asset__state${err ? " is-error" : ""}" title="${err ? err.replace(/"/g, "&quot;") : ""}">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : err ? "error" : ""}</span>` +
+          `<span class="sv-asset__state${err ? " is-error" : ""}" title="${esc(err ?? "")}">${busy ? "loading…" : entry ? (entry.visible ? "shown" : "hidden") : err ? "error" : ""}</span>` +
           `</label>` +
           `</div>`
         );
@@ -1020,7 +1200,7 @@ function render(): void {
               .join(", ");
             return (
               `<button class="sv-pick${i === curIndex ? " is-on" : ""}" data-pick="${i}" type="button">` +
-              `<b>${q.sensor}${q.system ? ` (${q.system})` : ""}</b><span>${meta}</span>` +
+              `<b>${esc(q.sensor)}${q.system ? ` (${esc(q.system)})` : ""}</b><span>${esc(meta)}</span>` +
               `</button>`
             );
           })
@@ -1028,11 +1208,39 @@ function render(): void {
         `</div>`
       : "";
 
-  ui.body.innerHTML = head + picks + bodyHtml + legend;
+  ui.body.innerHTML = head + pairBlock + picks + bodyHtml + legend;
 
+  ui.body.querySelector<HTMLButtonElement>("[data-pair]")?.addEventListener("click", async (ev) => {
+    const btn = ev.currentTarget as HTMLButtonElement;
+    if (btn.disabled) return;
+    btn.disabled = true;
+    const f = current();
+    const q = f?.properties;
+    if (!f || !q?.pair_id) return;
+    const asset: Asset = q.pair_source === "IMEO" ? "imeo" : "cm";
+    const granule = q.id.split(":")[0];
+    const mate = plumeIndex.get(`${granule}:${q.pair_id}`);
+    const mateProps: SampleProps = mate
+      ? { ...mate.properties, point: mate.geometry.coordinates }
+      : { ...q, system: q.pair_source ?? q.system, id: `${granule}:${q.pair_id}`, source: q.pair_id };
+    if (loading.has(keyOf(mateProps.id, asset))) return;
+    try {
+      const entry = await ensureLoaded(mateProps, asset);
+      setVisible(entry, true);
+    } catch (err) {
+      console.error(err);
+    }
+    render();
+  });
   ui.body.querySelectorAll<HTMLButtonElement>("[data-pick]").forEach((el) => {
     el.addEventListener("click", () => {
       curIndex = Number(el.dataset.pick);
+      const p = current()?.properties;
+      const point = p?.point as [number, number] | undefined;
+      if (p && p.dataset === "methaneset-emit" && point) {
+        flyToPlume(point);
+        void ensureEmitWindow(p.id, point);
+      }
       render();
     });
   });
@@ -1116,6 +1324,37 @@ function render(): void {
   });
 }
 
+async function ensureEmitWindow(id: string, point: [number, number]): Promise<void> {
+  const entry = entries.find((e) => e.key === keyOf(id, "radiance"));
+  if (!entry || !entry.base?.readRect) return;
+  while (entry.pending) await entry.pending.catch(() => null);
+  const r = entry.rendered;
+  if (!r.readRect || !r.scene || !r.fullSize || !r.zoomRead) return;
+  const uv = invertBilinearRaw(r.scene, point);
+  if (!uv || uv[0] < -0.02 || uv[0] > 1.02 || uv[1] < -0.02 || uv[1] > 1.02) return;
+  const [fw, fh] = r.fullSize;
+  const cx = Math.round(uv[0] * (fw - 1));
+  const cy = Math.round(uv[1] * (fh - 1));
+  const [x0, y0, x1, y1] = r.readRect;
+  const margin = 24;
+  if (cx >= x0 + margin && cx < x1 - margin && cy >= y0 + margin && cy < y1 - margin) return;
+  const winW = Math.min(640, fw);
+  const winH = Math.min(640, fh);
+  const nx0 = Math.max(0, Math.min(fw - winW, cx - (winW >> 1)));
+  const ny0 = Math.max(0, Math.min(fh - winH, cy - (winH >> 1)));
+  entry.pending = r.zoomRead([nx0, ny0, nx0 + winW, ny0 + winH]).catch(() => null);
+  const result = await entry.pending;
+  entry.pending = null;
+  if (!result) return;
+  entry.rendered = result;
+  entry.base = result;
+  const { src } = ids(entry.key);
+  const source = mapRef.getSource(src) as any;
+  if (source && typeof source.updateImage === "function") {
+    source.updateImage({ url: result.dataUrl, coordinates: result.coordinates });
+  }
+}
+
 export function openInspector(map: any, feature: Feature, ui: UiElements): void {
   mapRef = map;
   uiRef = ui;
@@ -1126,6 +1365,12 @@ export function openInspector(map: any, feature: Feature, ui: UiElements): void 
   }
   curList = [...source].sort((a, b) => (a.properties.date || "").localeCompare(b.properties.date || ""));
   curIndex = Math.max(0, curList.findIndex((f) => f.properties.id === feature.properties.id));
+  const p = feature.properties;
+  const point = (p.point ?? feature.geometry.coordinates) as [number, number];
+  if (p.dataset === "methaneset-emit") {
+    flyToPlume(point);
+    void ensureEmitWindow(p.id, point);
+  }
   render();
 }
 
@@ -1142,19 +1387,27 @@ export function reAddAll(map: any): void {
   } catch (e) {
     /* style not ready */
   }
+  try {
+    updatePairLine(current());
+  } catch (e) {
+    /* style not ready */
+  }
 }
 
 let zoomBound = false;
 let zoomToken = 0;
 
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleEmitRefresh(map: any): void {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => void refreshEmitWindows(map), 700);
+}
+
 export function attachEmitZoom(map: any): void {
   if (zoomBound) return;
   zoomBound = true;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  map.on("moveend", () => {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => void refreshEmitWindows(map), 700);
-  });
+  map.on("moveend", () => scheduleEmitRefresh(map));
 }
 
 function visibleRect(entry: Entry, map: any): [number, number, number, number] | null {
@@ -1194,10 +1447,27 @@ function visibleRect(entry: Entry, map: any): [number, number, number, number] |
 }
 
 async function refreshEmitWindows(map: any): Promise<void> {
-  if (map.getZoom() < 12) return;
   const token = ++zoomToken;
+  if (map.getZoom() < 12) {
+    for (const entry of entries) {
+      if (entry.asset !== "radiance" || !entry.base || entry.rendered === entry.base) continue;
+      entry.rendered = entry.base;
+      const { src } = ids(entry.key);
+      const source = map.getSource(src) as any;
+      if (source && typeof source.updateImage === "function") {
+        source.updateImage({ url: entry.base.dataUrl, coordinates: entry.base.coordinates });
+      }
+    }
+    return;
+  }
   for (const entry of entries) {
     if (entry.asset !== "radiance" || !entry.visible || !entry.rendered.zoomRead) continue;
+    if (entry.pending) {
+      await entry.pending.catch(() => null);
+      if (token !== zoomToken || map.getZoom() < 12) return;
+    }
+    const zoomRead = entry.rendered.zoomRead;
+    if (!zoomRead) continue;
     const rect = visibleRect(entry, map);
     if (!rect) continue;
     const loaded = entry.rendered.readRect;
@@ -1210,9 +1480,10 @@ async function refreshEmitWindows(map: any): Promise<void> {
     ) {
       continue;
     }
-    const zoomRead = entry.rendered.zoomRead;
-    const result = await zoomRead(rect).catch(() => null);
-    if (token !== zoomToken) return;
+    entry.pending = zoomRead(rect).catch(() => null);
+    const result = await entry.pending;
+    entry.pending = null;
+    if (token !== zoomToken || map.getZoom() < 12) return;
     if (!result) continue;
     entry.rendered = result;
     const { src } = ids(entry.key);

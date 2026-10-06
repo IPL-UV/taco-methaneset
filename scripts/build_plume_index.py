@@ -14,6 +14,7 @@ import json
 import pathlib
 import re
 import urllib.request
+from collections import Counter
 
 import pandas as pd
 
@@ -46,6 +47,8 @@ def wkt_points(value) -> list[tuple[float, float]]:
 
 
 def as_list(value) -> list:
+    if hasattr(value, "tolist"):
+        value = value.tolist()
     if isinstance(value, str):
         try:
             value = json.loads(value)
@@ -55,6 +58,8 @@ def as_list(value) -> list:
 
 
 def as_dict(value) -> dict:
+    if hasattr(value, "tolist"):
+        value = value.tolist()
     if isinstance(value, str):
         try:
             value = json.loads(value)
@@ -74,6 +79,21 @@ def fetch(path: str) -> pd.DataFrame:
 def emit_points(df: pd.DataFrame, sensor: str) -> list[dict]:
     features = []
     for _, row in df.iterrows():
+        pair_map = {}
+        for pair in as_list(row.get("match:pairs")):
+            if not isinstance(pair, dict):
+                continue
+            imeo = str(pair.get("imeo") or "")
+            cm = str(pair.get("cm") or "")
+            if not imeo or not cm:
+                continue
+            for key in (("IMEO", imeo), ("Carbon Mapper", cm)):
+                if key in pair_map:
+                    raise SystemExit(f"duplicate pair entry for {key} in {row.get('id')}")
+                pair_map[key] = ("Carbon Mapper", cm) if key[0] == "IMEO" else ("IMEO", imeo)
+        orphans = as_dict(row.get("match:orphans"))
+        orphan_imeo = {str(x) for x in as_list(orphans.get("imeo"))}
+        orphan_cm = {str(x) for x in as_list(orphans.get("cm"))}
         matches = [
             (
                 "IMEO",
@@ -91,11 +111,19 @@ def emit_points(df: pd.DataFrame, sensor: str) -> list[dict]:
         for system, ids, points, fluxes in matches:
             seen = set()
             for i, (lon, lat) in enumerate(points):
-                source = ids[i] if i < len(ids) else ""
+                value = ids[i] if i < len(ids) else ""
+                source = "" if value is None or pd.isna(value) else str(value)
                 key = source or (lon, lat)
                 if key in seen:
                     continue
                 seen.add(key)
+                mate = pair_map.get((system, source))
+                if mate:
+                    match, pair_source, pair_id = "pair", mate[0], mate[1]
+                elif source in (orphan_imeo if system == "IMEO" else orphan_cm):
+                    match, pair_source, pair_id = "orphan", None, None
+                else:
+                    match, pair_source, pair_id = None, None, None
                 features.append(
                     {
                         "type": "Feature",
@@ -110,6 +138,9 @@ def emit_points(df: pd.DataFrame, sensor: str) -> list[dict]:
                             "flux_kind": "max",
                             "id": f"{row['id']}:{source}" if source else str(row["id"]),
                             "source": source,
+                            "match": match,
+                            "pair_source": pair_source,
+                            "pair_id": pair_id,
                             "sector": row.get("detection:sector"),
                         },
                     }
@@ -149,7 +180,18 @@ def main() -> None:
     for dataset, sensor, path in SOURCES:
         df = fetch(path)
         if dataset == "methaneset-emit":
-            features += emit_points(df, sensor)
+            for column in ("match:pairs", "match:orphans"):
+                if column not in df.columns:
+                    raise SystemExit(
+                        f"{path} has no {column}: it is a stale cache, remove "
+                        f"{CACHE}/methaneset-emit__METADATA__level0.parquet and rerun"
+                    )
+            points = emit_points(df, sensor)
+            matches = Counter(p["properties"].get("match") for p in points)
+            if not matches["pair"] and not matches["orphan"]:
+                raise SystemExit(f"{path}: no pair or orphan features, match metadata not read")
+            print(f"{dataset} match: {dict(matches)}")
+            features += points
         else:
             features += multispectral_points(df, sensor, dataset)
         print(f"{dataset}: {len(df)} rows")

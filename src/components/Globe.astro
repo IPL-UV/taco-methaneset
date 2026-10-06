@@ -570,6 +570,37 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
     font-size: 0.7rem;
     color: var(--slate);
   }
+  .sample-viewer :global(.sv-pair) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 0.76rem;
+    color: var(--slate);
+  }
+  .sample-viewer :global(.sv-pair b) {
+    color: var(--text);
+    font-weight: 500;
+  }
+  .sample-viewer :global(.sv-pair__btn) {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--muted);
+    border-radius: var(--radius-xs);
+    padding: 4px 8px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    white-space: nowrap;
+    transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+      background-color var(--dur-fast) var(--ease);
+  }
+  .sample-viewer :global(.sv-pair__btn:hover) {
+    border-color: var(--teal);
+    color: var(--teal-light);
+    background: var(--accent-soft);
+  }
   .sample-viewer :global(.sv-legend) {
     margin-top: 12px;
     padding-top: 10px;
@@ -796,7 +827,14 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
   import maplibregl from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { url } from "../lib/url";
-  import { attachEmitZoom, openInspector, reAddAll } from "../lib/sampleViewer";
+  import {
+    attachEmitZoom,
+    openInspector,
+    reAddAll,
+    refreshPairLine,
+    setPlumeIndex,
+    setVisibleIds,
+  } from "../lib/sampleViewer";
 
   const SENSOR_COLOR = {
     EMIT: "#f97316",
@@ -956,6 +994,8 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       });
 
       const fmt = (v: number | null) => (v == null ? "n/a" : `${Math.round(v).toLocaleString()} kg/h`);
+      const esc = (s: unknown): string =>
+        String(s ?? "").replace(/[&<>"']/g, (c) => (({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }) as Record<string, string>)[c]);
 
       if (eventsBound) {
         reAddAll(map);
@@ -970,18 +1010,25 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
         if (!f) return;
         const p = f.properties;
         const color = SENSOR_COLOR[p.sensor as keyof typeof SENSOR_COLOR] ?? "#94a3b8";
-        const sector = p.sector ? `<div class="pp-row"><span>Sector</span><b>${p.sector}</b></div>` : "";
+        const sector = p.sector ? `<div class="pp-row"><span>Sector</span><b>${esc(p.sector)}</b></div>` : "";
+        const pair =
+          p.match === "pair" && p.pair_id
+            ? `<div class="pp-row"><span>Pair</span><b>${esc(p.pair_id)}</b></div>`
+            : p.match === "orphan"
+              ? `<div class="pp-row"><span>Catalog</span><b>orphan (${esc(p.system)})</b></div>`
+              : "";
         const stacked =
           p.n_same > 1 ? `<div class="pp-row"><span>Plumes here</span><b>${p.n_same}</b></div>` : "";
         popup
           .setLngLat(f.geometry.coordinates)
           .setHTML(
-            `<div class="pp"><span class="pp-sensor" style="color:${color}">${p.sensor}${p.system ? ` (${p.system})` : ""}</span>` +
-              `<h4>${p.country ?? "Unknown"}</h4>` +
-              `<div class="pp-row"><span>Dataset</span><b>${p.dataset}</b></div>` +
-              `<div class="pp-row"><span>Date</span><b>${p.date || "n/a"}</b></div>` +
+            `<div class="pp"><span class="pp-sensor" style="color:${color}">${esc(p.sensor)}${p.system ? ` (${esc(p.system)})` : ""}</span>` +
+              `<h4>${esc(p.country ?? "Unknown")}</h4>` +
+              `<div class="pp-row"><span>Dataset</span><b>${esc(p.dataset)}</b></div>` +
+              `<div class="pp-row"><span>Date</span><b>${esc(p.date || "n/a")}</b></div>` +
               `<div class="pp-row"><span>Flux</span><b>${fmt(p.flux)}</b></div>` +
               stacked +
+              pair +
               sector +
               `</div>`,
           )
@@ -1076,6 +1123,7 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
       .then((r) => r.json())
       .then((geojson) => {
         plumeData = geojson;
+        setPlumeIndex(geojson.features);
         countStacked(geojson.features);
 
         if (controls) {
@@ -1136,6 +1184,8 @@ const years = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
               ).length;
               el.textContent = n.toLocaleString();
             }
+            setVisibleIds(new Set(visibleFeatures.map((f: any) => String(f.properties.id))));
+            refreshPairLine();
           };
 
           boxes.forEach((b) => b.addEventListener("change", applyFilters));
