@@ -94,14 +94,17 @@ COLSPEC = {
     "sensor": [
         ("shape_rows", I, "Sensor-grid rows"),
         ("shape_cols", I, "Sensor-grid columns"),
-        ("sza_mean", F, "Mean solar zenith angle (deg); intra-scene range is <1 deg"),
-        ("vza_mean", F, "Mean view zenith angle (deg)"),
-        ("saa_mean", F, "Mean solar azimuth angle (deg)"),
-        ("vaa_mean", F, "Mean view azimuth angle (deg)"),
-        ("amf_mean", F, "Two-way air mass factor 1/cos(SZA)+1/cos(VZA)"),
-        ("phase_mean", F, "Mean solar phase angle between sun and view vectors (deg); sunglint indicator"),
-        ("path_length_mean", F, "Mean sensor-to-ground path length (m)"),
+        ("amf", F, "Two-way air mass factor 1/cos(SZA)+1/cos(VZA)"),
+        ("phase", F, "Mean solar phase angle between sun and view vectors (deg); sunglint indicator"),
+        ("path_length", F, "Mean sensor-to-ground path length (m)"),
         ("earth_sun_distance", F, "Earth-Sun distance (AU)"),
+    ],
+    "target": [
+        ("sza", F, "Scene-mean solar zenith angle (deg); intra-scene range is <1 deg"),
+        ("vza", F, "Scene-mean view zenith angle (deg)"),
+        ("saa", F, "Scene-mean solar azimuth angle (deg, clockwise from north)"),
+        ("vaa", F, "Scene-mean view azimuth angle (deg, clockwise from north), from the pixel to the sensor"),
+        ("raa", F, "Sun azimuth relative to the wind [deg], counterclockwise from the wind direction (matches the bank sun:raa convention)"),
     ],
     "meteo": [
         ("wind_u", F, "Scene-mean 10 m eastward wind from the wind.tif layer (ERA5-Land, time-interpolated); per-pixel field in wind.tif"),
@@ -165,7 +168,7 @@ class NSExt(SampleExtension):
 COLLECTION = dict(
     id="methaneset-emit",
     title="MethaneSET-EMIT: Hyperspectral Methane Plume Detection from EMIT",
-    dataset_version="1.0.0",
+    dataset_version="1.2.0",
     extent=Extent(spatial=[-123.6228, -47.2043, 152.1961, 50.7347],
                   temporal=["2022-08-10T06:49:57Z", "2025-11-12T17:40:08Z"]),
     description=(
@@ -185,7 +188,7 @@ COLLECTION = dict(
         "train/val/test split grouped by emitter is proposed; all metadata is "
         "queryable in level0.parquet without opening a raster."
     ),
-    licenses=["cc-by-4.0"],
+    licenses=["CC-BY-NC-SA-4.0"],  # derivado de MARS-S2L (anotaciones IMEO/CM); el banco va CC-BY-4.0
     providers=[
         Provider(name="NASA JPL", roles=["producer"]),
         Provider(name="UNEP IMEO", roles=["producer"]),
