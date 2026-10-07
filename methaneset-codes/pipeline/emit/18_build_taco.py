@@ -188,7 +188,7 @@ COLLECTION = dict(
         "train/val/test split grouped by emitter is proposed; all metadata is "
         "queryable in level0.parquet without opening a raster."
     ),
-    licenses=["cc-by-4.0"],
+    licenses=["cc-by-nc-sa-4.0"]  # derivado de MARS-S2L (anotaciones IMEO/CM); el banco va CC-BY-4.0,
     providers=[
         Provider(name="NASA JPL", roles=["producer"]),
         Provider(name="UNEP IMEO", roles=["producer"]),
