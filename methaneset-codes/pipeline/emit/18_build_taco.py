@@ -168,7 +168,7 @@ class NSExt(SampleExtension):
 COLLECTION = dict(
     id="methaneset-emit",
     title="MethaneSET-EMIT: Hyperspectral Methane Plume Detection from EMIT",
-    dataset_version="1.0.0",
+    dataset_version="1.2.0",
     extent=Extent(spatial=[-123.6228, -47.2043, 152.1961, 50.7347],
                   temporal=["2022-08-10T06:49:57Z", "2025-11-12T17:40:08Z"]),
     description=(

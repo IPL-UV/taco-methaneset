@@ -163,7 +163,7 @@ def main():
 
     root = Tortilla(samples=muestras, strict_schema=True)
     taco = Taco(tortilla=root, id=a.id, title=a.id,
-                dataset_version="1.0.0", licenses=["CC-BY-4.0"],
+                dataset_version="1.2.0", licenses=["CC-BY-4.0"],
                 description=DESCRIPCION,
                 tasks=["detection"], keywords=["methane", "landsat", "background", "plume", "taco"],
                 providers=[{"name": "Image and Signal Processing Group (ISP-UV)", "roles": ["producer"]},

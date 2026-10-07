@@ -137,7 +137,7 @@ def main() -> None:
         tortilla=root,
         id=a.ds,
         title=COLLECTION_TITLE,
-        dataset_version="1.0.0",
+        dataset_version="1.2.0",
         licenses=["CC-BY-4.0"],
         description=COLLECTION_DESCRIPTION,
         tasks=COLLECTION_TASKS,
