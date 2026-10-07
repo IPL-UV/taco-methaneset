@@ -44,5 +44,5 @@ BUILD = {
 
 # ── COLLECTION.json identity ──────────────────────────────────────────────
 COLLECTION_ID = "methaneset-emit"
-COLLECTION_VERSION = "1.0.0"
-COLLECTION_LICENSES = ["CC-BY-4.0"]
+COLLECTION_VERSION = "1.2.0"
+COLLECTION_LICENSES = ["CC-BY-NC-SA-4.0"]
