@@ -138,7 +138,7 @@ def main() -> None:
         id=a.ds,
         title=COLLECTION_TITLE,
         dataset_version="1.2.0",
-        licenses=["CC-BY-4.0"],
+        licenses=["CC-BY-NC-SA-4.0"],
         description=COLLECTION_DESCRIPTION,
         tasks=COLLECTION_TASKS,
         keywords=COLLECTION_KEYWORDS,
