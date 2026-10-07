@@ -69,9 +69,9 @@ COLUMN_ORDER = [
     "match:pairs", "match:orphans", "match:n_pairs", "match:n_perfect",
     "match:n_orph_imeo", "match:n_orph_cm",
     "sensor:shape_rows", "sensor:shape_cols",
-    "sensor:sza_mean", "sensor:vza_mean", "sensor:saa_mean", "sensor:vaa_mean",
-    "sensor:amf_mean", "sensor:phase_mean",
-    "sensor:path_length_mean", "sensor:earth_sun_distance",
+    "target:sza", "target:vza", "target:saa", "target:vaa", "target:raa",
+    "sensor:amf", "sensor:phase",
+    "sensor:path_length", "sensor:earth_sun_distance",
     "meteo:wind_u", "meteo:wind_v", "meteo:wind_speed",
     "meteo:imeo_wind", "meteo:cm_wind",
     "emit:flight_line", "emit:time_start", "emit:time_end",
@@ -82,8 +82,8 @@ COLUMN_ORDER = [
     "selection:split", "selection:is_free", "selection:flux_bin",
 ]
 
-ROUND = {3: ["sensor:sza_mean", "sensor:vza_mean", "sensor:saa_mean",
-             "sensor:vaa_mean", "sensor:amf_mean", "sensor:phase_mean",
+ROUND = {3: ["target:sza", "target:vza", "target:saa",
+             "target:vaa", "target:raa", "sensor:amf", "sensor:phase",
              "meteo:wind_u",
              "meteo:wind_v", "meteo:wind_speed", "radiance:elev_min_m",
              "radiance:elev_max_m", "detection:coverage_imeo",
@@ -93,7 +93,7 @@ ROUND = {3: ["sensor:sza_mean", "sensor:vza_mean", "sensor:saa_mean",
          4: ["radiance:min", "radiance:max"],
          6: ["spatial:bbox_west", "spatial:bbox_south", "spatial:bbox_east",
              "spatial:bbox_north"],
-         1: ["sensor:path_length_mean"],
+         1: ["sensor:path_length"],
          5: ["sensor:earth_sun_distance"]}
 
 G = {}
@@ -128,16 +128,16 @@ def obs_stats(path):
             i = next(k for k, n in enumerate(names) if key in n.lower())
             a = obs[:, :, i]
             return a[a > -9000]
-        out = {"sensor:sza_mean": float(band("to-sun zenith").mean()),
-               "sensor:vza_mean": float(band("to-sensor zenith").mean()),
-               "sensor:saa_mean": float(band("to-sun azimuth").mean()),
-               "sensor:vaa_mean": float(band("to-sensor azimuth").mean()),
-               "sensor:phase_mean": float(band("solar phase").mean()),
-               "sensor:path_length_mean": float(band("path length").mean()),
+        out = {"target:sza": float(band("to-sun zenith").mean()),
+               "target:vza": float(band("to-sensor zenith").mean()),
+               "target:saa": float(band("to-sun azimuth").mean()),
+               "target:vaa": float(band("to-sensor azimuth").mean()),
+               "sensor:phase": float(band("solar phase").mean()),
+               "sensor:path_length": float(band("path length").mean()),
                "sensor:earth_sun_distance": float(band("earth-sun").mean())}
-        out["sensor:amf_mean"] = float(
-            1 / np.cos(np.radians(out["sensor:sza_mean"]))
-            + 1 / np.cos(np.radians(out["sensor:vza_mean"])))
+        out["sensor:amf"] = float(
+            1 / np.cos(np.radians(out["target:sza"]))
+            + 1 / np.cos(np.radians(out["target:vza"])))
         return out
 
 
@@ -175,6 +175,12 @@ def build_row(ts):
             u, v_ = s.read(1), s.read(2)
             r["meteo:wind_u"] = float(u.mean()); r["meteo:wind_v"] = float(v_.mean())
             r["meteo:wind_speed"] = float(np.hypot(u, v_).mean())
+            _saa = r.get("target:saa", np.nan)
+            if np.isfinite(_saa) and np.hypot(r["meteo:wind_u"], r["meteo:wind_v"]) >= 0.1:
+                _dir_to = np.degrees(np.arctan2(r["meteo:wind_u"], r["meteo:wind_v"])) % 360
+                r["target:raa"] = (_dir_to - _saa) % 360
+            else:
+                r["target:raa"] = np.nan
         with rasterio.open(d / "plume_imeo.tif") as s:
             mi = s.read(1) > 0
         with rasterio.open(d / "plume_cm.tif") as s:
