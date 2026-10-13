@@ -419,12 +419,17 @@ def scalebar(ax, px_m: float, frac: float = 0.25):
     # axes direction depends on imshow; place inside bottom-right
     x1 = max(xlim[0], xlim[1]) - 0.05 * width_px - bar_px
     x2 = x1 + bar_px
-    bottom = max(ylim) if ax.yaxis_inverted() else min(ylim)
-    y = bottom + 0.04 * abs(ylim[1] - ylim[0])
+    rng = abs(ylim[1] - ylim[0])
+    if ax.yaxis_inverted():          # imshow: the bottom of the image is max(ylim)
+        y = max(ylim) - 0.06 * rng
+        y_text, va = y - 0.02 * rng, "top"
+    else:
+        y = min(ylim) + 0.06 * rng
+        y_text, va = y + 0.02 * rng, "bottom"
 
     ax.plot([x1, x2], [y, y], color=PALETTE["ink"], linewidth=2.5, solid_capstyle="butt")
-    ax.text((x1 + x2) / 2, y + 0.01 * abs(ylim[1] - ylim[0]), text,
-            ha="center", va="bottom", fontsize=7, color=PALETTE["ink"])
+    ax.text((x1 + x2) / 2, y_text, text,
+            ha="center", va=va, fontsize=7, color=PALETTE["ink"])
 
 
 def layers(sample) -> Any:
