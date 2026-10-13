@@ -554,7 +554,7 @@ def _find_col(df, names):
 def bank_query(df, sza: float, raa: float, wind: float, k: int = 1):
     """Nearest-neighbour query in the LES bank geometry space.
 
-    Builds a cKDTree on (sza, sin(raa), cos(raa), wind) so RAA wraps circularly.
+    Builds a cKDTree on (sza, sin(raa), cos(raa), wind) so RAA wraps circularly; the returned distance combines the RAA and SZA gaps.
     Returns (indices, angular_distance_deg, wind_error) for the k closest nodes.
     """
     from scipy.spatial import cKDTree
@@ -583,10 +583,12 @@ def bank_query(df, sza: float, raa: float, wind: float, k: int = 1):
     # cKDTree returns shape (1, k); flatten to 1-D
     idx = np.atleast_1d(idx[0])
 
-    # angular distance from the matched RAA values (circular, degrees)
+    # angular distance: circular RAA gap plus the SZA gap (degrees)
     matched_raa = df[col_raa].values[idx]
     delta = np.abs(matched_raa - raa)
-    ang_dist = np.minimum(delta, 360.0 - delta)
+    draa = np.minimum(delta, 360.0 - delta)
+    dsza = np.abs(df[col_sza].values[idx] - sza)
+    ang_dist = np.sqrt(draa ** 2 + dsza ** 2)
 
     matched_wind = df[col_wind].values[idx]
     wind_err = np.abs(matched_wind - wind)
