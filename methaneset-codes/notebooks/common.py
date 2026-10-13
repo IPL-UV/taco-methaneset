@@ -339,10 +339,11 @@ def ax_plot(ax):
 
 
 def panel_label(ax, letter: str):
-    """'(a)' at the top-left of an axis, 9 pt, ink color."""
+    """'(a)' at the top-left of an axis: white with a dark outline, readable on any image."""
+    import matplotlib.patheffects as pe
     ax.text(0.02, 0.98, f"({letter})", transform=ax.transAxes,
-            fontsize=9, color=PALETTE["ink"], va="top", ha="left",
-            fontweight="bold")
+            fontsize=10, color="white", va="top", ha="left", fontweight="bold",
+            path_effects=[pe.withStroke(linewidth=2.5, foreground=PALETTE["ink"])])
 
 
 def imshow_layer(ax, a: np.ndarray, kind: str = "enh", title: str | None = None,
