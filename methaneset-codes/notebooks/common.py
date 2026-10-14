@@ -161,6 +161,14 @@ def to_rgb(stack: np.ndarray, idx: tuple = (3, 2, 1), half: bool = False) -> np.
     return np.dstack(ch)
 
 
+def snr(img, inside, outside):
+    """(mean inside - mean outside) / std outside, NaN-safe. The usual plume SNR."""
+    s_out = np.nanstd(img[outside])
+    if not np.isfinite(s_out) or s_out == 0:
+        return float("nan")
+    return (np.nanmean(img[inside]) - np.nanmean(img[outside])) / s_out
+
+
 def mbmp(t_swir1, t_swir2, r_swir1, r_swir2, eps: float = 1e-9) -> np.ndarray:
     """Fractional MBMP enhancement (Varon et al. 2021); negative over a plume.
 
