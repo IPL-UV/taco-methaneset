@@ -48,6 +48,7 @@ CMAPS = {
 }
 CMAP_ENH = CMAPS["enh"]   # alias, does not break current notebooks
 
+DPI = {"hero": 110, "std": 95, "small": 90}   # per-figure resolution
 FIGW = 9.0
 ROW_H = {"image": 3.0, "plot": 2.8}
 PIXEL_M = {"s2": 10.0, "l89": 30.0, "emit": 60.0, "bank": 20.0}
@@ -148,8 +149,14 @@ def stretch(a: np.ndarray, p: tuple = (2, 98)) -> np.ndarray:
     return np.clip((a - lo) / (hi - lo), 0, 1)
 
 
-def to_rgb(stack: np.ndarray, idx: tuple = (3, 2, 1)) -> np.ndarray:
-    """(B, H, W) -> (H, W, 3), stretched per channel with a mild gamma."""
+def to_rgb(stack: np.ndarray, idx: tuple = (3, 2, 1), half: bool = False) -> np.ndarray:
+    """(B, H, W) -> (H, W, 3), stretched per channel with a mild gamma.
+
+    half=True keeps every other pixel: context images look bigger in the figure and the
+    notebook stays lighter, and the map is still readable.
+    """
+    if half:
+        stack = stack[:, ::2, ::2]
     ch = [stretch(stack[i]) ** 0.8 for i in idx]
     return np.dstack(ch)
 
@@ -306,7 +313,7 @@ def style() -> None:
         "font.family": "DejaVu Sans", "font.size": 9,
         "axes.titlesize": 9.5, "axes.labelsize": 9,
         "xtick.labelsize": 8, "ytick.labelsize": 8,
-        "figure.dpi": 100, "savefig.dpi": 100,
+        "figure.dpi": 100, "savefig.dpi": "figure",
         "figure.facecolor": "white", "savefig.bbox": "tight",
         "axes.grid": False,                      # grid is added by ax_plot()
         "grid.color": PALETTE["grid"], "grid.linewidth": 0.6,
@@ -320,13 +327,15 @@ def style() -> None:
     })
 
 
-def panels(n: int, rows: int = 1, kind: str = "image", w: float = FIGW):
+def panels(n: int, rows: int = 1, kind: str = "image", w: float = FIGW, dpi: int | None = None):
     """Return fig, axes already styled. kind='image' removes ticks, spines and grid."""
     import matplotlib.pyplot as plt
 
     cols = int(np.ceil(n / rows))
     h = rows * ROW_H[kind]
     fig, axes = plt.subplots(rows, cols, figsize=(w, h), constrained_layout=True)
+    if dpi is not None:
+        fig.set_dpi(dpi)
     if n == 1 and rows == 1:
         axes = np.array([axes])
     elif isinstance(axes, np.ndarray):
