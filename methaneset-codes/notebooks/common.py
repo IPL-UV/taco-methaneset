@@ -102,6 +102,18 @@ def load(dataset: str, backend: str = "pandas"):
     return tacoreader.load(resolve(dataset))
 
 
+def _read_retry(fn, tries: int = 4, wait: float = 8.0):
+    """Retry a raster read on HTTP 429 (Hugging Face rate limit is short-lived)."""
+    import time
+    for k in range(tries):
+        try:
+            return fn()
+        except Exception as exc:
+            if "429" not in str(exc) or k == tries - 1:
+                raise
+            time.sleep(wait * (k + 1))
+
+
 def read(src, leaf: str | None = None, bands=None, window=None, nan_nodata: bool = True):
     """Read a raster layer as float32 with nodata as NaN (unsigned ints kept as-is).
 
@@ -111,7 +123,7 @@ def read(src, leaf: str | None = None, bands=None, window=None, nan_nodata: bool
     """
     if leaf is not None:
         src = src.read(leaf)
-    with rasterio.open(src) as ds:
+    with _read_retry(lambda: rasterio.open(src)) as ds:
         if bands is None:
             a = ds.read(window=window)
         elif isinstance(bands, (int, np.integer)):
