@@ -16,6 +16,26 @@ import warnings
 from pathlib import Path
 from typing import Any
 
+def _hf_token() -> str | None:
+    """Hugging Face token from the environment or from a previous notebook_login()."""
+    tok = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    if tok:
+        return tok
+    try:
+        from huggingface_hub import get_token
+        return get_token()
+    except Exception:
+        return None
+
+
+# rasterio/GDAL fetch the remote files with their own HTTP stack, so a huggingface_hub
+# login is not enough: hand GDAL the same token, or the reads go anonymous and Hugging
+# Face rate limits the IP (429 Too Many Requests) after a few hundred files.
+_HF_TOKEN = _hf_token()
+if _HF_TOKEN:
+    os.environ.setdefault("GDAL_HTTP_HEADERS", f"Authorization: Bearer {_HF_TOKEN}")
+
+
 import numpy as np
 import rasterio
 
