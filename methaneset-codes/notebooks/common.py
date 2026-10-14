@@ -21,6 +21,8 @@ from typing import Any
 import os as _os
 _os.environ.setdefault("GDAL_DISABLE_READDIR_ON_OPEN", "EMPTY_DIR")
 _os.environ.setdefault("CPL_VSIL_CURL_USE_HEAD", "NO")
+# and only allow the raster itself: no probing for HDR*.txt, RPC*.txt, .msk sidecars
+_os.environ.setdefault("CPL_VSIL_CURL_ALLOWED_EXTENSIONS", ".tif,.TIF,.json")
 
 import numpy as np
 import rasterio
