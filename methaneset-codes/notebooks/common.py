@@ -633,3 +633,12 @@ def bank_query(df, sza: float, raa: float, wind: float, k: int = 1):
     if k == 1:
         return int(idx[0]), float(ang_dist[0]), float(wind_err[0])
     return idx, ang_dist, wind_err
+
+
+def scene_scan(dataset, ids, layers=("target", "plume", "bg0")):
+    """Read each scene's layers once and return them in a dict keyed by scene id."""
+    out = {}
+    for i in ids:
+        sc = dataset.read(int(i))
+        out[int(i)] = {k: read(sc, k, bands=1) if k == "plume" else read(sc, k) for k in layers}
+    return out
