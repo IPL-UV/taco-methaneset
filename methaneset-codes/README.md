@@ -14,7 +14,7 @@ from the raw catalogs to the final TACO collections.
 | [methaneset-s2-pretraining](https://huggingface.co/datasets/tacofoundation/methaneset/tree/main/methaneset-s2-pretraining) | 56,344 | 36.9 GB | Sentinel-2 |
 | [methaneset-s2-finetune](https://huggingface.co/datasets/tacofoundation/methaneset/tree/main/methaneset-s2-finetune) | 3,552 | 6.4 GB | Sentinel-2 |
 | [methaneset-l89-pretraining](https://huggingface.co/datasets/tacofoundation/methaneset/tree/main/methaneset-l89-pretraining) | 21,919 | 8.9 GB | Landsat 8/9 |
-| [methaneset-l89-finetune](https://huggingface.co/datasets/tacofoundation/methaneset/tree/main/methaneset-l89-finetune) | 1,353 | 1.2 GB | Landsat 8/9 |
+| [methaneset-l89-finetune](https://huggingface.co/datasets/tacofoundation/methaneset/tree/main/methaneset-l89-finetune) | 1,353 | 1.68 GB | Landsat 8/9 |
 | [methaneset-emit](https://huggingface.co/datasets/tacofoundation/methaneset/tree/main/methaneset-emit) | 721 | 1.0 TB | EMIT |
 | [methaneset-bank](https://huggingface.co/datasets/tacofoundation/methaneset/tree/main/methaneset-bank) | 238,545 | 5.1 GB | synthetic |
 | [methaneset-bank-les](https://huggingface.co/datasets/tacofoundation/methaneset/tree/main/methaneset-bank-les) | 1,647 | 3.1 GB | synthetic |

@@ -44,7 +44,7 @@ export const datasets: Dataset[] = [
     family: "Landsat 8/9",
     subset: "Finetune",
     samples: 1353,
-    sizeGB: 1.2,
+    sizeGB: 1.68,
     icon: "l89",
     abstract:
       "Landsat 8/9 imagery with expert-verified plume masks, 9 OLI bands at 30 m resampled to 10 m.",
