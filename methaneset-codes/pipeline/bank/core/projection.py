@@ -5,27 +5,39 @@ import numpy as np
 from . import config as C
 
 
-def proyectar(vol: np.ndarray, sza: float, raa: float, a_v: float = C.A_V):
-    """Column map seen by a nadir sensor with the sun at (sza, raa).
+def proyectar(vol: np.ndarray, sza: float, raa: float, vza: float = 0.0, vaa: float = 0.0,
+              a_v: float | None = None):
+    """Column map seen at (vza, vaa) with the sun at (sza, raa).
 
     vol: (nz, ny, nx) contribution of each level to the column, in ppb, without the relaxation band.
-    Each level is shifted k*DZ*tan(sza) towards raa + 180 (the side opposite the sun) with bilinear
-    splitting, which conserves mass exactly; the view path (VZA = 0) is not shifted.
-    They are combined with the path weights: (A_s*sol + A_v*nadir) / (A_s + A_v).
+    Solar and view paths shift each level by k*DZ*tan(angle) towards azimuth + 180, with bilinear
+    splitting that conserves mass. Their weights are A_s = 1/cos(sza) and A_v = 1/cos(vza), unless
+    a_v is given. At vza = 0 the view path keeps the original unshifted accumulation.
 
     Returns (mapa, fila0, col0): the canvas contains all the mass, and (fila0, col0) is the
     position of its [0, 0] pixel in the vol frame."""
+    if a_v is None:
+        a_v = 1.0 / math.cos(math.radians(vza))
     nz, ny, nx = vol.shape
     activos = [k for k in range(nz) if np.any(vol[k] != 0)]
     s = np.array([k * C.DZ * math.tan(math.radians(sza)) / C.PX for k in activos])
     ang = math.radians(raa + 180.0)
     dx, dy = s * math.cos(ang), s * math.sin(ang)
-    x_lo, x_hi = min(0, math.floor(dx.min())), max(0, math.floor(dx.max()) + 1)
-    y_lo, y_hi = min(0, math.floor(dy.min())), max(0, math.floor(dy.max()) + 1)
+    if vza == 0.0:
+        x_lo, x_hi = min(0, math.floor(dx.min())), max(0, math.floor(dx.max()) + 1)
+        y_lo, y_hi = min(0, math.floor(dy.min())), max(0, math.floor(dy.max()) + 1)
+    else:
+        s_v = np.array([k * C.DZ * math.tan(math.radians(vza)) / C.PX for k in activos])
+        ang_v = math.radians(vaa + 180.0)
+        dx_v, dy_v = s_v * math.cos(ang_v), s_v * math.sin(ang_v)
+        x_lo = min(0, math.floor(dx.min()), math.floor(dx_v.min()))
+        x_hi = max(0, math.floor(dx.max()) + 1, math.floor(dx_v.max()) + 1)
+        y_lo = min(0, math.floor(dy.min()), math.floor(dy_v.min()))
+        y_hi = max(0, math.floor(dy.max()) + 1, math.floor(dy_v.max()) + 1)
     H, W = ny + y_hi - y_lo, nx + x_hi - x_lo
     sol = np.zeros((H, W))
     nad = np.zeros((H, W))
-    for k, ddx, ddy in zip(activos, dx, dy):
+    for j, (k, ddx, ddy) in enumerate(zip(activos, dx, dy)):
         L = vol[k]
         ix, iy = math.floor(ddx), math.floor(ddy)
         fx, fy = ddx - ix, ddy - iy
@@ -34,7 +46,16 @@ def proyectar(vol: np.ndarray, sza: float, raa: float, a_v: float = C.A_V):
         sol[r:r + ny, c + 1:c + 1 + nx] += fx * (1 - fy) * L
         sol[r + 1:r + 1 + ny, c:c + nx] += (1 - fx) * fy * L
         sol[r + 1:r + 1 + ny, c + 1:c + 1 + nx] += fx * fy * L
-        nad[-y_lo:-y_lo + ny, -x_lo:-x_lo + nx] += L
+        if vza == 0.0:
+            nad[-y_lo:-y_lo + ny, -x_lo:-x_lo + nx] += L
+        else:
+            ix, iy = math.floor(dx_v[j]), math.floor(dy_v[j])
+            fx, fy = dx_v[j] - ix, dy_v[j] - iy
+            r, c = iy - y_lo, ix - x_lo
+            nad[r:r + ny, c:c + nx] += (1 - fx) * (1 - fy) * L
+            nad[r:r + ny, c + 1:c + 1 + nx] += fx * (1 - fy) * L
+            nad[r + 1:r + 1 + ny, c:c + nx] += (1 - fx) * fy * L
+            nad[r + 1:r + 1 + ny, c + 1:c + 1 + nx] += fx * fy * L
     a_s = 1.0 / math.cos(math.radians(sza))
     return (a_s * sol + a_v * nad) / (a_s + a_v), y_lo, x_lo
 
