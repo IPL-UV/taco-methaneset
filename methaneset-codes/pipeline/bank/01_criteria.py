@@ -8,7 +8,7 @@ peak and whether it passes.
 """
 import numpy as np
 import pandas as pd
-from banco import config as C
+from core import config as C
 
 z = np.load(C.PERFILES)
 px, pico = z["px"].astype("float64"), z["pico"].astype("float64")

@@ -1,7 +1,7 @@
 """Step 3 · Grid of sun positions. Output: trabajo/rejilla.csv."""
 import pandas as pd
-from banco import config as C
-from banco.geometria import rejilla
+from core import config as C
+from core.geometry import rejilla
 
 d = pd.DataFrame(rejilla(), columns=["anillo", "sza", "raa"])
 d.insert(0, "nodo", range(len(d)))

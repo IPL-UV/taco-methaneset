@@ -8,8 +8,8 @@ Output: trabajo/seleccion.csv, one row per physical plume.
 import itertools
 import numpy as np
 import pandas as pd
-from banco import config as C
-from banco.esquema import uid as nombre_uid
+from core import config as C
+from core.schema import uid as nombre_uid
 
 c = pd.read_csv(C.TRABAJO / "criterios.csv")
 O = C.OBJETIVOS

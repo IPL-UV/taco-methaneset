@@ -7,9 +7,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import rasterio
-from banco import config as C
-from banco.esquema import COLUMNAS
-from banco.geometria import rejilla
+from core import config as C
+from core.schema import COLUMNAS
+from core.geometry import rejilla
 
 ap = argparse.ArgumentParser()
 ap.add_argument("dir", type=Path)

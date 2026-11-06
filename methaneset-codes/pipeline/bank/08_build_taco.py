@@ -29,8 +29,8 @@ import pydantic
 import tacotoolbox
 from tacotoolbox.datamodel import Sample, Tortilla, Taco
 from tacotoolbox.sample.datamodel import SampleExtension
-from banco import config as C
-from banco.esquema import COLUMNAS, DESCRIPCIONES
+from core import config as C
+from core.schema import COLUMNAS, DESCRIPCIONES
 
 AQUI = Path(__file__).parent
 

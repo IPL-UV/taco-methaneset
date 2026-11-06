@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import rasterio
 import tacoreader
-from banco import config as C
-from banco.esquema import COLUMNAS
+from core import config as C
+from core.schema import COLUMNAS
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--muestra", type=int, default=500)

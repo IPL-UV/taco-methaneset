@@ -22,10 +22,10 @@ import numpy as np
 import pandas as pd
 import rasterio
 from rasterio.transform import Affine
-from banco import config as C
-from banco.geometria import fuentes, centro, rejilla
-from banco.proyeccion import proyectar, recortar
-from banco.esquema import COLUMNAS, emisor, uid as nombre_uid
+from core import config as C
+from core.geometry import fuentes, centro, rejilla
+from core.projection import proyectar, recortar
+from core.schema import COLUMNAS, emisor, uid as nombre_uid
 
 NODOS = rejilla()
 FUENTES = fuentes()
