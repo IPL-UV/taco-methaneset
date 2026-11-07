@@ -14,17 +14,17 @@ the GeoTIFF tags: 3000 kg/h, ppb, 20 m pixel, view weight with VZA 0 (nadir).
 """
 
 
-def emisor(tipo: str, p: int) -> str:
+def emitter(tipo: str, p: int) -> str:
     """a1 to a9 the area sources, p1 to p9 the point sources."""
     return ("a" if tipo == "area" else "p") + str(p)
 
 
 def uid(tipo: str, p: int, ws: float, snap: int) -> str:
     """Physical plume: emitter, wind and snapshot. Example: a1_w02.0_s078."""
-    return f"{emisor(tipo, p)}_w{ws:04.1f}_s{snap:03d}"
+    return f"{emitter(tipo, p)}_w{ws:04.1f}_s{snap:03d}"
 
 
-COLUMNAS = [
+COLUMNS = [
     "id", "path",
     "methane:plume_uid", "methane:sim_type", "methane:emitter", "methane:wind_speed",
     "methane:snapshot_index", "methane:snapshot_minute", "methane:scale_factor",
@@ -41,7 +41,7 @@ COLUMNAS = [
 ]
 
 # User-facing descriptions (English): they go to the TACO and its generated README.md
-DESCRIPCIONES = {
+DESCRIPTIONS = {
     "methane:plume_uid": "Physical plume: emitter, wind speed and snapshot (e.g. a1_w02.0_s078). Shared by the 855 rows (sun positions) of the plume",
     "methane:sim_type": "LES simulation type: 'area' (area sources) or 'multi' (point sources)",
     "methane:emitter": "Emitter: a1 to a9 are area sources, from smallest to largest; p1 to p9 are point sources",
@@ -75,9 +75,9 @@ DESCRIPCIONES = {
     "qa:foreign_mass_frac": "Estimated fraction of the mass of the vertical column map that comes from the outer WRF domain: the mass in the strip upwind of the source, where the plume itself cannot reach, extended over the 110 columns of the domain. Below 0.002 in every sample",
 }
 for _k in ("edge:upwind", "edge:downwind", "edge:downwind_ref", "edge:top", "edge:bottom"):
-    DESCRIPCIONES[f"{_k}_frac"] = (f"{_k}_ppb / methane:peak_ppb. It does not change when the plume is "
+    DESCRIPTIONS[f"{_k}_frac"] = (f"{_k}_ppb / methane:peak_ppb. It does not change when the plume is "
                                    "rescaled to another emission rate")
 for _lado, _nombre in (("upwind", "upwind, where the wind enters"), ("downwind", "downwind, where it leaves"),
                        ("top", "top (+y)"), ("bottom", "bottom (-y)")):
-    DESCRIPCIONES[f"array:grow_{_lado}_px"] = (f"Number of pixels by which the image extends beyond (+) or falls "
+    DESCRIPTIONS[f"array:grow_{_lado}_px"] = (f"Number of pixels by which the image extends beyond (+) or falls "
                                                f"short of (-) the 110 x 80 LES domain on the {_nombre} side")

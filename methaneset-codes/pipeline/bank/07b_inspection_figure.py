@@ -18,7 +18,7 @@ D = Path(sys.argv[1])
 t = pd.read_parquet(D / "tabla.parquet")
 
 
-def pinta(ax, r, titulo):
+def draw(ax, r, titulo):
     with rasterio.open(D / r["path"]) as s:
         x = s.read(1); b = s.bounds
     ax.imshow(np.log10(np.clip(x, 0.1, None)), cmap="magma", vmin=-1, vmax=3.3,
@@ -37,7 +37,7 @@ for ax, (raa, lado) in zip(axs[0], [(0, "sun downwind: footprint backwards"),
                                     (180, "sun upwind: footprint forwards"),
                                     (270, "sun to the south: footprint to the north")]):
     r = p.iloc[(p["sun:raa"] - raa).abs().argmin()]
-    pinta(ax, r, f"{uid}\nSZA {r['sun:sza']:.1f}, RAA {r['sun:raa']:.1f} · {lado}")
+    draw(ax, r, f"{uid}\nSZA {r['sun:sza']:.1f}, RAA {r['sun:raa']:.1f} · {lado}")
     ang = np.radians(r["sun:raa"])
     ax.annotate("sun", xy=(0, 0), xytext=(900 * np.cos(ang), 900 * np.sin(ang)), color="#facc15",
                 fontsize=9, fontweight="bold", ha="center",
@@ -47,7 +47,7 @@ ejemplos = [("p1", 2.0), ("a5", 5.0), ("a6", 2.0), ("p9", 10.0)]
 for ax, (em, ws) in zip(axs[1], ejemplos):
     c = n0[n0["methane:emitter"] == em]
     r = c.iloc[(c["methane:wind_speed"] - ws).abs().argmin()]
-    pinta(ax, r, f"{r['methane:plume_uid']} · nadir\npeak {r['methane:peak_ppb']:.0f} ppb, "
+    draw(ax, r, f"{r['methane:plume_uid']} · nadir\npeak {r['methane:peak_ppb']:.0f} ppb, "
                  f"edge {r['edge:downwind_ppb']:.0f} ppb, mean height {r['methane:mean_height_m']:.0f} m")
 fig.suptitle("methaneset-bank v3 · real GeoTIFFs, log10 ppb at 3 t/h · cross = source at (0, 0) from the transform",
              fontsize=11, fontweight="bold")

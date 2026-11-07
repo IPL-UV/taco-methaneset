@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 import rasterio
 import tacoreader
-from bankles import config as C
-from bankles.esquema import COLUMNAS
+from core import config as C
+from core.schema import COLUMNS
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--muestra", type=int, default=200)
@@ -28,17 +28,17 @@ d = ds.data.to_arrow().to_pandas()
 print(f"TACO: {ds.id} v{getattr(ds, 'version', '?')} · {d.shape[0]} rows")
 check(len(d) == len(t), f"rows: {len(d)} (table {len(t)})")
 check(d["id"].is_unique and set(d["id"]) == set(t.index), "same ids as the table")
-faltan = [c for c in COLUMNAS[2:] if c not in d.columns]
-check(not faltan, f"all schema columns ({len(COLUMNAS) - 2}) {faltan or ''}")
-check(list(d.columns[:len(COLUMNAS)]) == ["id", "type"] + COLUMNAS[2:],
+faltan = [c for c in COLUMNS[2:] if c not in d.columns]
+check(not faltan, f"all schema columns ({len(COLUMNS) - 2}) {faltan or ''}")
+check(list(d.columns[:len(COLUMNS)]) == ["id", "type"] + COLUMNS[2:],
       "columns in schema order")
 d = d.set_index("id").loc[t.index]
-num = [c for c in COLUMNAS[2:] if not pd.api.types.is_string_dtype(t[c]) and c != "grid:level_heights_m"]
+num = [c for c in COLUMNS[2:] if not pd.api.types.is_string_dtype(t[c]) and c != "grid:level_heights_m"]
 dif = max(float(np.nanmax(np.abs(d[c].astype(float).values - t[c].astype(float).values))) for c in num)
 check(dif == 0, f"identical numeric values (maximum difference {dif})")
 lh = all(np.allclose(list(x), list(y)) for x, y in zip(d["grid:level_heights_m"], t["grid:level_heights_m"]))
 check(lh, "identical level_heights")
-txt = all((d[c].values == t[c].values).all() for c in COLUMNAS[2:]
+txt = all((d[c].values == t[c].values).all() for c in COLUMNS[2:]
           if pd.api.types.is_string_dtype(t[c]) and c != "grid:level_heights_m")
 check(txt, "identical texts")
 

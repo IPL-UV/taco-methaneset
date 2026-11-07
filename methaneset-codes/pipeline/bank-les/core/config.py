@@ -47,35 +47,35 @@ Q_REF = 3000.0              # kg/h
 WS = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 7.0, 8.0, 10.0]
 SNAPS = [60, 70, 80, 90, 100, 110, 119]
 PROYECTADO = Path(__file__).resolve().parents[1] / "snapshots-proyectado.csv"
-TIPOS = ("multi", "area")
+TYPES = ("multi", "area")
 PLUMAS = list(range(1, 10))
-CARPETA_TIPO = {"multi": "multisource_simulations", "area": "areasource_simulations"}
+TYPE_FOLDER = {"multi": "multisource_simulations", "area": "areasource_simulations"}
 
 # criteria of the projected bank, to flag them here too (the same numbers)
-COL_ENTRADA = RELAX
-COL_BORDE = NX - 1 - RELAX
-VENTANA = 30
-INTERIOR = (40, COL_BORDE + 1 - VENTANA)
-ENTRADA_FRAC = 0.02
+ENTRY_COL = RELAX
+EXIT_COL = NX - 1 - RELAX
+WINDOW = 30
+INTERIOR = (40, EXIT_COL + 1 - WINDOW)
+ENTRY_FRAC = 0.02
 LATERAL_FRAC = 0.02
-BARLOVENTO = 5
-FUERA_MAX = 0.002
-ANCHO_BORDE_MAX = 60.0
-RUIDO_REF = 50.0
+UPWIND = 5
+OUTSIDE_MAX = 0.002
+EDGE_WIDTH_MAX = 60.0
+NOISE_REF = 50.0
 TOCA_BORDE_FRAC = 0.05
 
-UNIDADES = "ppb"
+UNITS = "ppb"
 VERSION = "1.0.0"
 
 
-def carpeta_viento(ws: float) -> str:
+def wind_folder(ws: float) -> str:
     return f"ugeo_{int(ws)}ms" + ("5" if ws % 1 else "")
 
 
-def emisor(tipo: str, p: int) -> str:
+def emitter(tipo: str, p: int) -> str:
     """a1 to a9 the area sources, p1 to p9 the point sources."""
     return ("a" if tipo == "area" else "p") + str(p)
 
 
 def uid(tipo: str, p: int, ws: float, snap: int) -> str:
-    return f"{emisor(tipo, p)}_w{ws:04.1f}_s{snap:03d}"
+    return f"{emitter(tipo, p)}_w{ws:04.1f}_s{snap:03d}"

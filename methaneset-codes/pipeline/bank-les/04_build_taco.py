@@ -4,10 +4,10 @@ Runs with tacotoolbox 0.26.x (majortom environment), the same API as the project
 
 Usage
   python 04_build_taco.py RAW --prueba 300 --split 3MB --salida DIR   a few rows, to check
-  python 04_build_taco.py RAW                                          the whole bank, in bankles.config.FINAL
+  python 04_build_taco.py RAW                                          the whole bank, in core.config.FINAL
 
 Each row of tabla.parquet is a Sample: its 49-band GeoTIFF and its columns as metadata, with the
-English description of each one (bankles/esquema.py). The description of the collection is
+English description of each one (core/schema.py). The description of the collection is
 DATASET_README.md without its column table.
 """
 from __future__ import annotations
@@ -26,28 +26,28 @@ import pydantic
 import tacotoolbox
 from tacotoolbox.datamodel import Sample, Tortilla, Taco
 from tacotoolbox.sample.datamodel import SampleExtension
-from bankles import config as C
-from bankles.esquema import COLUMNAS, DESCRIPCIONES
+from core import config as C
+from core.schema import COLUMNS, DESCRIPTIONS
 
 AQUI = Path(__file__).parent
 
 
-class Fila(SampleExtension):
+class Row(SampleExtension):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
-    datos: dict[str, Any]
-    esquema: Any
+    data: dict[str, Any]
+    schema: Any
 
     def get_schema(self) -> pa.Schema:
-        return self.esquema
+        return self.schema
 
     def get_field_descriptions(self) -> dict[str, str]:
-        return DESCRIPCIONES
+        return DESCRIPTIONS
 
     def _compute(self, sample) -> pa.Table:
-        return pa.Table.from_pylist([self.datos], schema=self.esquema)
+        return pa.Table.from_pylist([self.data], schema=self.schema)
 
 
-def descripcion() -> str:
+def description() -> str:
     """DATASET_README.md without the title or the columns section (the generated README renders it)."""
     txt = (AQUI / "DATASET_README.md").read_text(encoding="utf-8")
     txt = re.sub(r"\A# .*\n+", "", txt)
@@ -55,7 +55,7 @@ def descripcion() -> str:
     return txt.strip() + "\n\n"
 
 
-def limpio(v):
+def clean(v):
     if isinstance(v, np.integer):
         return int(v)
     if isinstance(v, np.floating):
@@ -67,13 +67,13 @@ def limpio(v):
     return v
 
 
-def ordenar_tacocat(salida: Path) -> None:
+def order_tacocat(salida: Path) -> None:
     import pyarrow.parquet as pq
     f = salida.parent / ".tacocat" / "level0.parquet"
     if not f.exists():
         return
     tab = pq.read_table(f)
-    orden = ["id", "type"] + COLUMNAS[2:]
+    orden = ["id", "type"] + COLUMNS[2:]
     orden += [c for c in tab.column_names if c not in orden]
     assert set(orden) == set(tab.column_names)
     pq.write_table(tab.select(orden), f, compression="zstd")
@@ -88,7 +88,7 @@ def readme(salida: Path, zips: list[Path]) -> Path:
             nombre = next(n for n in z.namelist() if n.endswith("COLLECTION.json"))
             coll = Path(tempfile.mkdtemp()) / "COLLECTION.json"
             coll.write_bytes(z.read(nombre))
-    faltan = [c for c in COLUMNAS[2:] if c not in json.dumps(json.loads(coll.read_text()))]
+    faltan = [c for c in COLUMNS[2:] if c not in json.dumps(json.loads(coll.read_text()))]
     assert not faltan, f"columns missing from COLLECTION.json: {faltan}"
     ejemplo = str(salida.parent / ".tacocat") if cat.exists() else str(zips[0])
     destino = salida.parent / "README.md"
@@ -106,24 +106,24 @@ def main():
     ap.add_argument("--split", default="4GB")
     a = ap.parse_args()
     t = pd.read_parquet(a.raw / "tabla.parquet")
-    assert list(t.columns) == COLUMNAS, "the table does not follow bankles/esquema.py"
-    assert set(DESCRIPCIONES) == set(COLUMNAS[2:]), "descriptions missing or extra"
+    assert list(t.columns) == COLUMNS, "the table does not follow core/schema.py"
+    assert set(DESCRIPTIONS) == set(COLUMNS[2:]), "descriptions missing or extra"
     if a.prueba:
         t = t.sample(a.prueba, random_state=0)
-    extras = COLUMNAS[2:]
-    esquema = pa.Schema.from_pandas(t[extras], preserve_index=False)
+    extras = COLUMNS[2:]
+    schema = pa.Schema.from_pandas(t[extras], preserve_index=False)
     muestras = []
     for vals in t.itertuples(index=False, name=None):
         d = dict(zip(t.columns, vals))
         s = Sample(id=d["id"], path=(a.raw / d["path"]).resolve())
-        s.extend_with(Fila(datos={c: limpio(d[c]) for c in extras}, esquema=esquema))
+        s.extend_with(Row(data={c: clean(d[c]) for c in extras}, schema=schema))
         muestras.append(s)
     taco = Taco(
         tortilla=Tortilla(muestras),
         id="methaneset_bank_les",
         title="MethaneSET bank LES",
         dataset_version=C.VERSION,
-        description=descripcion(),
+        description=description(),
         licenses=["CC-BY-4.0"],
         providers=[{"name": "Image and Signal Processing Group (ISP-UV)", "roles": ["producer"]},
                    {"name": "LARS-UPV, Gorroño et al. (WRF-LES simulations)", "roles": ["licensor"]}],
@@ -139,7 +139,7 @@ def main():
         from tacotoolbox.tacocat import create_tacocat
         create_tacocat(inputs=list(zips), output=a.salida.parent, validate_schema=True)
         print("consolidated in", a.salida.parent / ".tacocat")
-    ordenar_tacocat(a.salida)
+    order_tacocat(a.salida)
     print("README:", readme(a.salida, zips))
 
 

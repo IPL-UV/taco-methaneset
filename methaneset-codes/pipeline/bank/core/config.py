@@ -29,12 +29,12 @@ import paths as P  # noqa: E402
 LES = P.LES
 LOADER = P.LOADER
 CONF_WRF = P.WRF_CONF
-PERFILES = P.INJECTION_ASSETS / "perfiles-todos.npz"
-LATERALES = P.INJECTION_ASSETS / "bordes-laterales-todos.csv"
-ANCHOS = P.INJECTION_ASSETS / "ancho-todos.csv"
-FUERA = P.INJECTION_ASSETS / "fuera-todos.csv"
+PROFILES = P.INJECTION_ASSETS / "perfiles-todos.npz"
+SIDES = P.INJECTION_ASSETS / "bordes-laterales-todos.csv"
+WIDTHS = P.INJECTION_ASSETS / "ancho-todos.csv"
+OUTSIDE = P.INJECTION_ASSETS / "fuera-todos.csv"
 CODE = Path(__file__).resolve().parents[1]
-TRABAJO = CODE / "trabajo"
+WORK = CODE / "trabajo"
 RAW = P.BANK_RAW
 FINAL = P.BANK_FINAL
 
@@ -48,36 +48,36 @@ PIXEL_AREA = PX * PX
 Q_REF = 3000.0                 # kg/h
 WS = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 7.0, 8.0, 10.0]
 SNAPS = list(range(60, 120))   # minutes 30 to 59.5
-TIPOS = ("multi", "area")
-CARPETA_TIPO = {"multi": "multisource_simulations", "area": "areasource_simulations"}
+TYPES = ("multi", "area")
+TYPE_FOLDER = {"multi": "multisource_simulations", "area": "areasource_simulations"}
 
 
-def carpeta_viento(ws: float) -> str:
+def wind_folder(ws: float) -> str:
     return f"ugeo_{int(ws)}ms" + ("5" if ws % 1 else "")
 
 
 # selection criteria
-COL_ENTRADA = RELAX                     # 5
-COL_BORDE = NX - 1 - RELAX              # 114
-VENTANA = 30                            # slope columns, 600 m
-INTERIOR = (40, COL_BORDE + 1 - VENTANA)  # columns 40 to 84
-ENTRADA_FRAC = 0.02                     # upwind edge below 2% of the peak
+ENTRY_COL = RELAX                     # 5
+EXIT_COL = NX - 1 - RELAX              # 114
+WINDOW = 30                            # slope columns, 600 m
+INTERIOR = (40, EXIT_COL + 1 - WINDOW)  # columns 40 to 84
+ENTRY_FRAC = 0.02                     # upwind edge below 2% of the peak
 LATERAL_FRAC = 0.02                     # north (row 84) and south (row 5) edges below 2% of the peak
-BARLOVENTO = 5                          # px: the foreign methane strip ends 100 m before the source box
-FUERA_MAX = 0.002                       # estimated foreign methane below 0.2% of the mass (twice the zero budget)
-RUIDO_REF = 50.0                        # ppb, EMIT standard noise: sets the visible width of the plume
-ANCHO_BORDE_MAX = 60.0                  # m: the plume leaves the domain narrower than one EMIT pixel
+UPWIND = 5                          # px: the foreign methane strip ends 100 m before the source box
+OUTSIDE_MAX = 0.002                       # estimated foreign methane below 0.2% of the mass (twice the zero budget)
+NOISE_REF = 50.0                        # ppb, EMIT standard noise: sets the visible width of the plume
+EDGE_WIDTH_MAX = 60.0                  # m: the plume leaves the domain narrower than one EMIT pixel
 SEP = 16                                # 8 minutes between snapshots
-OBJETIVOS = (75, 90, 105)               # minutes 37.5, 45 and 52.5
+TARGETS = (75, 90, 105)               # minutes 37.5, 45 and 52.5
 
 # geometry
 Z_REF = 330.0                  # m, grid reference height: above the z_eff of every plume (max. 330)
 TOL = 60.0                     # m, one EMIT pixel
-SZA_TOPE = 70.5                # degrees; with TOL and Z_REF it gives 17 rings, the last one at 71.0
+SZA_MAX = 70.5                # degrees; with TOL and Z_REF it gives 17 rings, the last one at 71.0
 VZA_REF = 0.0                  # degrees: nadir (24 Sep reprocess; 8.4 before, median of the 721 EMIT scenes)
 A_V = 1.0 / math.cos(math.radians(VZA_REF))
 
 # saving
-UMBRAL_CEROS = 1e-4            # maximum threshold, fraction of the maximum of each array
-PRESUPUESTO_MASA = 1e-3        # the zeros cannot take more than 0.1% of the mass
-UNIDADES = "ppb"
+ZERO_THRESHOLD = 1e-4            # maximum threshold, fraction of the maximum of each array
+MASS_BUDGET = 1e-3        # the zeros cannot take more than 0.1% of the mass
+UNITS = "ppb"

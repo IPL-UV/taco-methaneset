@@ -5,8 +5,8 @@ Usage: python 03_inspection.py
 import numpy as np
 import pandas as pd
 import rasterio
-from bankles import config as C
-from bankles.esquema import COLUMNAS
+from core import config as C
+from core.schema import COLUMNS
 
 fallos = 0
 
@@ -19,17 +19,17 @@ def check(cond, msg):
 
 t = pd.read_parquet(C.RAW / "tabla.parquet")
 proy = pd.read_csv(C.PROYECTADO)
-base = {(ti, float(w), p, s) for ti in C.TIPOS for w in C.WS for p in C.PLUMAS for s in C.SNAPS}
+base = {(ti, float(w), p, s) for ti in C.TYPES for w in C.WS for p in C.PLUMAS for s in C.SNAPS}
 extra = {(r.tipo, float(r.ws), int(r.plume), int(r.snap)) for r in proy.itertuples()}
 n_esp = len(base | extra)
 print(f"table: {len(t)} rows, {t['id'].nunique()} ids ({len(base)} from the 5-min set + {len(extra) - len(base & extra)} from the projected bank)")
 check(len(t) == n_esp, f"rows: {len(t)} (expected {n_esp})")
-check(list(t.columns) == COLUMNAS, "columns in the order of bankles/esquema.py")
+check(list(t.columns) == COLUMNS, "columns in the order of core/schema.py")
 check(t["id"].is_unique, "unique ids")
 check(t["id"].tolist() == t["path"].str.split("/").str[-1].str.replace(".tif", "", regex=False).tolist(),
       "path = id")
 check(set(zip(t["methane:sim_type"], t["methane:emitter"])) ==
-      {(ti, C.emisor(ti, p)) for ti in C.TIPOS for p in C.PLUMAS}, "all 18 emitters present")
+      {(ti, C.emitter(ti, p)) for ti in C.TYPES for p in C.PLUMAS}, "all 18 emitters present")
 check(set(t["methane:wind_speed"]) == set(C.WS), "all 11 wind speeds present")
 
 L = t["grid:level_heights_m"].apply(len)
@@ -43,10 +43,10 @@ check((t["methane:ime_ppb_px"] > 0).all(), "positive IME")
 esperado = (t["criteria:fades_out"] & t["criteria:ent_ok"] & t["criteria:lat_ok"] & t["criteria:fuera_ok"]
             & t["criteria:ancho_ok"])
 check((t["criteria:pasa"] == esperado).all(), "criteria:pasa = the five flags")
-check((t["criteria:ancho_ok"] == (t["edge:downwind_width_m"] <= C.ANCHO_BORDE_MAX)).all(),
-      f"ancho_ok = downwind width <= {C.ANCHO_BORDE_MAX:.0f} m")
-check((t["criteria:fuera_ok"] == (t["edge:foreign_mass_frac"] < C.FUERA_MAX)).all(),
-      f"fuera_ok = foreign methane < {C.FUERA_MAX}")
+check((t["criteria:ancho_ok"] == (t["edge:downwind_width_m"] <= C.EDGE_WIDTH_MAX)).all(),
+      f"ancho_ok = downwind width <= {C.EDGE_WIDTH_MAX:.0f} m")
+check((t["criteria:fuera_ok"] == (t["edge:foreign_mass_frac"] < C.OUTSIDE_MAX)).all(),
+      f"fuera_ok = foreign methane < {C.OUTSIDE_MAX}")
 check((t["edge:touches_edge"] == (t["edge:max_frac"] > C.TOCA_BORDE_FRAC)).all(),
       "touches_edge = edge:max_frac > 0.05")
 

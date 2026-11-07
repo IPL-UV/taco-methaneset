@@ -15,7 +15,7 @@ Prefixes
   qa:       zeros of the volume
 """
 
-COLUMNAS = [
+COLUMNS = [
     "id", "path",
     "methane:sim_type", "methane:emitter", "methane:wind_speed", "methane:snapshot_index",
     "methane:scale_factor", "methane:peak_ppb",
@@ -29,7 +29,7 @@ COLUMNAS = [
     "grid:level_heights_m", "qa:zeros_frac",
 ]
 
-DESCRIPCIONES = {
+DESCRIPTIONS = {
     "methane:sim_type": "LES simulation type: 'area' (area sources) or 'multi' (point sources)",
     "methane:emitter": "Emitter: a1 to a9 are area sources, from smallest to largest; p1 to p9 are point sources",
     "methane:wind_speed": "Geostrophic wind speed of the LES run [m/s]. The wind always blows towards +x (the right of the image), so there is no wind direction column",

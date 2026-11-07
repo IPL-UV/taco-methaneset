@@ -23,27 +23,27 @@ import pandas as pd
 import rasterio
 from rasterio.transform import Affine
 from core import config as C
-from core.geometry import fuentes, centro, rejilla
-from core.projection import proyectar, recortar
-from core.schema import COLUMNAS, emisor, uid as nombre_uid
+from core.geometry import sources, center, nodes
+from core.projection import project, crop
+from core.schema import COLUMNS, emitter, uid as plume_uid
 
-NODOS = rejilla()
-FUENTES = fuentes()
+NODOS = nodes()
+FUENTES = sources()
 
 
-def medidas(A: np.ndarray, vol: np.ndarray, fc: float, fw: float) -> dict:
+def measures(A: np.ndarray, vol: np.ndarray, fc: float, fw: float) -> dict:
     """Measurements of the physical plume on the full column map (90 x 120), the same ones used by
     the criteria, and z_eff on the volume without the relaxation band."""
     px = A.max(axis=0)
     pico = float(A.max())
-    W = C.VENTANA
+    W = C.WINDOW
     X = np.arange(W)
-    Lg = np.log(np.clip(px[C.COL_BORDE + 1 - W:C.COL_BORDE + 1], 1e-3, None))
+    Lg = np.log(np.clip(px[C.EXIT_COL + 1 - W:C.EXIT_COL + 1], 1e-3, None))
     slope = float(((X - X.mean()) * (Lg - Lg.mean())).sum() / ((X - X.mean()) ** 2).sum())
-    lado = {"upwind": A[:, C.COL_ENTRADA].max(), "downwind": A[:, C.COL_BORDE].max(),
+    lado = {"upwind": A[:, C.ENTRY_COL].max(), "downwind": A[:, C.EXIT_COL].max(),
             # sides: only the stretch kept in the GeoTIFF (columns 5 to 114), as in 01_criteria
-            "bottom": A[C.RELAX, C.RELAX:C.COL_BORDE + 1].max(),
-            "top": A[C.NY - 1 - C.RELAX, C.RELAX:C.COL_BORDE + 1].max()}
+            "bottom": A[C.RELAX, C.RELAX:C.EXIT_COL + 1].max(),
+            "top": A[C.NY - 1 - C.RELAX, C.RELAX:C.EXIT_COL + 1].max()}
     mmin = float(px[C.INTERIOR[0]:C.INTERIOR[1]].min())
     m_k = np.clip(vol.sum(axis=(1, 2)), 0, None)
     z_eff = float((np.arange(C.NZ) * C.DZ * m_k).sum() / m_k.sum())
@@ -54,16 +54,16 @@ def medidas(A: np.ndarray, vol: np.ndarray, fc: float, fw: float) -> dict:
         d[f"edge:{k}_frac"] = float(v) / pico
     # foreign methane: upwind strip (up to 100 m before the box), extended over the 110 columns
     D = A[C.RELAX:C.NY - C.RELAX, C.RELAX:C.NX - C.RELAX]
-    anc = (D > C.RUIDO_REF).sum(axis=0) * C.PX          # visible width per column
+    anc = (D > C.NOISE_REF).sum(axis=0) * C.PX          # visible width per column
     d["methane:width_max_m"] = float(anc.max())
     d["edge:downwind_width_m"] = float(anc[-1])
-    c1 = int(np.floor(fc - fw / 2 - C.BARLOVENTO))
+    c1 = int(np.floor(fc - fw / 2 - C.UPWIND))
     U = A[C.RELAX:C.NY - C.RELAX, C.RELAX:c1 + 1]
     d["qa:foreign_mass_frac"] = float(U.sum() / U.shape[1] * D.shape[1] / D.sum())
     return d
 
 
-def escribir(path: Path, arr_su: np.ndarray, src_row_su: float, src_col: float, etiquetas: dict):
+def write(path: Path, arr_su: np.ndarray, src_row_su: float, src_col: float, etiquetas: dict):
     """Writes north up. arr_su has row 0 at the south (LES frame)."""
     arr = np.flipud(arr_su).astype("float32")
     h, w = arr.shape
@@ -77,8 +77,8 @@ def escribir(path: Path, arr_su: np.ndarray, src_row_su: float, src_col: float, 
     return h, w, src_row
 
 
-def pluma(tipo, ws, p, snap, full_ppb, sf, salida: Path) -> int:
-    uid = nombre_uid(tipo, p, ws, snap)
+def plume(tipo, ws, p, snap, full_ppb, sf, salida: Path) -> int:
+    uid = plume_uid(tipo, p, ws, snap)
     fparquet = salida / "filas" / f"{uid}.parquet"
     if fparquet.exists():
         return 0
@@ -87,23 +87,23 @@ def pluma(tipo, ws, p, snap, full_ppb, sf, salida: Path) -> int:
     A = full_ppb.sum(0)
     vol = full_ppb[:, C.RELAX:-C.RELAX, C.RELAX:-C.RELAX]
     tot = float(vol.sum())
-    fr, fc, fh, fw = centro(FUENTES[(tipo, p)])
-    base = {"methane:plume_uid": uid, "methane:sim_type": tipo, "methane:emitter": emisor(tipo, p),
+    fr, fc, fh, fw = center(FUENTES[(tipo, p)])
+    base = {"methane:plume_uid": uid, "methane:sim_type": tipo, "methane:emitter": emitter(tipo, p),
             "methane:wind_speed": ws, "methane:snapshot_index": snap, "methane:snapshot_minute": snap / 2,
-            "methane:scale_factor": sf, **medidas(A, vol, fc, fw),
+            "methane:scale_factor": sf, **measures(A, vol, fc, fw),
             "methane:source_width_m": fw * C.PX, "methane:source_height_m": fh * C.PX}
     filas = []
     for nodo, (anillo, sza, raa) in enumerate(NODOS):
-        mapa, f0, c0 = proyectar(vol, sza, raa)
+        mapa, f0, c0 = project(vol, sza, raa)
         fuera = abs(tot - float(mapa.sum())) / tot
-        arr, f, c, qa = recortar(mapa, f0, c0)
+        arr, f, c, qa = crop(mapa, f0, c0)
         src_row_su = (fr - C.RELAX) - f
         src_col = (fc - C.RELAX) - c
         nombre = f"{uid}_sza{sza:04.1f}_raa{raa:05.1f}"
-        et = {"units": C.UNIDADES, "q_ref_kg_h": C.Q_REF, "plume_uid": uid, "sza": f"{sza:.4f}",
+        et = {"units": C.UNITS, "q_ref_kg_h": C.Q_REF, "plume_uid": uid, "sza": f"{sza:.4f}",
               "raa": f"{raa:.4f}", "convention": "north-up; wind to +x; RAA = sun azimuth, "
               "counterclockwise from the wind; coordinates in m from the source"}
-        h, w, src_row = escribir(dtif / f"{nombre}.tif", arr, src_row_su, src_col, et)
+        h, w, src_row = write(dtif / f"{nombre}.tif", arr, src_row_su, src_col, et)
         filas.append({"id": nombre, "path": f"tifs/{uid}/{nombre}.tif", **base,
                       "sun:sza": sza, "sun:raa": raa,
                       "array:width": w, "array:height": h,
@@ -111,17 +111,17 @@ def pluma(tipo, ws, p, snap, full_ppb, sf, salida: Path) -> int:
                       # pixels beyond (+) or short of (-) the domain without relaxation
                       # (columns 5 to 114, rows 5 to 84); (fr, fc) is the source in the LES, row 0 = south
                       "array:grow_upwind_px": round(src_col - (fc - C.RELAX)),
-                      "array:grow_downwind_px": round((w - 1 - src_col) - (C.COL_BORDE - fc)),
+                      "array:grow_downwind_px": round((w - 1 - src_col) - (C.EXIT_COL - fc)),
                       "array:grow_top_px": round(src_row - (C.NY - 1 - C.RELAX - fr)),
                       "array:grow_bottom_px": round((h - 1 - src_row) - (fr - C.RELAX)),
                       **qa})
         assert fuera < 1e-9, f"{nombre}: mass outside the canvas {fuera:.1e}"
     fparquet.parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(filas)[COLUMNAS].to_parquet(fparquet, index=False)
+    pd.DataFrame(filas)[COLUMNS].to_parquet(fparquet, index=False)
     return len(filas)
 
 
-def grupo(args):
+def group(args):
     """One wind speed and type run: loaded once with all its plumes and snapshots."""
     tipo, ws, pares, salida = args
     sys.path.insert(0, C.LOADER)
@@ -133,7 +133,7 @@ def grupo(args):
     n = 0
     for p, s in pares:
         full = np.asarray(n_tot[(p, s)], dtype="float64") / (C.N_TOTAL_AIR * C.PIXEL_AREA) * 1e9 * sf[p]
-        n += pluma(tipo, ws, p, s, full, float(sf[p]), Path(salida))
+        n += plume(tipo, ws, p, s, full, float(sf[p]), Path(salida))
     print(f"{tipo} {ws:4.1f} m/s: {len(pares)} plumes, {n} files, {time.time() - t0:.0f} s", flush=True)
     return n
 
@@ -144,7 +144,7 @@ def main():
     ap.add_argument("--salida", type=Path)
     ap.add_argument("-p", "--procesos", type=int, default=8)
     a = ap.parse_args()
-    sel = pd.read_csv(C.TRABAJO / "seleccion.csv")
+    sel = pd.read_csv(C.WORK / "seleccion.csv")
     if a.piloto:
         sel = sel[(sel.tipo == "multi") & (sel.plume == 5) & (sel.ws == 7.0) & (sel.snap == 93)]
         salida = a.piloto
@@ -155,10 +155,10 @@ def main():
                 for (t, w), g in sel.groupby(["tipo", "ws"])]
     t0 = time.time()
     if len(trabajos) == 1:
-        total = grupo(trabajos[0])
+        total = group(trabajos[0])
     else:
         with Pool(a.procesos) as pool:
-            total = sum(pool.imap_unordered(grupo, trabajos))
+            total = sum(pool.imap_unordered(group, trabajos))
     print(f"done: {total} files in {time.time() - t0:.0f} s", flush=True)
 
 

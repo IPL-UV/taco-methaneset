@@ -9,13 +9,13 @@ import itertools
 import numpy as np
 import pandas as pd
 from core import config as C
-from core.schema import uid as nombre_uid
+from core.schema import uid as plume_uid
 
-c = pd.read_csv(C.TRABAJO / "criterios.csv")
-O = C.OBJETIVOS
+c = pd.read_csv(C.WORK / "criterios.csv")
+O = C.TARGETS
 
 
-def elegir(ok):
+def choose(ok):
     best = None
     for a, b, d in itertools.combinations(ok, 3):
         if b - a >= C.SEP and d - b >= C.SEP:
@@ -36,10 +36,10 @@ def elegir(ok):
 
 filas = []
 for (t, w, p), g in c.groupby(["tipo", "ws", "plume"]):
-    for s in elegir(np.sort(g[g.pasa].snap.values)):
+    for s in choose(np.sort(g[g.pasa].snap.values)):
         filas.append(dict(tipo=t, ws=w, plume=int(p), snap=int(s), minuto=s / 2,
-                          plume_uid=nombre_uid(t, int(p), w, int(s))))
+                          plume_uid=plume_uid(t, int(p), w, int(s))))
 d = pd.DataFrame(filas)
-d.to_csv(C.TRABAJO / "seleccion.csv", index=False)
+d.to_csv(C.WORK / "seleccion.csv", index=False)
 print(f"{len(d)} physical plumes")
 print(d.groupby(["tipo", "plume"]).size().to_string())

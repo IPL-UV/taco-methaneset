@@ -8,17 +8,17 @@ import numpy as np
 import pandas as pd
 import rasterio
 from core import config as C
-from core.schema import COLUMNAS
-from core.geometry import rejilla
+from core.schema import COLUMNS
+from core.geometry import nodes
 
 ap = argparse.ArgumentParser()
 ap.add_argument("dir", type=Path)
 ap.add_argument("--muestra", type=int, default=300)
 a = ap.parse_args()
 t = pd.read_parquet(a.dir / "tabla.parquet")
-sel = pd.read_csv(C.TRABAJO / "seleccion.csv")
-crit = pd.read_csv(C.TRABAJO / "criterios.csv")
-nod = pd.DataFrame(rejilla(), columns=["anillo", "sza", "raa"])
+sel = pd.read_csv(C.WORK / "seleccion.csv")
+crit = pd.read_csv(C.WORK / "criterios.csv")
+nod = pd.DataFrame(nodes(), columns=["anillo", "sza", "raa"])
 fallos = 0
 
 
@@ -29,7 +29,7 @@ def check(cond, msg):
 
 
 print("counts")
-check(list(t.columns) == COLUMNAS, f"columns in schema order ({t.shape[1]})")
+check(list(t.columns) == COLUMNS, f"columns in schema order ({t.shape[1]})")
 n_pl = t["methane:plume_uid"].nunique()
 check(n_pl == len(sel), f"physical plumes: {n_pl} (selected {len(sel)})")
 check(len(t) == len(sel) * len(nod), f"rows: {len(t)} (expected {len(sel) * len(nod)})")
@@ -48,23 +48,23 @@ for col_t, col_c in [("methane:peak_ppb", "pico"), ("edge:downwind_ppb", "edge")
     err = np.nanmax(np.abs(m[col_t] - m[col_c]) / np.maximum(np.abs(m[col_c]), 1e-9))
     check(err < 1e-3, f"{col_t} same as in the criteria (maximum relative error {err:.1e})")
 check((m["edge:downwind_slope"] < 0).all() and (m["edge:downwind_ppb"] < m["edge:downwind_ref_ppb"]).all(), "all fade out")
-check((m["edge:upwind_frac"] < C.ENTRADA_FRAC).all(), "all with a clean upwind edge (west)")
+check((m["edge:upwind_frac"] < C.ENTRY_FRAC).all(), "all with a clean upwind edge (west)")
 check((m["edge:top_frac"] < C.LATERAL_FRAC).all() and (m["edge:bottom_frac"] < C.LATERAL_FRAC).all(),
       "all with clean north and south edges")
 err = np.nanmax(np.abs(m["qa:foreign_mass_frac"] - m["fuera_frac"]))
 check(err < 1e-6, f"qa:foreign_mass_frac same as in the criteria (maximum difference {err:.1e})")
-check((m["qa:foreign_mass_frac"] < C.FUERA_MAX).all(), f"all with less than {100 * C.FUERA_MAX:.1f}% of foreign methane")
+check((m["qa:foreign_mass_frac"] < C.OUTSIDE_MAX).all(), f"all with less than {100 * C.OUTSIDE_MAX:.1f}% of foreign methane")
 err = np.nanmax(np.abs(m["edge:downwind_width_m"] - m["ancho_borde_ruido"]))
 check(err < 1e-6, f"edge:downwind_width_m same as in the criteria (maximum difference {err:.1e})")
-check((m["edge:downwind_width_m"] <= C.ANCHO_BORDE_MAX).all(), f"all leave with {C.ANCHO_BORDE_MAX:.0f} m of width or less")
+check((m["edge:downwind_width_m"] <= C.EDGE_WIDTH_MAX).all(), f"all leave with {C.EDGE_WIDTH_MAX:.0f} m of width or less")
 
 print("quality")
 perd = 1 - t["qa:ime_after"] / t["qa:ime_before"]
-check(perd.max() <= C.PRESUPUESTO_MASA * (1 + 1e-9), f"zeros: maximum loss {100 * perd.max():.3f}%, median {100 * perd.median():.3f}%")
+check(perd.max() <= C.MASS_BUDGET * (1 + 1e-9), f"zeros: maximum loss {100 * perd.max():.3f}%, median {100 * perd.median():.3f}%")
 g = ["array:grow_upwind_px", "array:grow_downwind_px", "array:grow_top_px", "array:grow_bottom_px"]
 check((t.loc[t["sun:sza"] == 0, g] <= 0).all().all(), "with the sun overhead the image never grows")
 check((t["array:grow_downwind_px"] >= 0).all(), "never cropped on the downwind side (the plume reaches the edge)")
-check(t["qa:threshold_rel"].max() <= C.UMBRAL_CEROS * (1 + 1e-9), "threshold never above 1e-4 of the maximum")
+check(t["qa:threshold_rel"].max() <= C.ZERO_THRESHOLD * (1 + 1e-9), "threshold never above 1e-4 of the maximum")
 check(t["sun:sza"].round(6).isin(nod.sza.round(6)).all() and t["sun:raa"].between(0, 360, inclusive="left").all(), "angles inside the grid")
 
 print(f"sample of {a.muestra} GeoTIFFs")

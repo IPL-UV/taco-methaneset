@@ -17,7 +17,7 @@ _PAT = re.compile(
     r".*?tracer\(i, 1, j, P_plume(\d)\) = 1\.", re.S)
 
 
-def fuentes() -> dict:
+def sources() -> dict:
     """{(tipo, plume): (row0, row1, col0, col1)} inclusive, 0-based (Gorroño's solve_em.F)."""
     out = {}
     for tipo, sub in (("multi", "multisource"), ("area", "areasource")):
@@ -29,20 +29,20 @@ def fuentes() -> dict:
     return out
 
 
-def centro(caja):
+def center(caja):
     """(centre_row, centre_col, height_px, width_px)."""
     r0, r1, c0, c1 = caja
     return 0.5 * (r0 + r1), 0.5 * (c0 + c1), r1 - r0 + 1, c1 - c0 + 1
 
 
-def _ficheros(tipo: str, ws: float):
-    d = C.LES / C.CARPETA_TIPO[tipo] / C.carpeta_viento(ws)
+def _files(tipo: str, ws: float):
+    d = C.LES / C.TYPE_FOLDER[tipo] / C.wind_folder(ws)
     return sorted(p for p in d.iterdir() if p.name.startswith("auxhist24"))
 
 
 def extras(tipo: str, ws: float, snaps) -> dict:
     """Per requested snapshot: real level heights (49), UTC time and domain means of U10/V10."""
-    fs = _ficheros(tipo, ws)
+    fs = _files(tipo, ws)
     ds = [nc.Dataset(str(f)) for f in fs]
     try:
         PH = np.concatenate([d.variables["PH"][:] for d in ds], axis=0).astype("float32")
@@ -68,21 +68,21 @@ def extras(tipo: str, ws: float, snaps) -> dict:
                 "u10": float(u10[s]), "v10": float(v10[s])} for s in snaps}
 
 
-def metricas(A, vol, fr, fc, fw, fh, level_heights, u10, v10) -> dict:
+def metrics(A, vol, fr, fc, fw, fh, level_heights, u10, v10) -> dict:
     """A: column map (ppb, 90 x 120). vol: volume (ppb, 49 x 90 x 120)."""
     pico = float(A.max())
     px = A.max(axis=0)
-    W = C.VENTANA
+    W = C.WINDOW
     X = np.arange(W)
-    Lg = np.log(np.clip(px[C.COL_BORDE + 1 - W:C.COL_BORDE + 1], 1e-3, None))
+    Lg = np.log(np.clip(px[C.EXIT_COL + 1 - W:C.EXIT_COL + 1], 1e-3, None))
     slope = float(((X - X.mean()) * (Lg - Lg.mean())).sum() / ((X - X.mean()) ** 2).sum())
     mmin = float(px[C.INTERIOR[0]:C.INTERIOR[1]].min())
-    bordes = {"upwind": A[:, C.COL_ENTRADA].max(), "downwind": A[:, C.COL_BORDE].max(),
-              "bottom": A[C.RELAX, C.RELAX:C.COL_BORDE + 1].max(),
-              "top": A[C.NY - 1 - C.RELAX, C.RELAX:C.COL_BORDE + 1].max()}
+    bordes = {"upwind": A[:, C.ENTRY_COL].max(), "downwind": A[:, C.EXIT_COL].max(),
+              "bottom": A[C.RELAX, C.RELAX:C.EXIT_COL + 1].max(),
+              "top": A[C.NY - 1 - C.RELAX, C.RELAX:C.EXIT_COL + 1].max()}
     D = A[C.RELAX:C.NY - C.RELAX, C.RELAX:C.NX - C.RELAX]
-    anc = (D > C.RUIDO_REF).sum(axis=0) * C.PX
-    c1 = int(np.floor(fc - fw / 2 - C.BARLOVENTO))
+    anc = (D > C.NOISE_REF).sum(axis=0) * C.PX
+    c1 = int(np.floor(fc - fw / 2 - C.UPWIND))
     U = A[C.RELAX:C.NY - C.RELAX, C.RELAX:c1 + 1]
     # if the source box leaves no upwind strip (a8, a9), there is no measurement: NaN, as in the projected bank
     if U.shape[1] == 0:
@@ -108,9 +108,9 @@ def metricas(A, vol, fr, fc, fw, fh, level_heights, u10, v10) -> dict:
     sxc = float(np.sqrt((my * (yg - cxc) ** 2).sum() / tot))
     szg = float(np.sqrt((mk * (zg - zef) ** 2).sum() / tot))
     pi = px[C.RELAX:C.NX - C.RELAX]
-    cols = np.where(pi > C.RUIDO_REF)[0]
+    cols = np.where(pi > C.NOISE_REF)[0]
     length = float((cols.max() - cols.min()) * C.PX) if len(cols) else 0.0
-    lev = np.where(vi.max(axis=(1, 2)) > C.RUIDO_REF)[0]
+    lev = np.where(vi.max(axis=(1, 2)) > C.NOISE_REF)[0]
     dz = float(np.diff(zg).mean())
     height = float(zg[lev.max()] - zg[lev.min()] + dz) if len(lev) else 0.0
     ime = float(A[C.RELAX:C.NY - C.RELAX, C.RELAX:C.NX - C.RELAX].sum())
@@ -118,10 +118,10 @@ def metricas(A, vol, fr, fc, fw, fh, level_heights, u10, v10) -> dict:
     ef = {kk: float(v) / pico for kk, v in bordes.items()}
     maxf = max(ef.values())
     apaga = bool(slope < 0 and bordes["downwind"] < mmin)
-    ent_ok = bool(bordes["upwind"] < C.ENTRADA_FRAC * pico)
+    ent_ok = bool(bordes["upwind"] < C.ENTRY_FRAC * pico)
     lat_ok = bool(bordes["top"] < C.LATERAL_FRAC * pico and bordes["bottom"] < C.LATERAL_FRAC * pico)
-    fuera_ok = bool(fuera < C.FUERA_MAX)
-    ancho_ok = bool(anc[-1] <= C.ANCHO_BORDE_MAX)
+    fuera_ok = bool(fuera < C.OUTSIDE_MAX)
+    ancho_ok = bool(anc[-1] <= C.EDGE_WIDTH_MAX)
 
     d = {
         "methane:peak_ppb": pico, "methane:peak_level": int(k),
