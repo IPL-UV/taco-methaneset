@@ -48,9 +48,9 @@ CMAPS = {
 }
 CMAP_ENH = CMAPS["enh"]   # alias, does not break current notebooks
 
-DPI = {"hero": 110, "std": 95, "small": 90}   # per-figure resolution
-FIGW = 9.0
-ROW_H = {"image": 3.0, "plot": 2.8}
+DPI = {"hero": 160, "std": 140, "small": 120}   # per-figure resolution
+FIGW = 10.5
+ROW_H = {"image": 3.4, "plot": 3.1}
 PIXEL_M = {"s2": 10.0, "l89": 30.0, "emit": 60.0, "bank": 20.0}
 NODATA_EMIT = -9999.0
 WEAK_KGH = 1000.0         # Ruzicka et al. 2023 convention
