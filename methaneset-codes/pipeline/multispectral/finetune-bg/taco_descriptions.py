@@ -1,4 +1,11 @@
-"""Descriptions (English) of the table and of the collection of the L89 finetune with the 4 references."""
+"""Descriptions (English) of the table and of the collection of the L89 finetune with the 4 references.
+
+OJO al reconstruir: `generate_markdown` sobrescribe el README.md de la coleccion con este texto.
+El texto bueno es el que esta publicado (12 nov 2026) en
+/data/databases/METHANESET_TACOS/<coleccion>/README.md: alli se paso "background" a "reference" y
+se corrigio la card de S2, que describia escenas de Landsat. DESCRIPCION esta escrita para L89 y se
+usa tambien para S2, asi que la card de S2 necesita su propio texto antes de regenerarla.
+"""
 
 DESCRIPCION = """
 Landsat 8/9 plume scenes for supervised methane detection, each with the original target scene
