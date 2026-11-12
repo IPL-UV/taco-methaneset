@@ -1,4 +1,4 @@
-"""Step 4 · Real sensor of each background by querying GEE (L8/L9 alternate and parity is not enough).
+"""Step 4 · Real sensor of each reference by querying GEE (L8/L9 alternate and parity is not enough).
 
 Fills background:sensor0/1/2/3 in tabla_propuesta.csv. sensor0 comes from Cesar's tile;
 sensor1/2/3 are queried by (WRS_PATH, WRS_ROW, date) and cached.
@@ -52,7 +52,7 @@ def pr_of(tid):
     return m.group(1) if m else None
 
 
-# sensor0 from the tile of Cesar's background
+# sensor0 from the tile of Cesar's reference
 t["background:sensor0"] = [str(tile_by.get(i, " ")).split("_")[0] if str(tile_by.get(i, "")).startswith(("LC08", "LC09", "S2")) else None for i in t["id"]]
 
 tareas = []

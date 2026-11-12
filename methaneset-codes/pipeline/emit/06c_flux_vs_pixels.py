@@ -13,6 +13,7 @@ Usage:
   /data/users/julio/.conda/envs/deep/bin/python code/v2/06c_flux_vs_pixels.py \
         > code/v2/06c_flux_vs_pixels.log 2>&1
 """
+import os
 import pathlib
 import re
 import sys

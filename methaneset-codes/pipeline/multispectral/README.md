@@ -2,7 +2,7 @@
 
 Two independent builds share the same conventions:
 
-- `finetune-bg/` — scenes with expert-verified plume masks, plus the matched background.
+- `finetune-bg/` — scenes with expert-verified plume masks, plus the matched reference.
 - `pretraining/` — confirmed plume-free scenes with their paired reference.
 
 The pairs, annotations and temporal split come from MARS-S2L. The imagery is re-retrieved at

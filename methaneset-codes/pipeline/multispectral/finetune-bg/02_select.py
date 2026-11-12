@@ -1,11 +1,11 @@
-"""Step 2 · Picks the 3 best backgrounds per site among the raw candidates. In parallel.
+"""Step 2 · Picks the 3 best references per site among the raw candidates. In parallel.
 
 Faithful to MARS:
-  similarity = mean(|target - background * gain|), gain = mean_target/mean_background per band,
+  similarity = mean(|target - reference * gain|), gain = mean_target/mean_reference per band,
   over methane-insensitive bands (B02,B03,B04,B11; in Landsat B2,B3,B4,B6), with co-registration.
 And also:
   - OmniCloudMask cloud mask (cloud+shadow fraction).
-  - background methane through the SWIR2/SWIR1 ratio against the pool median.
+  - methane in the reference through the SWIR2/SWIR1 ratio against the pool median.
 It filters the flagged ones and keeps the top 3 most similar.
 
 Usage:
@@ -65,7 +65,7 @@ def coregister(target, bg, ref=COREG_REF_IDX):
 
 def diferencia_mars(target, bg, band_idx):
     """mean(|t - b*gain|) with per-band gain = mean(t)/mean(b). The gain cancels the
-    scale (Cesar's target is in reflectance and the background in DN)."""
+    scale (Cesar's target is in reflectance and the reference in DN)."""
     t = target[band_idx].astype(np.float64)
     b = bg[band_idx].astype(np.float64)
     diffs = []

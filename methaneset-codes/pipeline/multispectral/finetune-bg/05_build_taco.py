@@ -117,7 +117,7 @@ def main():
 
     t = pd.read_csv(TABLA)
     t = t.where(pd.notna(t), None)
-    # the TACO requires a fixed structure: only sites with all 3 backgrounds
+    # the TACO requires a fixed structure: only sites with all 3 references
     n0 = len(t)
     t = t[t["bg:date1"].notna() & t["bg:date2"].notna() & t["bg:date3"].notna()].reset_index(drop=True)
     print(f"sites with all 3 backgrounds: {len(t)} of {n0}")

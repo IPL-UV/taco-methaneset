@@ -1,6 +1,6 @@
-"""Step 3 · Proposed finetune table with the extra bg + the cloud of the target and the reference.
+"""Step 3 · Proposed finetune table with the extra references + the cloud of the target and the reference.
 
-Joins Cesar's table with the background selection (bg1/2/3) and adds two new columns:
+Joins Cesar's table with the reference selection (bg1/2/3) and adds two new columns:
   target:cloud    -> cloud fraction (OmniCloudMask) of Cesar's target
   background:cloud0 -> cloud fraction (OmniCloudMask) of Cesar's reference (the bg0)
 """

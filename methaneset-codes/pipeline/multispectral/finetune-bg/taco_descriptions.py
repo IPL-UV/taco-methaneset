@@ -1,8 +1,8 @@
-"""Descriptions (English) of the table and of the collection of the L89 finetune with the 4 backgrounds."""
+"""Descriptions (English) of the table and of the collection of the L89 finetune with the 4 references."""
 
 DESCRIPCION = """
 Landsat 8/9 plume scenes for supervised methane detection, each with the original target scene
-(MARS-S2L) and four clean backgrounds of the same site.
+(MARS-S2L) and four clean references of the same site.
 
 ## Samples
 
@@ -11,24 +11,24 @@ Every sample is one plume id, a FOLDER with eight leaves:
 | leaf | what it is |
 |---|---|
 | `target` | the Landsat scene with the plume (from MARS-S2L) |
-| `bg0` | the background that MARS itself selected for that target (the original `reference`) |
-| `bg1`, `bg2`, `bg3` | three extra clean backgrounds, curated here |
+| `bg0` | the reference that MARS itself selected for that target (the original `reference` scene) |
+| `bg1`, `bg2`, `bg3` | three extra clean references, curated here |
 | `ch4` | the MBMP enhancement of the target (from MARS) |
 | `plume` | binary plume mask of the target |
 | `dem` | Copernicus GLO-30 elevation |
 
-## Backgrounds
+## References
 
-`bg0` is the single background that comes with the MARS-S2L pair. `bg1` to `bg3` are three extra
-backgrounds that we curate for every target, with the same MARS method: query Landsat 8 and 9
+`bg0` is the single reference that comes with the MARS-S2L pair. `bg1` to `bg3` are three extra
+references that we curate for every target, with the same MARS method: query Landsat 8 and 9
 together within ±120 days (before or after), filter by cloud and constellation, discard the target's
 own pass, and keep the three most similar by the MARS metric on methane-insensitive bands (B2, B3,
 B4, B6). When ±120 days does not yield 40 candidates, the pool is filled with the same day-of-year
-±45 days up to two years back. All four backgrounds are clean of methane.
+±45 days up to two years back. All four references are clean of methane.
 
 ## Columns
 
-All columns describe the target unless prefixed `bg:`, which describe the four backgrounds
+All columns describe the target unless prefixed `bg:`, which describe the four references
 (`bg:sensor0` to `bg:sensor3`, and so on).
 
 Some columns are constant in this dataset and are kept for compatibility: `detection:offshore` is

@@ -1,4 +1,4 @@
-"""download_backgrounds.py — downloads the per-site background POOL of a methane TACO.
+"""download_backgrounds.py — downloads the per-site reference POOL of a methane TACO.
 
 Works for BOTH TACOs (Landsat 8/9 and Sentinel-2): the sensor is auto-detected per
 row from satellite:platform, so you run the SAME command pointing at either TACO.
@@ -6,7 +6,7 @@ row from satellite:platform, so you run the SAME command pointing at either TACO
 Core idea
 ---------
 For each site (FOLDER row = scene with a plume) it downloads a pool of PAST images
-of the SAME site without a plume ("background"), as a reference of how the site looks
+of the SAME site without a plume ("reference"), a baseline of how the site looks
 without methane. The pool already comes filtered by clouds/nodata on the GEE server;
 the final fine filter (methane enhancement, similarity ranking) runs AFTER, on the
 downloaded pixels.
@@ -15,7 +15,7 @@ Key decisions
 -------------
 1. EXACT TACO GEOTRANSFORM. The RasterTransform is rebuilt as-is from the TACO
    (stac:geotransform + stac:crs + stac:tensor_shape), it is not re-centered. That way
-   backgrounds stay pixel-aligned with the plume and the stack is piled without
+   the references stay pixel-aligned with the plume and the stack is piled without
    resampling.
 
 2. SAME SENSOR AS THE PLUME. LC08→LANDSAT/LC08/C02/T1, LC09→.../LC09/..., S2→
@@ -510,7 +510,7 @@ def main() -> None:
     ap.add_argument("--platform", default=None, choices=["LC08", "LC09", "S2"],
                     help="process only one sensor (to run L8/L9/S2 separately)")
     ap.add_argument("--limit", type=int, default=None, help="process only N sites (test)")
-    ap.add_argument("--n", type=int, default=N_BACKGROUNDS, help="max backgrounds per site")
+    ap.add_argument("--n", type=int, default=N_BACKGROUNDS, help="max references per site")
     ap.add_argument("--nworkers", type=int, default=NWORKERS, help="download pool workers")
     ap.add_argument("--discover-workers", type=int, default=DISCOVER_WORKERS,
                     help="concurrent threads for discovery (PHASE 1). Lower it if EE rate-limits")
@@ -594,7 +594,7 @@ def main() -> None:
                 [site["taco_id"], site["id"], site["platform"], site["plume_date"], len(chosen),
                  "|".join(d.strftime("%Y%m%d") for _, d in chosen),
                  "|".join(f"{(_score(r) or 0):.0f}" for r, _ in chosen),
-                 "|".join(str(r.image) for r, _ in chosen)]  # GEE id of each background
+                 "|".join(str(r.image) for r, _ in chosen)]  # GEE id of each reference
             )
             if args.dry_run:
                 continue
