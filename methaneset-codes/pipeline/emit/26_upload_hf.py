@@ -6,7 +6,7 @@ Context (Julio, Aug 27): the previous version had ended up nested as
 is uploaded at the root, as `methaneset-emit/`.
 
 Path trick: `upload_large_folder` does not accept `path_in_repo`, it uploads the
-content of the folder you give it. Since /data/databases/METHANSET_TACOS/ already
+content of the folder you give it. Since /data/databases/METHANESET_TACOS/ already
 contains ONLY methaneset-emit/, pointing there reproduces exactly the
 desired structure and does NOT nest again.
 
@@ -23,7 +23,7 @@ import sys
 from huggingface_hub import HfApi, upload_large_folder
 
 REPO = "tacofoundation/methaneset"
-PARENT = pathlib.Path("/data/databases/METHANSET_TACOS")
+PARENT = pathlib.Path("/data/databases/METHANESET_TACOS")
 TACO = PARENT / "methaneset-emit"
 WORKERS = 12
 

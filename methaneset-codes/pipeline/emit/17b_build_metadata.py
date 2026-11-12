@@ -40,7 +40,7 @@ from shapely.geometry import MultiPoint
 
 DATA = pathlib.Path(__file__).resolve().parent.parent.parent / "assets" / "data"
 # the emit/ workshop no longer exists: samples live in the TACO (hardlinks)
-ROOT = pathlib.Path("/data/databases/METHANSET_TACOS/methaneset-emit/DATA")
+ROOT = pathlib.Path("/data/databases/METHANESET_TACOS/methaneset-emit/DATA")
 # CM manifest/sources: dated backup in the vault (cm_plume_tifs deleted)
 CM_DIR = pathlib.Path("/data/users/julio/Notes/01-Projects/methanset/assets/data/carbonmapper/2026-08-25")
 RAD_ROOTS = [pathlib.Path("/data/databases/MARS-Hyperspectral/EMIT_FULL"),

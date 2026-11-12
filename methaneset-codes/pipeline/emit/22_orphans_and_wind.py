@@ -40,7 +40,7 @@ ROOT = pathlib.Path(os.environ.get("METHANESET_ROOT", "/data/users/julio/Notes/0
 IMG = ROOT / "assets" / "images"
 PUB = ROOT / "assets" / "slides" / "public"
 CROSS = ROOT / "assets" / "data" / "cross" / "2026-08-25"
-TACO = pathlib.Path("/data/databases/METHANSET_TACOS/methaneset-emit")
+TACO = pathlib.Path("/data/databases/METHANESET_TACOS/methaneset-emit")
 DATA = TACO / "DATA"
 IOU_TWIN, CONT_TWIN = 0.5, 0.9
 

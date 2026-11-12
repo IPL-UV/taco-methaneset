@@ -38,7 +38,7 @@ CM_DIR = ROOT / "assets" / "data" / "carbonmapper" / "2026-08-25"
 CROSS = ROOT / "assets" / "data" / "cross" / "2026-08-25"
 CACHE_DIR = ROOT / "assets" / "data" / "carbonmapper" / "2026-08-26-outlines"
 CACHE = CACHE_DIR / "outlines.parquet"
-LEVEL0 = pathlib.Path("/data/databases/METHANSET_TACOS/methaneset-emit/METADATA/level0.parquet")
+LEVEL0 = pathlib.Path("/data/databases/METHANESET_TACOS/methaneset-emit/METADATA/level0.parquet")
 STAC = "https://api.carbonmapper.org/api/v1/stac/search"
 IOU_DUP = 0.5  # 'same plume' threshold, consistent with the matching
 

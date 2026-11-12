@@ -36,7 +36,7 @@ from matplotlib.lines import Line2D  # noqa: E402
 ROOT = pathlib.Path(os.environ.get("METHANESET_ROOT", "/data/users/julio/Notes/01-Projects/methanset"))
 IMG = ROOT / "assets" / "images"
 PUB = ROOT / "assets" / "slides" / "public"
-TACO = pathlib.Path("/data/databases/METHANSET_TACOS/methaneset-emit")
+TACO = pathlib.Path("/data/databases/METHANESET_TACOS/methaneset-emit")
 DATA = TACO / "DATA"
 LEVEL0 = TACO / "METADATA" / "level0.parquet"
 

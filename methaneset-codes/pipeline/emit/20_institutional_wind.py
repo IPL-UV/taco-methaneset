@@ -32,7 +32,7 @@ ROOT = pathlib.Path(os.environ.get("METHANESET_ROOT", "/data/users/julio/Notes/0
 DATA = ROOT / "assets" / "data"
 CROSS = DATA / "cross" / "2026-08-25"
 CM_FROZEN = DATA / "carbonmapper" / "2026-08-25"
-LEVEL0 = pathlib.Path("/data/databases/METHANSET_TACOS/methaneset-emit/METADATA/level0.parquet")
+LEVEL0 = pathlib.Path("/data/databases/METHANESET_TACOS/methaneset-emit/METADATA/level0.parquet")
 TS_G = re.compile(r"_(\d{8})T(\d{6})_")
 
 

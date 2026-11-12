@@ -9,8 +9,8 @@ downloaded as soon as its API page delivers it (the URL list cannot be saved
 for later).
 
 Output:
-  /data/databases/METHANSET_TACOS/cm_plume_tifs/<plume_id>.tif
-  /data/databases/METHANSET_TACOS/cm_plume_tifs/manifest.parquet
+  /data/databases/METHANESET_TACOS/cm_plume_tifs/<plume_id>.tif
+  /data/databases/METHANESET_TACOS/cm_plume_tifs/manifest.parquet
     (plume_id, granule_ts, gas, sector, emission_auto, lon, lat, scene_id)
 
 Resumable (skips tifs already downloaded). Usage:
@@ -25,7 +25,7 @@ import pandas as pd
 import requests
 
 DATA = pathlib.Path(__file__).resolve().parent.parent.parent / "assets" / "data"
-OUT = pathlib.Path("/data/databases/METHANSET_TACOS/cm_plume_tifs")
+OUT = pathlib.Path("/data/databases/METHANESET_TACOS/cm_plume_tifs")
 API = "https://api.carbonmapper.org/api/v1/catalog/plumes/annotated"
 TS_CM = re.compile(r"^emi(\d{8}t\d{6})")
 LIMIT = 500

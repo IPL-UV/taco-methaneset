@@ -23,7 +23,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 import requests
 
-OUT_DIR = pathlib.Path("/data/databases/METHANSET_TACOS/cm_plume_tifs")
+OUT_DIR = pathlib.Path("/data/databases/METHANESET_TACOS/cm_plume_tifs")
 API = "https://api.carbonmapper.org/api/v1/catalog/source/plume/name/{}"
 WORKERS = 8
 

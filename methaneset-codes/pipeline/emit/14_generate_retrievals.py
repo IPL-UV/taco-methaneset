@@ -7,7 +7,7 @@ SWIR 2122-2488 nm, three recipes per scene:
   mag1c iterative sparse (30 iterations)
 
 v2 changes with respect to v1:
-  - output in METHANSET_TACOS/emit/<GRANULE>/ next to the rest of the sample
+  - output in METHANESET_TACOS/emit/<GRANULE>/ next to the rest of the sample
   - v2 profile: float32, tile 128, zstd, sensor grid NO CRS
   - careful nodata: radiance fill pixels are forced to -9999 in the three
     outputs and the nodata tag is declared
@@ -37,7 +37,7 @@ RAD_ROOTS = [
     pathlib.Path("/data/databases/MARS-Hyperspectral/EMIT_FULL"),
     pathlib.Path("/data/databases/MARS-Hyperspectral_complement/EMIT_FULL"),
 ]
-OUT_ROOT = pathlib.Path("/data/databases/METHANSET_TACOS/emit")
+OUT_ROOT = pathlib.Path("/data/databases/METHANESET_TACOS/emit")
 TS = re.compile(r"(\d{8}T\d{6})")
 METHODS = {"mf": MFConfig, "rmf": RMFConfig, "mag1c": MAG1CConfig}
 BATCH_SIZE = 64

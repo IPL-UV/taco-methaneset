@@ -9,7 +9,7 @@ replicated + v2 chunking (tile 128, zstd):
               nodata 0). It is the ONLY georeferenced layer of the sample:
               CRS and geotransform come from the nc attrs themselves.
 
-Destination: /data/databases/METHANSET_TACOS/emit/<GRANULE>/
+Destination: /data/databases/METHANESET_TACOS/emit/<GRANULE>/
 Resumable; numeric argument = scene limit (test).
 
 Usage:
@@ -33,7 +33,7 @@ RAD_ROOTS = [
     pathlib.Path("/data/databases/MARS-Hyperspectral/EMIT_FULL"),
     pathlib.Path("/data/databases/MARS-Hyperspectral_complement/EMIT_FULL"),
 ]
-OUT_ROOT = pathlib.Path("/data/databases/METHANSET_TACOS/emit")
+OUT_ROOT = pathlib.Path("/data/databases/METHANESET_TACOS/emit")
 TS = re.compile(r"(\d{8}T\d{6})")
 WORKERS = 8
 BASE = dict(driver="GTiff", tiled=True, blockxsize=128, blockysize=128,

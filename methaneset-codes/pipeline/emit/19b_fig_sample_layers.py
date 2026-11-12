@@ -30,7 +30,7 @@ ROOT = pathlib.Path(os.environ.get("METHANESET_ROOT", "/data/users/julio/Notes/0
 IMG = ROOT / "assets" / "images"
 PUB = ROOT / "assets" / "slides" / "public"
 SCENE = "EMIT_L1B_RAD_001_20220827T060753_2223904_013"
-DATA = pathlib.Path("/data/databases/METHANSET_TACOS/methaneset-emit/DATA") / SCENE
+DATA = pathlib.Path("/data/databases/METHANESET_TACOS/methaneset-emit/DATA") / SCENE
 
 # EMIT: 285 bands, ~381-2493 nm, ~7.4 nm step
 RGB_NM = (640.0, 550.0, 460.0)

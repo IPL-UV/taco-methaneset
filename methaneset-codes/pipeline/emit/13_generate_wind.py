@@ -39,7 +39,7 @@ RAD_ROOTS = [
     pathlib.Path("/data/databases/MARS-Hyperspectral/EMIT_FULL"),
     pathlib.Path("/data/databases/MARS-Hyperspectral_complement/EMIT_FULL"),
 ]
-OUT_ROOT = pathlib.Path("/data/databases/METHANSET_TACOS/emit")
+OUT_ROOT = pathlib.Path("/data/databases/METHANESET_TACOS/emit")
 TS = re.compile(r"(\d{8}T\d{6})")
 WORKERS = 3
 MARGIN = 0.15

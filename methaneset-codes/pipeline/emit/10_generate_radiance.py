@@ -11,7 +11,7 @@ split (700 with plume + 21 free), reads the RAD nc and writes radiance.tif:
     (COG + DISCARD_LSB per SNR zones, tile 512, Cesar's) is set by
     module 10b (10b_apply_lsb.py), which ALWAYS runs after this one
 
-Destination (Julio's decision): /data/databases/METHANSET_TACOS/emit/<GRANULE>/radiance.tif
+Destination (Julio's decision): /data/databases/METHANESET_TACOS/emit/<GRANULE>/radiance.tif
 
 Resumable (skips scenes already written). TEST: passing a number as argument
 limits to that many scenes (e.g. `... 10_generate_radiance.py 3`).
@@ -37,7 +37,7 @@ RAD_ROOTS = [
     pathlib.Path("/data/databases/MARS-Hyperspectral/EMIT_FULL"),
     pathlib.Path("/data/databases/MARS-Hyperspectral_complement/EMIT_FULL"),
 ]
-OUT_ROOT = pathlib.Path("/data/databases/METHANSET_TACOS/emit")
+OUT_ROOT = pathlib.Path("/data/databases/METHANESET_TACOS/emit")
 TS = re.compile(r"(\d{8}T\d{6})")
 FILL = -9990.0
 NODATA = -9999.0

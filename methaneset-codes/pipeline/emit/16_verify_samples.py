@@ -26,7 +26,7 @@ import pandas as pd
 import rasterio
 
 DATA = pathlib.Path(__file__).resolve().parent.parent.parent / "assets" / "data"
-ROOT = pathlib.Path("/data/databases/METHANSET_TACOS/emit")
+ROOT = pathlib.Path("/data/databases/METHANESET_TACOS/emit")
 TS_G = re.compile(r"EMIT_L1B_RAD_001_(\d{8}T\d{6})")
 LAYERS = ["radiance", "latlon", "glt", "elevation", "wind",
           "mf", "rmf", "mag1c", "plume_imeo", "plume_cm"]

@@ -37,10 +37,10 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 ROOT = pathlib.Path(os.environ.get("METHANESET_ROOT", "/data/users/julio/Notes/01-Projects/methanset"))
 CROSS = ROOT / "assets" / "data" / "cross" / "2026-08-25"
-DATA = pathlib.Path("/data/databases/METHANSET_TACOS/methaneset-emit/DATA")
+DATA = pathlib.Path("/data/databases/METHANESET_TACOS/methaneset-emit/DATA")
 IMG = ROOT / "assets" / "images"
 PUB = ROOT / "assets" / "slides" / "public"
-LEVEL0 = pathlib.Path("/data/databases/METHANSET_TACOS/methaneset-emit/METADATA/level0.parquet")
+LEVEL0 = pathlib.Path("/data/databases/METHANESET_TACOS/methaneset-emit/METADATA/level0.parquet")
 
 
 def haversine_m(lo1, la1, lo2, la2):

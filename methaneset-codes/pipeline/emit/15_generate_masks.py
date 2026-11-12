@@ -25,7 +25,7 @@ Matching (Julio's thresholds, sensitivity sweep pending):
   containment >= 0.9 -> the inner code enters the outer one.
 
 Outputs:
-  METHANSET_TACOS/emit/<granule>/plume_imeo.tif and plume_cm.tif
+  METHANESET_TACOS/emit/<granule>/plume_imeo.tif and plume_cm.tif
   cross/<date>/mask_codes.parquet  (codes and matching per scene, for the
                                      metadata module 16)
 
@@ -56,8 +56,8 @@ from shapely.geometry import shape
 from shapely.ops import unary_union
 
 DATA = pathlib.Path(__file__).resolve().parent.parent.parent / "assets" / "data"
-OUT_ROOT = pathlib.Path("/data/databases/METHANSET_TACOS/emit")
-CM_DIR = pathlib.Path("/data/databases/METHANSET_TACOS/cm_plume_tifs")
+OUT_ROOT = pathlib.Path("/data/databases/METHANESET_TACOS/emit")
+CM_DIR = pathlib.Path("/data/databases/METHANESET_TACOS/cm_plume_tifs")
 TS_G = re.compile(r"EMIT_L1B_RAD_001_(\d{8}T\d{6})")
 WORKERS = 8
 PT_MAX_DEG = 0.05

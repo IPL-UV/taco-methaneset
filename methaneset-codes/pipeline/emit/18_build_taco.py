@@ -1,7 +1,7 @@
 """MODULE 18: assemble the definitive methaneset-emit TACO (FOLDER).
 
 A single module, three ingredients (all verified beforehand):
-  - samples: METHANSET_TACOS/emit/<granule>/ (721 x 10 layers)
+  - samples: METHANESET_TACOS/emit/<granule>/ (721 x 10 layers)
   - table:   cross/<date>/metadata_level0.parquet (721 x 59)
   - collection: the v2 identity defined here (includes the DESCRIPTIONS of
     all columns: it is the official documentation of the dataset)
@@ -13,7 +13,7 @@ Key details:
   - Runs with the majortom environment (tacotoolbox 0.26.9):
       /data/users/ceayca/.conda/envs/majortom/bin/python
 
-Output: /data/databases/METHANSET_TACOS/methaneset-emit/
+Output: /data/databases/METHANESET_TACOS/methaneset-emit/
 Optional numeric argument = scene limit (test).
 
 Usage:
@@ -40,8 +40,8 @@ from tacotoolbox.taco.extensions.scientific import Publication, Publications
 DATA = pathlib.Path(__file__).resolve().parent.parent.parent / "assets" / "data"
 # samples live in the DATA of the current TACO (the emit/ workshop was deleted);
 # with hardlinks, reading from there and writing the new FOLDER costs zero bytes
-SRC = pathlib.Path("/data/databases/METHANSET_TACOS/methaneset-emit/DATA")
-OUT = "/data/databases/METHANSET_TACOS/methaneset-emit"
+SRC = pathlib.Path("/data/databases/METHANESET_TACOS/methaneset-emit/DATA")
+OUT = "/data/databases/METHANESET_TACOS/methaneset-emit"
 LAYERS = ["radiance.tif", "latlon.tif", "glt.tif", "elevation.tif", "wind.tif",
           "mf.tif", "rmf.tif", "mag1c.tif", "plume_imeo.tif", "plume_cm.tif"]
 

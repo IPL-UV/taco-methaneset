@@ -42,8 +42,8 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 DATA = pathlib.Path(__file__).resolve().parent.parent.parent / "assets" / "data"
 IMG = pathlib.Path(__file__).resolve().parent.parent.parent / "assets" / "images"
-ROOT = pathlib.Path("/data/databases/METHANSET_TACOS/emit")
-CM_DIR = pathlib.Path("/data/databases/METHANSET_TACOS/cm_plume_tifs")
+ROOT = pathlib.Path("/data/databases/METHANESET_TACOS/emit")
+CM_DIR = pathlib.Path("/data/databases/METHANESET_TACOS/cm_plume_tifs")
 TS_G = re.compile(r"EMIT_L1B_RAD_001_(\d{8}T\d{6})")
 def cm_sector_name(code):
     """CM IPCC map -> IMEO vocabulary, prefix-robust (1B1a, etc.)."""
