@@ -8,6 +8,12 @@ And also:
   - methane in the reference through the SWIR2/SWIR1 ratio against the pool median.
 It filters the flagged ones and keeps the top 3 most similar.
 
+Cloud rule: two passes like MARS-S2L, --cloud-max (default 5 % of the chip) and
+--cloud-max-relax (35 %) when the strict pass does not reach three references.
+Methane in the reference: --methane-max (3 % of the pixels).
+The published v1.2.0 collections were built with --cloud-max 0.10 and no second
+pass; the 70 samples recovered in v1.4.0 used --cloud-max 0.50 --cloud-max-relax 0.50.
+
 Usage:
   python 02_select.py --taco .../methaneset-l89-finetune --raw .../methaneset-l89-finetune-bg-raw \
                            --platform LC08 [--workers 8]
@@ -98,11 +104,12 @@ def methane_frac(bg, med, swir1, swir2, thr=0.92):
     return float(np.mean(r[v] < thr))
 
 
-def _init(taco, raw, platform, top, cloud_max, methane_max):
+def _init(taco, raw, platform, top, cloud_max, methane_max, cloud_max_relax=0.35):
     tacoreader.use("pandas")
     globals()["_DATA"] = tacoreader.load(taco).data
     _CFG.update(dict(taco=taco, raw=raw, platform=platform, top=top,
-                     cloud_max=cloud_max, methane_max=methane_max,
+                     cloud_max=cloud_max, cloud_max_relax=cloud_max_relax,
+                     methane_max=methane_max,
                      fam=PLATFORM_FAMILY[platform]))
 
 
@@ -143,11 +150,11 @@ def _sitio(i):
         m = methane_frac(bg, med, s1, s2)
         scored.append((p.name, d, cb, m))
     scored.sort(key=lambda x: (np.isnan(x[1]), x[1]))
-    # clean = passes cloud (2%) and methane (3%). If there are not 3, it relaxes cloud to 35% (MARS 2nd pass).
+    # Two-pass cloud filter, as in MARS: strict first, looser if three references are not reached.
     clean = [s for s in scored if not (s[2] > _CFG["cloud_max"]) and not (s[3] > _CFG["methane_max"])]
     pick = clean[:_CFG["top"]]
     if len(pick) < _CFG["top"]:
-        relax = [s for s in scored if s not in pick and not (s[2] > _CFG["cloud_max"]) and not (s[3] > _CFG["methane_max"])]
+        relax = [s for s in scored if s[2] <= _CFG["cloud_max_relax"] and not (s[3] > _CFG["methane_max"])]
         pick += relax[:_CFG["top"] - len(pick)]
     out = []
     for rank, (name, d, cb, m) in enumerate(pick, 1):
@@ -167,7 +174,8 @@ def main():
     ap.add_argument("--top", type=int, default=3)
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--limit", type=int, default=None)
-    ap.add_argument("--cloud-max", type=float, default=0.10)
+    ap.add_argument("--cloud-max", type=float, default=0.05)
+    ap.add_argument("--cloud-max-relax", type=float, default=0.35)
     ap.add_argument("--methane-max", type=float, default=0.03)
     args = ap.parse_args()
 
@@ -182,7 +190,8 @@ def main():
 
     with ProcessPoolExecutor(max_workers=args.workers, initializer=_init,
                              initargs=(args.taco, args.raw, args.platform, args.top,
-                                       args.cloud_max, args.methane_max)) as ex:
+                                       args.cloud_max, args.methane_max,
+                                       args.cloud_max_relax)) as ex:
         resultados = list(ex.map(_sitio, idx, chunksize=4))
 
     rows = [r for out, _ in resultados for r in out]
