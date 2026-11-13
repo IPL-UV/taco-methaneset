@@ -41,10 +41,22 @@ RGN_IDX = {"landsat": (3, 2, 4), "s2": (3, 2, 7)}
 PLATFORM_FAMILY = {"LC08": "landsat", "LC09": "landsat", "S2": "s2"}
 
 try:
-    from omnicloudmask import predict_from_array as _ocm
-    _HAS_OCM = True
+    import torch
+    from cloudsen12_models import cloudsen12 as _cs12
+    _HAS_CS12 = True
 except Exception:  # noqa: BLE001
-    _HAS_OCM = False
+    _HAS_CS12 = False
+
+_MODELOS: dict = {}
+
+
+def _modelo(familia: str):
+    """CloudSEN12: landsat30 para Landsat 8/9, UNetMobV2_V2 para Sentinel-2."""
+    if familia not in _MODELOS:
+        nombre = "landsat30" if familia == "landsat" else "UNetMobV2_V2"
+        dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        _MODELOS[familia] = _cs12.load_model_by_name(nombre, device=dev)
+    return _MODELOS[familia]
 
 _DATA = None
 _CFG = {}
@@ -82,26 +94,48 @@ def diferencia_mars(target, bg, band_idx):
     return float(np.mean(diffs))
 
 
-def cloud_frac(bg, rgn):
-    if not _HAS_OCM:
+def cloud_frac(bg, rgn, familia="landsat"):
+    """Fraccion de nube con CloudSEN12 a la resolucion nativa del sensor.
+
+    `rgn` se mantiene en la firma por compatibilidad, pero ya no se usa: cada modelo
+    recibe sus propias bandas. Inferir sobre el chip remuestreado a 10 m dispara estos
+    modelos (desierto despejado sale al 0,97); a 30 m en Landsat y 20 m en S2 coinciden
+    con la mascara oficial de MARS.
+    """
+    if not _HAS_CS12:
         return np.nan
-    arr = np.stack([bg[rgn[0]], bg[rgn[1]], bg[rgn[2]]]).astype(np.float32)
+    modelo = _modelo(familia)
+    x = bg.astype(np.float32)
+    # Los chips del TACO L89 vienen en reflectancia 0-1, pero las descargas de GEE y el
+    # TACO de S2 vienen escaladas por 10000. Se normaliza por el rango.
+    if float(np.nanmax(x)) > 1.5:
+        x = x / 10000.0
+    if familia == "s2":
+        k = 2
+    else:
+        k = 3
+        x = x[[0, 1, 2, 3, 4, 8, 5, 6]]  # B1,B2,B3,B4,B5,B9,B6,B7: orden de landsat30
+    n = (x.shape[1] // k) * k
+    nat = x[:, :n, :n].reshape(x.shape[0], n // k, k, n // k, k).mean(axis=(2, 4))
     try:
-        pred = np.asarray(_ocm(arr)).squeeze()
+        pred = np.asarray(modelo.predict(nat.astype(np.float32))).squeeze()
     except Exception:  # noqa: BLE001
         return np.nan
     return float(np.mean(np.isin(pred, (1, 2, 3)))) if pred.size else np.nan
 
 
-def methane_frac(bg, med, swir1, swir2, thr=0.92):
+def methane_frac(bg, med=None, swir1=5, swir2=6, thr=0.92):
+    """Fraccion de pixeles con realce propio DENTRO de la misma imagen.
+
+    Antes se comparaba contra la mediana del pool de candidatas, y eso medía el desfase
+    global de ratio entre escenas (otra fecha, otro vapor de agua): salían valores del
+    90 % en chips sin pluma. Contra la mediana de la propia imagen, un 0,927 pasa a 0,001.
+    """
     b1, b2 = bg[swir1].astype(np.float64), bg[swir2].astype(np.float64)
-    m1, m2 = med[swir1].astype(np.float64), med[swir2].astype(np.float64)
-    v = (b1 > 0) & (b2 > 0) & (m1 > 0) & (m2 > 0)
-    if not v.any():
-        return np.nan
-    r = np.divide(b2, b1, out=np.zeros_like(b2), where=b1 > 0) / np.divide(
-        m2, m1, out=np.ones_like(m2), where=m1 > 0)
-    return float(np.mean(r[v] < thr))
+    v = (b1 > 0) & (b2 > 0)
+    r = np.divide(b2, b1, out=np.full_like(b2, np.nan), where=v)
+    m1, m2 = np.nanmedian(r[v]), 1.0
+    return float(np.nanmean(r[v] < thr * m1))
 
 
 def _init(taco, raw, platform, top, cloud_max, methane_max, cloud_max_relax=0.35):
@@ -117,7 +151,9 @@ def _sitio(i):
     row = _DATA.iloc[i]
     if str(row.get("type", "FOLDER")) != "FOLDER":
         return [], []
-    if PLATFORM_FAMILY.get(str(row.get("satellite:platform")), "s2") != _CFG["fam"]:
+    # La columna cambió de nombre en la v1.2.0 (`satellite:platform` -> `target:sensor`).
+    sensor = str(row.get("target:sensor") or row.get("satellite:platform") or "")
+    if PLATFORM_FAMILY.get(sensor, "s2") != _CFG["fam"]:
         return [], []
     tid = _slug(row.get("id"))
     site = pathlib.Path(_CFG["raw"]) / _CFG["platform"] / pathlib.Path(str(_CFG["taco"]).rstrip("/")).name / tid
@@ -146,7 +182,7 @@ def _sitio(i):
     scored = []
     for p, bg in zip(cand, arrays):
         d = diferencia_mars(target, bg, band_idx)
-        cb = cloud_frac(bg, rgn)
+        cb = cloud_frac(bg, rgn, fam)
         m = methane_frac(bg, med, s1, s2)
         scored.append((p.name, d, cb, m))
     scored.sort(key=lambda x: (np.isnan(x[1]), x[1]))

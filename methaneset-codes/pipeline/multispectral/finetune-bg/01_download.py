@@ -18,7 +18,7 @@ Key decisions
    the references stay pixel-aligned with the plume and the stack is piled without
    resampling.
 
-2. SAME SENSOR AS THE PLUME. LC08→LANDSAT/LC08/C02/T1, LC09→.../LC09/..., S2→
+2. SAME SENSOR AS THE PLUME. LC08→LANDSAT/LC08/C02/T1_TOA, LC09→.../LC09/... (T1_TOA), S2→
    COPERNICUS/S2_HARMONIZED (a single collection, no merge → no GEE errors).
 
 3. ±45 DAY SEASONAL WINDOW. It walks back year by year within
@@ -54,6 +54,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 import ee
+import pandas as pd
 import tacoreader
 
 import cubexpress
@@ -86,8 +87,8 @@ LANDSAT_BANDS = ("B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B
 S2_BANDS = ("B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B8A", "B9", "B10", "B11", "B12")
 
 SENSOR_PRESETS = {
-    "LC08": {"collection": "LANDSAT/LC08/C02/T1", "earliest": dt.date(2013, 3, 18), "label": "LC08", "family": "landsat", "bands": LANDSAT_BANDS},
-    "LC09": {"collection": "LANDSAT/LC09/C02/T1", "earliest": dt.date(2021, 10, 31), "label": "LC09", "family": "landsat", "bands": LANDSAT_BANDS},
+    "LC08": {"collection": "LANDSAT/LC08/C02/T1_TOA", "earliest": dt.date(2013, 3, 18), "label": "LC08", "family": "landsat", "bands": LANDSAT_BANDS},
+    "LC09": {"collection": "LANDSAT/LC09/C02/T1_TOA", "earliest": dt.date(2021, 10, 31), "label": "LC09", "family": "landsat", "bands": LANDSAT_BANDS},
     "S2A":  {"collection": "COPERNICUS/S2_HARMONIZED", "earliest": dt.date(2015, 6, 27), "label": "S2", "family": "s2", "bands": S2_BANDS},
     "S2B":  {"collection": "COPERNICUS/S2_HARMONIZED", "earliest": dt.date(2015, 6, 27), "label": "S2", "family": "s2", "bands": S2_BANDS},
     "S2C":  {"collection": "COPERNICUS/S2_HARMONIZED", "earliest": dt.date(2015, 6, 27), "label": "S2", "family": "s2", "bands": S2_BANDS},
@@ -182,9 +183,17 @@ def rt_from_taco_row(row) -> RasterTransform:
     stac:geotransform = GDAL order [tx, sx, shear_x, ty, shear_y, sy];
     stac:tensor_shape = [n_bands, height, width].
     """
-    gt = list(row["stac:geotransform"])
+    gt = row["stac:geotransform"]
+    if isinstance(gt, str):
+        # Puede venir como repr de numpy: "[ 5.759550e+05  1.000000e+01 ... ]"
+        gt = [float(v) for v in gt.replace("[", " ").replace("]", " ").split()]
+    else:
+        gt = [float(v) for v in list(gt)]
     tx, sx, shear_x, ty, shear_y, sy = gt[0], gt[1], gt[2], gt[3], gt[4], gt[5]
-    _, height, width = (int(v) for v in row["stac:tensor_shape"])
+    ts = row["stac:tensor_shape"]
+    if isinstance(ts, str):
+        ts = [int(v) for v in ts.replace("[", " ").replace("]", " ").split()]
+    _, height, width = (int(v) for v in list(ts)[:3])
     return RasterTransform(
         crs=str(row["stac:crs"]),
         translate_x=float(tx),
@@ -199,12 +208,17 @@ def rt_from_taco_row(row) -> RasterTransform:
 
 
 def plume_date_from_row(row) -> dt.date | None:
-    """Plume date from stac:time_start (can come as NaT)."""
+    """Plume date from stac:time_start (can come as NaT, datetime or string)."""
     ts = row["stac:time_start"]
     try:
         if ts is None or str(ts) == "NaT":
             return None
-        return dt.date(int(ts.year), int(ts.month), int(ts.day))
+        if hasattr(ts, "year") and not isinstance(ts, str):
+            return dt.date(int(ts.year), int(ts.month), int(ts.day))
+        parsed = pd.to_datetime(str(ts), format="mixed", errors="coerce")
+        if pd.isna(parsed):
+            return None
+        return dt.date(int(parsed.year), int(parsed.month), int(parsed.day))
     except Exception:
         return None
 
@@ -216,9 +230,15 @@ def load_sites(taco_path: str, limit: int | None = None, platform_filter: str | 
     platform_filter: if given (e.g. "LC08", "LC09", "S2"), it only returns the
     sites with that sensor label. Useful to run L8/L9/S2 separately.
     """
-    tacoreader.use("pandas")
-    taco = tacoreader.load(taco_path)
-    table = taco.data
+    # La tabla se lee del parquet directamente: al pasar por arrow, `stac:time_start`
+    # (string con formatos mezclados) se castea a timestamp y las filas nuevas salen NaT.
+    ruta = pathlib.Path(taco_path)
+    parquet = (ruta / ".tacocat" / "level0.parquet") if ruta.is_dir() else None
+    if parquet is not None and parquet.exists():
+        table = pd.read_parquet(parquet)
+    else:
+        tacoreader.use("pandas")
+        table = tacoreader.load(taco_path).data
 
     # taco.data is a TacoDataFramePandas (not a regular DataFrame): it has no
     # iterrows/columns, but it does have len and iloc. We iterate by position.
@@ -228,7 +248,9 @@ def load_sites(taco_path: str, limit: int | None = None, platform_filter: str | 
         if str(row.get("type", "FOLDER")) != "FOLDER":
             continue
 
-        platform = str(row.get("satellite:platform") or "").strip()
+        # El nombre de la columna cambió en la v1.2.0: `satellite:platform` pasó a
+        # `target:sensor`. Se aceptan las dos para no romper con los TACO antiguos.
+        platform = str(row.get("target:sensor") or row.get("satellite:platform") or "").strip()
         preset = preset_for_platform(platform)
         if preset is None:
             print(f"  [skip] idx={idx}: unknown platform {platform!r}")
