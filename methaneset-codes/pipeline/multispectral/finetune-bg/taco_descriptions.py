@@ -1,15 +1,14 @@
 """Descriptions (English) of the table and of the collection of the L89 finetune with the 4 references.
 
 OJO al reconstruir: `generate_markdown` sobrescribe el README.md de la coleccion con este texto.
-El texto bueno es el que esta publicado (12 nov 2026) en
-/data/databases/METHANESET_TACOS/<coleccion>/README.md: alli se paso "background" a "reference" y
-se corrigio la card de S2, que describia escenas de Landsat. DESCRIPCION esta escrita para L89 y se
-usa tambien para S2, asi que la card de S2 necesita su propio texto antes de regenerarla.
+DESCRIPCION es la de L89 y DESCRIPCION_S2 la de Sentinel-2; no se mezclan (la card de S2 llego a
+describir escenas de Landsat por reutilizar la de L89). `tacotoolbox` 0.5.2 ya no trae
+`generate_markdown`, asi que estas descripciones se aplican con `recovery-v1.4.0/t9_cards.py`.
 """
 
 DESCRIPCION = """
 Landsat 8/9 plume scenes for supervised methane detection, each with the original target scene
-(MARS-S2L) and four clean references of the same site.
+(MARS-S2L) and four references of the same site.
 
 ## Samples
 
@@ -19,7 +18,7 @@ Every sample is one plume id, a FOLDER with eight leaves:
 |---|---|
 | `target` | the Landsat scene with the plume (from MARS-S2L) |
 | `bg0` | the reference that MARS itself selected for that target (the original `reference` scene) |
-| `bg1`, `bg2`, `bg3` | three extra clean references, curated here |
+| `bg1`, `bg2`, `bg3` | three extra references, curated here |
 | `ch4` | the MBMP enhancement of the target (from MARS) |
 | `plume` | binary plume mask of the target |
 | `dem` | Copernicus GLO-30 elevation |
@@ -27,22 +26,93 @@ Every sample is one plume id, a FOLDER with eight leaves:
 ## References
 
 `bg0` is the single reference that comes with the MARS-S2L pair. `bg1` to `bg3` are three extra
-references that we curate for every target, with the same MARS method: query Landsat 8 and 9
-together within ±120 days (before or after), filter by cloud and constellation, discard the target's
-own pass, and keep the three most similar by the MARS metric on methane-insensitive bands (B2, B3,
-B4, B6). When ±120 days does not yield 40 candidates, the pool is filled with the same day-of-year
-±45 days up to two years back. All four references are clean of methane.
+references that we curate for every target with the MARS-S2L rule: query Landsat 8 and 9 together
+within ±120 days (before or after) of the target, drop candidates with more than 50 % cloud, cloud
+shadow or missing pixels, drop the target's own pass, and keep the three most similar by the MARS
+metric on methane-insensitive bands (B2, B3, B4, B6). When ±120 days does not yield 40 candidates
+the window widens to ±240 days and, if still thin, to the same day-of-year ±45 days over earlier
+years, and adjacent WRS-2 paths (±1) are admitted when the site sits on a scene edge. Of the 4,059
+reference leaves that carry a date, 119 lie beyond ±120 days (2.9 %); 659 of the 4,059 references
+added before v1.4.0 come from an adjacent path.
+
+All four references are stored as top-of-atmosphere reflectance (Landsat Collection 2 Level-1
+`T1_TOA`), in the same scale and dtype as `target`.
+
+`bg:methane1`--`bg:methane3` is the fraction of reference pixels that carry a methane enhancement of
+their own. References are ranked to minimise it; it is below 0.03 in 4,012 of the 4,110 reference
+leaves (97.6 %), and the column lets you drop the remaining ones if your application needs a
+stricter bound.
+
+`bg:difference1`--`bg:difference3` is the MARS score of each reference against the target,
+computed on the published TOA leaves. It is not a ranking: many candidates are near-ties (the
+median gap between the first and the second reference is 0.0005), so the order of `bg1`--`bg3`
+carries no meaning.
 
 ## Columns
 
 All columns describe the target unless prefixed `bg:`, which describe the four references
 (`bg:sensor0` to `bg:sensor3`, and so on).
 
+The `target:cloud` and `bg:cloud0`--`bg:cloud3` columns are the cloud and shadow fraction of each chip, computed with OmniCloudMask.
+
 Some columns are constant in this dataset and are kept for compatibility: `detection:offshore` is
 always False (onshore plumes only) and `quality:observability` is `clear` for all but three samples.
 `detection:isplume` was always True and is not shipped as a column.
 """
 
+DESCRIPCION_S2 = """
+# methaneset-s2-finetune
+
+
+Sentinel-2 plume scenes for supervised methane detection, each with the original target scene
+(MARS-S2L) and four references of the same site.
+
+## Samples
+
+Every sample is one plume id, a FOLDER with eight leaves:
+
+| leaf | what it is |
+|---|---|
+| `target` | the Sentinel-2 scene with the plume (from MARS-S2L) |
+| `bg0` | the reference that MARS itself selected for that target (the original `reference` scene) |
+| `bg1`, `bg2`, `bg3` | three extra references, curated here |
+| `ch4` | the MBMP enhancement of the target (from MARS) |
+| `plume` | binary plume mask of the target |
+| `dem` | Copernicus GLO-30 elevation |
+
+## References
+
+`bg0` is the single reference that comes with the MARS-S2L pair. `bg1` to `bg3` are three extra
+references that we curate for every target with the MARS-S2L rule: query Sentinel-2 acquisitions
+within ±120 days (before or after) of the target, drop candidates with more than 50 % cloud, cloud
+shadow or missing pixels, drop the target's own pass, and keep the three most similar by the MARS
+metric on methane-insensitive bands (B02, B03, B04, B11). When ±120 days does not yield 40
+candidates the window widens to ±240 days and, if still thin, to the same day-of-year ±45 days over
+earlier years. The 159 references added in v1.4.0 all lie within ±120 days of their target.
+
+All four references are stored in the same BOA reflectance scale and dtype as `target`.
+
+`bg:methane1`--`bg:methane3` is the fraction of reference pixels that carry a methane enhancement of
+their own. References are ranked to minimise it, and it is below 0.03 in all 10,815 reference
+leaves.
+
+`bg:difference1`--`bg:difference3` is the MARS score of each reference against the target,
+computed on the published leaves. It is not a ranking: many candidates are near-ties, so the order
+of `bg1`--`bg3` carries no meaning.
+
+## Columns
+
+All columns describe the target unless prefixed `bg:`, which describe the four references
+(`bg:sensor0` to `bg:sensor3`, and so on).
+
+The `target:cloud` and `bg:cloud0`--`bg:cloud3` columns are the cloud and shadow fraction of each chip, computed with OmniCloudMask.
+
+Some columns are constant in this dataset and are kept for compatibility: `detection:offshore` is
+always False (onshore plumes only) and `quality:observability` is `clear` for all but three samples.
+`detection:isplume` was always True and is not shipped as a column.
+"""
+
+DESCRIPCION_POR_COLECCION = {"l89": DESCRIPCION, "s2": DESCRIPCION_S2}
 
 DESCRIPCIONES = {
     "target:sensor": "Satellite of the target scene: LC08 (Landsat 8) or LC09 (Landsat 9)",

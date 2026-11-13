@@ -23,8 +23,8 @@ export const datasets: Dataset[] = [
     name: "methaneset-s2-finetune",
     family: "Sentinel-2",
     subset: "Finetune",
-    samples: 3552,
-    sizeGB: 6.4,
+    samples: 3605,
+    sizeGB: 6.16,
     icon: "s2",
     abstract:
       "Sentinel-2 imagery with expert-verified plume masks from IMEO MARS, all 13 bands at 10 m and 200x200 px patches.",
@@ -43,8 +43,8 @@ export const datasets: Dataset[] = [
     name: "methaneset-l89-finetune",
     family: "Landsat 8/9",
     subset: "Finetune",
-    samples: 1353,
-    sizeGB: 1.68,
+    samples: 1370,
+    sizeGB: 1.71,
     icon: "l89",
     abstract:
       "Landsat 8/9 imagery with expert-verified plume masks, 9 OLI bands at 30 m resampled to 10 m.",
