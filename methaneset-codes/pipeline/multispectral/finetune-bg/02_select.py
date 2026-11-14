@@ -10,7 +10,12 @@ It filters the flagged ones and keeps the top 3 most similar.
 
 Cloud rule: two passes like MARS-S2L, --cloud-max (default 5 % of the chip) and
 --cloud-max-relax (35 %) when the strict pass does not reach three references.
-Methane in the reference: --methane-max (3 % of the pixels).
+Methane in the reference: the column `methane` is computed and reported, but it is NOT
+used to reject candidates by default. Measured on the real collection it does not separate
+plumes from heterogeneous land cover (water, vegetation, moist soil all give 20-40 % of the
+pixels below the ratio median, and published plume targets score lower than clean scenes).
+MARS does not test methane in its references either — `isplume` is dead code on the public
+candidates path — so the selection here is cloud + similarity, same as MARS.
 The published v1.2.0 collections were built with --cloud-max 0.10 and no second
 pass; the 70 samples recovered in v1.4.0 used --cloud-max 0.50 --cloud-max-relax 0.50.
 
@@ -214,7 +219,7 @@ def main():
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--cloud-max", type=float, default=0.05)
     ap.add_argument("--cloud-max-relax", type=float, default=0.35)
-    ap.add_argument("--methane-max", type=float, default=0.03)
+    ap.add_argument("--methane-max", type=float, default=1.0)
     args = ap.parse_args()
 
     raiz = pathlib.Path(args.raw)
