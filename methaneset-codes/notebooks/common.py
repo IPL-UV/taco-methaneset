@@ -265,13 +265,19 @@ def mars_difference(target_stack: np.ndarray, bg_stack: np.ndarray,
     for k in idx:
         t_k = target_stack[k]
         b_k = bg_stack[k]
-        m_t = np.nanmean(t_k)
-        m_b = np.nanmean(b_k)
+        # Landsat deja los píxeles fuera de la huella en -inf (relleno), no en NaN:
+        # se compara solo donde ambos tienen dato, como haría MARS con su parche nativo.
+        ok = np.isfinite(t_k) & np.isfinite(b_k)
+        if ok.sum() < 100:
+            diffs.append(np.nan)
+            continue
+        m_t = float(t_k[ok].mean())
+        m_b = float(b_k[ok].mean())
         if not (np.isfinite(m_t) and np.isfinite(m_b) and abs(m_b) > 1e-12):
             diffs.append(np.nan)
             continue
         g_k = m_t / m_b
-        diffs.append(np.nanmean(np.abs(t_k - g_k * b_k)))
+        diffs.append(float(np.abs(t_k[ok] - g_k * b_k[ok]).mean()))
     return float(np.nanmean(diffs))
 
 

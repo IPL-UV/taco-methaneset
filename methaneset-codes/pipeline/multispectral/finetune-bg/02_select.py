@@ -34,6 +34,7 @@ import warnings
 from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
+import pandas as pd
 import rasterio
 import tacoreader
 from scipy.ndimage import shift as nd_shift
@@ -145,12 +146,13 @@ def methane_frac(bg, med=None, swir1=5, swir2=6, thr=0.92):
     return float(np.nanmean(r[v] < thr * m1))
 
 
-def _init(taco, raw, platform, top, cloud_max, methane_max, cloud_max_relax=0.35):
+def _init(taco, raw, platform, top, cloud_max, methane_max, cloud_max_relax=0.35,
+          max_days=120):
     tacoreader.use("pandas")
     globals()["_DATA"] = tacoreader.load(taco).data
     _CFG.update(dict(taco=taco, raw=raw, platform=platform, top=top,
                      cloud_max=cloud_max, cloud_max_relax=cloud_max_relax,
-                     methane_max=methane_max,
+                     methane_max=methane_max, max_days=max_days,
                      fam=PLATFORM_FAMILY[platform]))
 
 
@@ -194,6 +196,12 @@ def _sitio(i):
         scored.append((p.name, d, cb, m))
     scored.sort(key=lambda x: (np.isnan(x[1]), x[1]))
     # Two-pass cloud filter, as in MARS: strict first, looser if three references are not reached.
+    # MARS: la referencia tiene que caer dentro de ±120 días del target.
+    limite = pd.Timestamp(str(row.get("stac:time_start"))[:10])
+    def dentro(name):
+        fecha = pd.Timestamp(re.search(r"_(\d{8})\.tif$", name).group(1))
+        return abs((fecha - limite).days) <= _CFG["max_days"]
+    scored = [s for s in scored if dentro(s[0])]
     clean = [s for s in scored if not (s[2] > _CFG["cloud_max"]) and not (s[3] > _CFG["methane_max"])]
     pick = clean[:_CFG["top"]]
     if len(pick) < _CFG["top"]:
@@ -220,6 +228,7 @@ def main():
     ap.add_argument("--cloud-max", type=float, default=0.05)
     ap.add_argument("--cloud-max-relax", type=float, default=0.35)
     ap.add_argument("--methane-max", type=float, default=1.0)
+    ap.add_argument("--max-days", type=int, default=120)
     args = ap.parse_args()
 
     raiz = pathlib.Path(args.raw)
@@ -234,7 +243,7 @@ def main():
     with ProcessPoolExecutor(max_workers=args.workers, initializer=_init,
                              initargs=(args.taco, args.raw, args.platform, args.top,
                                        args.cloud_max, args.methane_max,
-                                       args.cloud_max_relax)) as ex:
+                                       args.cloud_max_relax, args.max_days)) as ex:
         resultados = list(ex.map(_sitio, idx, chunksize=4))
 
     rows = [r for out, _ in resultados for r in out]
