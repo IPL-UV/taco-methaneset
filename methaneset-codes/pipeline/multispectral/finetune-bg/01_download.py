@@ -419,7 +419,10 @@ def gather_raw(site: dict) -> list[RequestRow]:
     rt, plume_date = site["rt"], site["plume_date"]
     platform = site["platform"]
     if platform in ("LC08", "LC09"):
-        collections = ("LANDSAT/LC08/C02/T1", "LANDSAT/LC09/C02/T1")
+        # T1_TOA es la unica coleccion que entrega reflectancia TOA en 0-1 y temperatura
+        # en kelvin, que es la convencion de las hojas publicadas. C02/T1 (nivel 1) viene
+        # en DN y dejaba el pool en otra escala que el target.
+        collections = ("LANDSAT/LC08/C02/T1_TOA", "LANDSAT/LC09/C02/T1_TOA")
     else:
         collections = (site["collection"],)
     cutoff = plume_date - dt.timedelta(days=PLUME_BUFFER_DAYS)

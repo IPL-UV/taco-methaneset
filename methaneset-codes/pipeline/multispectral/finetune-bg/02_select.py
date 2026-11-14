@@ -106,9 +106,11 @@ def cloud_frac(bg, rgn, familia="landsat"):
         return np.nan
     modelo = _modelo(familia)
     x = bg.astype(np.float32)
-    # Los chips del TACO L89 vienen en reflectancia 0-1, pero las descargas de GEE y el
-    # TACO de S2 vienen escaladas por 10000. Se normaliza por el rango.
-    if float(np.nanmax(x)) > 1.5:
+    # La escala se decide con las bandas reflectivas: el TACO de L89 va en 0-1 y el de S2
+    # en uint16 x10000. Mirar el maximo de todo el cubo falla en L89 porque las termicas
+    # vienen en kelvin (~300).
+    reflectivas = x[:5] if familia != "s2" else x[:3]
+    if float(np.nanmax(reflectivas)) > 1.5:
         x = x / 10000.0
     if familia == "s2":
         k = 2
