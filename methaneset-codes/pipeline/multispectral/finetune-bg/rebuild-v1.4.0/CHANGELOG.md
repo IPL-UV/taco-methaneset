@@ -44,7 +44,7 @@ byte: 39,404 hojas idénticas, 337 sustituidas y 0 cambiadas fuera de la lista.
 
 - `t20_puertas.py`: 0 fallos en las dos colecciones. Comprueba sha256 hoja por hoja, offsets
   contra los TIFF reales, `TACO_HEADER` contra el zip, `METADATA` contra `DATA`, columnas y
-  orden canónico, nube ≤35 %, `COLLECTION.json` por zip y `tacoreader.load()`.
+  orden canónico, nube ≤35 %, `COLLECTION.json` por zip, nube de `target` y `bg0` sin NaN y `tacoreader.load()`.
 - `t13_auditoria.py`: 0 fallos y 0 avisos en las dos colecciones. Recalcula nube, diferencia y
   metano sobre las hojas publicadas y compara con las columnas.
 - Aviso aceptado: 9 hojas L89 con cobertura parcial de swath entre 75 % y 99 % (los bordes de
@@ -59,7 +59,9 @@ byte: 39,404 hojas idénticas, 337 sustituidas y 0 cambiadas fuera de la lista.
   El manifiesto de `main` coincide con el de la rama en las dos colecciones.
 - `dataset_version` se queda en **1.4.0** por decisión de Julio; este changelog y los hashes
   son la trazabilidad de lo que cambió dentro de esa versión.
-- Código: `IPL-UV/taco-methaneset` commit `0fea497` (diferencia con relleno y ventana de 120 días).
+- Código: `IPL-UV/taco-methaneset` commits `0fea497` (diferencia con relleno y ventana de
+  120 días) y `a82a55c` (scripts y puertas de este rebuild, en
+  `pipeline/multispectral/finetune-bg/rebuild-v1.4.0/`).
 
 ## Hashes (sha256 de cada `.tacozip` publicado)
 ### methaneset-l89-finetune (19 ficheros, 1.73 GB)
