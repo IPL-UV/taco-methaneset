@@ -64,7 +64,8 @@ here, so it is a library for the rest of the folder.
 ### Numbers in the paper
 
 Test split of the release, histogram gradient boosting, four references, three pixel seeds, AUC-ROC
-pooled over test pixels:
+pooled over test pixels. These were measured on the finetune sets as they stood before the v1.4.0
+rebuild; re-running the two extraction steps above against v1.4.0 repeats them on the current files:
 
 | Sensor | Six release bands | All bands | Paired per-scene delta (95 % CI, by site) |
 |---|---:|---:|---|
@@ -84,9 +85,10 @@ python summarize_snr_control.py               # real, control, ratio, paired sig
 ```
 
 `--limit N` keeps the first N samples, which is enough to check that the script runs. The numbers in
-the paper are medians over the 3,552 Sentinel-2 and 1,353 Landsat samples: SWIR-2 reaches 1.56 times
-its control in Sentinel-2 (B12) and 1.76 in Landsat 8/9 (B07), the Landsat thermal bands stay at
-0.82, and every other band sits between 0.93 and 1.07.
+the paper are medians over the 3,552 Sentinel-2 and 1,353 Landsat samples of the finetune sets as
+they stood when the control was computed, before the v1.4.0 rebuild added 70 samples: SWIR-2 reaches
+1.56 times its control in Sentinel-2 (B12) and 1.76 in Landsat 8/9 (B07), the Landsat thermal bands
+stay at 0.82, and every other band sits between 0.93 and 1.07.
 
 ## Smoke test
 
