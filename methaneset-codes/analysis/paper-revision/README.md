@@ -92,6 +92,6 @@ stay at 0.82, and every other band sits between 0.93 and 1.07.
 
 ## Smoke test
 
-`METHANESET_LIMIT=8` runs the whole chain in about ten minutes on eight scenes per split. The
-numbers are meaningless at that size and some band sets end with an empty validation mask, which
-the fit will refuse; it is only a check that the scripts run end to end.
+`METHANESET_LIMIT=8` runs the whole chain, bootstrap included, in about fifteen minutes on eight
+scenes per split. The numbers are meaningless at that size; it is only a check that the scripts run
+end to end on a laptop.
