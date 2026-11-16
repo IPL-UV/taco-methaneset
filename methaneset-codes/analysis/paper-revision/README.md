@@ -34,7 +34,10 @@ python ridge_multiref_01_extract_multiref.py  # -> work/ridge_multiref
 # 3. the comparison in the paper: six release bands vs all bands
 python bench_08_mars_release.py --tag mr      # -> work/bench_nonlin/results_marsrelease_long_mr.csv
 
-# 4. controls quoted in the paper
+# 4. paired per-scene delta and its interval (the numbers in the paper)
+python bootstrap_mars6.py mr
+
+# 5. controls quoted in the paper
 python bench_01_nonlin_vs_ridge.py --tag full
 python bench_05_r0common.py --sensors s2  --tag s2c
 python bench_05_r0common.py --sensors l89 --tag l89c
@@ -43,8 +46,12 @@ python bench_06_sitesplit.py --sensors l89 --tag l89site
 python bench_07_bootstrap.py                  # -> work/bench_nonlin/bootstrap_*.csv
 ```
 
-Step 1 draws at most 500 scenes per split with a fixed seed and reads 1,000 plume and 1,000
-background pixels per sample for each of three pixel seeds. Step 2 re-uses that scene list, so the
+`bench_08_mars_release.py` also accepts `--refs` and `--band-sets`, so a quick run can be limited to
+the comparison the paper uses: `--refs 4 --band-sets mars6,all`.
+
+Step 1 draws at most 500 scenes per split with a fixed seed and reads up to 2,000 pixels per sample
+for each of three pixel seeds: 1,000 plume and 1,000 background, and when one class has fewer the
+deficit goes to the other class, so a scene is never dropped for being plume-heavy. Step 2 re-uses that scene list, so the
 two extractions draw the same pixels. Every later script reads the npz files and never touches the
 imagery again, so the expensive part runs once.
 
@@ -67,7 +74,8 @@ here, so it is a library for the rest of the folder.
 ### Numbers in the paper
 
 Test split of the release, histogram gradient boosting, four references, three pixel seeds, AUC-ROC
-pooled over test pixels, 500 scenes per split. Measured on the published v1.4.0 collections:
+pooled over test pixels, at most 500 scenes per split (500 test scenes in Sentinel-2, 490 in
+Landsat 8/9). Measured on the published v1.4.0 collections:
 
 | Sensor | Six release bands | All bands | Paired per-scene delta (95 % CI, by site) |
 |---|---:|---:|---|
@@ -92,7 +100,8 @@ python summarize_snr_control.py               # real, control, ratio, paired sig
 `--limit N` keeps the first N samples, which is enough to check that the script runs. The numbers in
 the paper are medians over the published 3,605 Sentinel-2 and 1,370 Landsat samples: SWIR-2 reaches
 1.63 times its control in Sentinel-2 (B12) and 1.86 in Landsat 8/9 (B07), the Landsat thermal bands
-stay at 0.86 and 0.82, and every other band sits between 0.96 and 1.01.
+stay at 0.86 and 0.82, the Sentinel-2 water-vapour band (B09) at 0.89, and the remaining bands
+between 0.96 and 1.01.
 
 ## Smoke test
 
