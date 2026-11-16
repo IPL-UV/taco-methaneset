@@ -67,6 +67,7 @@ imagery again, so the expensive part runs once.
 | `bench_06_sitesplit.py` | split by `site:location_name`, no site shared between train and test |
 | `bench_07_bootstrap.py` | bootstrap clustered by site over the per-scene deltas |
 | `bench_08_mars_release.py` | the six release bands vs all bands |
+| `band_ratio_pairs.py` | plume contrast of every band pair, the numbers behind the pairwise figure |
 
 `bench_03_weak.py` is imported by the others; its weak-plume run needs a flux table that is not kept
 here, so it is a library for the rest of the folder.
@@ -84,6 +85,27 @@ Landsat 8/9). Measured on the published v1.4.0 collections:
 
 `bootstrap_mars6.py` rebuilds the per-scene delta and its interval from the table
 `bench_08_mars_release.py` leaves behind.
+
+### Band pairs
+
+`band_ratio_pairs.py` produces the medians of the pairwise figure. It reads every finetune scene
+once and returns, per band pair, the plume contrast of the raw quotient and of the MARS-S2L
+per-scene normalisation (`mbmp_torch.to_mbmp`, `mixing_ratio_methane.ratio_bands`), so the two can
+be compared without recomputing. It takes about four minutes on 22 processes:
+
+```bash
+WORKERS=22 python band_ratio_pairs.py    # -> $METHANESET_WORK/band_ratio/*.json
+```
+
+| Sensor | Formulation | Classical pair | Inverse pair |
+|---|---|---:|---:|
+| Sentinel-2 | raw quotient | 0.67 (B12/B11) | 0.70 (B11/B12) |
+| Sentinel-2 | MARS per-scene | 0.68 | 0.69 |
+| Landsat 8/9 | raw quotient | 0.73 (B07/B06) | 0.78 (B06/B07) |
+| Landsat 8/9 | MARS per-scene | 0.74 | 0.75 |
+
+The order of the pairs holds in both formulations; the advantage of the inverse pair shrinks from
+0.03 and 0.05 to 0.01 and 0.01.
 
 ## Random-mask control for the per-band contrast
 
