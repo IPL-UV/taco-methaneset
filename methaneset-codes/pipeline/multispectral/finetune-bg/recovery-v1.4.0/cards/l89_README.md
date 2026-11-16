@@ -21,34 +21,33 @@ Every sample is one plume id, a FOLDER with eight leaves:
 ## References
 
 `bg0` is the single reference that comes with the MARS-S2L pair. `bg1` to `bg3` are three extra
-references that we curate for every target with the MARS-S2L rule: query Landsat 8 and 9 together
-within ±120 days (before or after) of the target, drop candidates with more than 50 % cloud, cloud
-shadow or missing pixels, drop the target's own pass, and keep the three most similar by the MARS
-metric on methane-insensitive bands (B2, B3, B4, B6). When ±120 days does not yield 40 candidates
-the window widens to ±240 days and, if still thin, to the same day-of-year ±45 days over earlier
-years, and adjacent WRS-2 paths (±1) are admitted when the site sits on a scene edge. Of the 4,059
-reference leaves that carry a date, 119 lie beyond ±120 days (2.9 %); 659 of the 4,059 references
-added before v1.4.0 come from an adjacent path.
+references curated here with the MARS-S2L rule (MARS itself only discards candidates above 50 %
+cloud, shadow or missing pixels): query Landsat 8 and 9 together within ±120 days (before or after)
+of the target, discard the target's own pass, then screen cloud more strictly than MARS — 5 % in a
+first round, up to 35 % only where that round leaves fewer than three candidates — and keep the
+three most similar by the MARS score on methane-insensitive bands (B2, B3, B4, B6).
 
-All four references are stored as top-of-atmosphere reflectance (Landsat Collection 2 Level-1
-`T1_TOA`), in the same scale and dtype as `target`.
+All 4,110 reference leaves of this release lie within ±120 days of their target. Cloud (shadow
+included) is 0 in the median; 98.6 % of the leaves are at or below 5 % and the maximum is 31.8 %,
+which the second round allows. All four references are stored as top-of-atmosphere reflectance
+(Landsat Collection 2 Level-1 `T1_TOA`), in the same scale and dtype as `target`.
 
-`bg:methane1`--`bg:methane3` is the fraction of reference pixels that carry a methane enhancement of
-their own. References are ranked to minimise it; it is below 0.03 in 4,012 of the 4,110 reference
-leaves (97.6 %), and the column lets you drop the remaining ones if your application needs a
-stricter bound.
+`bg:methane1`--`bg:methane3` is a diagnostic added in v1.4.0: the fraction of reference pixels whose
+SWIR ratio sits more than 8 % below the leaf's own median. MARS does not screen its references for
+methane (its `isplume` filter is disabled in `location_image.py`), so this column does not take part
+in the ranking; it is published so that a stricter application can filter. The median leaf is
+0.004 and 85.0 % of the leaves are at or below 0.03.
 
-`bg:difference1`--`bg:difference3` is the MARS score of each reference against the target,
-computed on the published TOA leaves. It is not a ranking: many candidates are near-ties (the
-median gap between the first and the second reference is 0.0005), so the order of `bg1`--`bg3`
-carries no meaning.
+`bg:difference1`--`bg:difference3` is the MARS score of each reference against the target, computed
+on the published leaves. It is not a ranking: many candidates are near-ties (the median gap between
+the first and the second reference is 0.0005), so the order of `bg1`--`bg3` carries no meaning.
 
 ## Columns
 
 All columns describe the target unless prefixed `bg:`, which describe the four references
 (`bg:sensor0` to `bg:sensor3`, and so on).
 
-The `target:cloud` and `bg:cloud0`--`bg:cloud3` columns are the cloud and shadow fraction of each chip, computed with OmniCloudMask.
+The `target:cloud` and `bg:cloud0`--`bg:cloud3` columns are the cloud and shadow fraction of each chip, computed with CloudSEN12 at the native resolution of each sensor (30 m for Landsat, 20 m for Sentinel-2).
 
 Some columns are constant in this dataset and are kept for compatibility: `detection:offshore` is
 always False (onshore plumes only) and `quality:observability` is `clear` for all but three samples.
@@ -248,11 +247,10 @@ every leaf is listed in `data/gee_ids_l89_finetune.csv` in the
 
 `B10` and `B11` are brightness temperature from `T1_TOA`. Outside the TIRS swath (100 km) the
 product has no data, and those pixels are stored as `-inf` (the TOA conversion of the fill value).
-This affects 71 of the 6,765 reflectance leaves in 42 of the 1,353 samples (3 %), `target` and
-references alike. In 49 of those leaves the `-inf` is confined to `B10`/`B11`; in 22 it also
-reaches `B1`--`B9` because the chip straddles the edge of the scene, and in two references
-(`468c9372` `bg1` and `a025cd0f` `bg3`, both `LC08_165038_20250205`) only 2.4 % of the pixels are
-valid. Mask with `np.isfinite` before normalising, and check per-leaf valid fraction if you
+This reaches about 3 % of the samples, `target` and references alike. In most affected leaves the
+`-inf` is confined to `B10`/`B11`; in a few it also reaches `B1`--`B9` because the chip straddles the
+edge of the scene, and in a couple of references only a few percent of the pixels are valid. Mask
+with `np.isfinite` before normalising, and check the per-leaf valid fraction if you
 subsample.
 
 ## Known issue: references that coincide with another target

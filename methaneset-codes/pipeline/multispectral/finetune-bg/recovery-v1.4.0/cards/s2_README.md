@@ -21,29 +21,35 @@ Every sample is one plume id, a FOLDER with eight leaves:
 ## References
 
 `bg0` is the single reference that comes with the MARS-S2L pair. `bg1` to `bg3` are three extra
-references that we curate for every target with the MARS-S2L rule: query Sentinel-2 acquisitions
-within ±120 days (before or after) of the target, drop candidates with more than 50 % cloud, cloud
-shadow or missing pixels, drop the target's own pass, and keep the three most similar by the MARS
-metric on methane-insensitive bands (B02, B03, B04, B11). When ±120 days does not yield 40
-candidates the window widens to ±240 days and, if still thin, to the same day-of-year ±45 days over
-earlier years. The 159 references added in v1.4.0 all lie within ±120 days of their target.
+references curated here with the MARS-S2L rule (MARS itself only discards candidates above 50 %
+cloud, shadow or missing pixels): query Sentinel-2 acquisitions within ±120 days (before or after)
+of the target, discard the target's own pass, then screen cloud more strictly than MARS — 5 % in a
+first round, up to 35 % only where that round leaves fewer than three candidates — and keep the
+three most similar by the MARS score on methane-insensitive bands (B02, B03, B04, B11).
 
-All four references are stored in the same BOA reflectance scale and dtype as `target`.
+All 10,815 reference leaves of this release lie within ±120 days of their target. Cloud (shadow
+included) is 0 in the median; 99.1 % of the leaves are at or below 5 % and the maximum is 34.4 %,
+which the second round allows. All four references are stored as top-of-atmosphere reflectance, in
+the same BOA scale and dtype as `target`. `bg:sensor1`--`bg:sensor3` carry the constellation family
+(`S2`): Sentinel-2A, 2B and 2C cannot be told apart from the archived product identifiers reliably,
+so the exact spacecraft is not published.
 
-`bg:methane1`--`bg:methane3` is the fraction of reference pixels that carry a methane enhancement of
-their own. References are ranked to minimise it, and it is below 0.03 in all 10,815 reference
-leaves.
+`bg:methane1`--`bg:methane3` is a diagnostic added in v1.4.0: the fraction of reference pixels whose
+SWIR ratio sits more than 8 % below the leaf's own median. MARS does not screen its references for
+methane (its `isplume` filter is disabled in `location_image.py`), so this column does not take part
+in the ranking; it is published so that a stricter application can filter. The median leaf is
+0.003 and 85.9 % of the leaves are at or below 0.03.
 
-`bg:difference1`--`bg:difference3` is the MARS score of each reference against the target,
-computed on the published leaves. It is not a ranking: many candidates are near-ties, so the order
-of `bg1`--`bg3` carries no meaning.
+`bg:difference1`--`bg:difference3` is the MARS score of each reference against the target, computed
+on the published leaves. It is not a ranking: many candidates are near-ties (the median gap between
+the first and the second reference is 0.0004), so the order of `bg1`--`bg3` carries no meaning.
 
 ## Columns
 
 All columns describe the target unless prefixed `bg:`, which describe the four references
 (`bg:sensor0` to `bg:sensor3`, and so on).
 
-The `target:cloud` and `bg:cloud0`--`bg:cloud3` columns are the cloud and shadow fraction of each chip, computed with OmniCloudMask.
+The `target:cloud` and `bg:cloud0`--`bg:cloud3` columns are the cloud and shadow fraction of each chip, computed with CloudSEN12 at the native resolution of each sensor (30 m for Landsat, 20 m for Sentinel-2).
 
 Some columns are constant in this dataset and are kept for compatibility: `detection:offshore` is
 always False (onshore plumes only) and `quality:observability` is `clear` for all but three samples.
@@ -113,19 +119,19 @@ always False (onshore plumes only) and `quality:observability` is `clear` for al
 | `stac:tensor_shape` | `string` | Shape of the chip: 11 bands, 200 rows, 200 columns |
 | `stac:time_start` | `string` | Acquisition time of the target scene |
 | `bg:date0` | `string` | Acquisition date of bg0 |
-| `bg:sensor0` | `string` | Satellite of bg0 (the MARS reference): S2A, S2B or S2C |
+| `bg:sensor0` | `string` | Spacecraft of bg0 as recorded by MARS: S2A or S2B |
 | `bg:tile0` | `string` | Sentinel-2 granule id of bg0 (the MARS reference) |
-| `bg:sensor1` | `string` | Satellite of bg1: S2A, S2B or S2C |
+| `bg:sensor1` | `string` | Constellation family of bg1: always S2 (the spacecraft is not recoverable from the archive) |
 | `bg:date1` | `string` | Acquisition date of bg1 |
 | `bg:cloud1` | `double` | Cloud and shadow fraction of bg1 |
 | `bg:difference1` | `double` | MARS similarity of bg1 to the target (lower is more similar) |
 | `bg:methane1` | `double` | Fraction of bg1 pixels with a methane enhancement of its own |
-| `bg:sensor2` | `string` | Satellite of bg2: S2A, S2B or S2C |
+| `bg:sensor2` | `string` | Constellation family of bg2: always S2 (the spacecraft is not recoverable from the archive) |
 | `bg:date2` | `string` | Acquisition date of bg2 |
 | `bg:cloud2` | `double` | Cloud and shadow fraction of bg2 |
 | `bg:difference2` | `double` | MARS similarity of bg2 to the target (lower is more similar) |
 | `bg:methane2` | `double` | Fraction of bg2 pixels with a methane enhancement of its own |
-| `bg:sensor3` | `string` | Satellite of bg3: S2A, S2B or S2C |
+| `bg:sensor3` | `string` | Constellation family of bg3: always S2 (the spacecraft is not recoverable from the archive) |
 | `bg:date3` | `string` | Acquisition date of bg3 |
 | `bg:cloud3` | `double` | Cloud and shadow fraction of bg3 |
 | `bg:difference3` | `double` | MARS similarity of bg3 to the target (lower is more similar) |
