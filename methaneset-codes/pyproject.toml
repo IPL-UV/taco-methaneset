@@ -17,10 +17,12 @@ dependencies = [
     "requests",
     "earthaccess",
     "pyyaml",
+    "tacoreader",
 ]
 
 [project.optional-dependencies]
 dev = ["ruff", "pytest"]
+analysis = ["scikit-learn", "scipy"]
 
 [tool.ruff]
 line-length = 110
