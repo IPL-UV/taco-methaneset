@@ -2,7 +2,7 @@
 
 The goal is a controlled comparison of ridge features built from FOUR
 background references (bg0..bg3, provided per finetune sample) against the
-previous single-reference experiment in /tmp/opencode/ridge_bands.
+previous single-reference experiment in $METHANESET_WORK/ridge_bands.
 
 Comparability with the previous experiment:
   - the previous samples_<sensor>.csv is the authoritative sample list
@@ -21,7 +21,7 @@ For every kept pixel, stores:
   - bg_ok : per-reference validity, (n, 4) uint8
   - y     : plume label, sid : sample index
 
-Run: /data/users/julio/.conda/envs/deep/bin/python 01_extract_multiref.py
+Run: python ridge_multiref_01_extract_multiref.py   (env: METHANESET_DATA, METHANESET_WORK, METHANESET_LIMIT)
 """
 
 import glob
@@ -33,12 +33,17 @@ import numpy as np
 import pandas as pd
 import rasterio
 
+DATA = os.environ.get("METHANESET_DATA", "")
 BASES = {
-    "s2": "/data/databases/METHANESET_TACOS/methaneset-s2-finetune",
-    "l89": "/data/databases/METHANESET_TACOS/methaneset-l89-finetune",
+    "s2": os.path.join(DATA, "methaneset-s2-finetune"),
+    "l89": os.path.join(DATA, "methaneset-l89-finetune"),
 }
-PREV = "/tmp/opencode/ridge_bands"
-OUT = "/tmp/opencode/ridge_multiref"
+WORK = os.path.abspath(os.environ.get(
+    "METHANESET_WORK", os.path.join(os.path.dirname(os.path.abspath(__file__)), "work")))
+PREV = os.path.join(WORK, "ridge_bands")
+OUT = os.path.join(WORK, "ridge_multiref")
+os.makedirs(OUT, exist_ok=True)
+LIMIT = int(os.environ.get("METHANESET_LIMIT", "0"))   # samples; 0 = all
 MAX_PER_CLASS = 1000
 SEEDS = [0, 1, 2]
 LEAVES = ["target", "bg0", "bg1", "bg2", "bg3", "plume"]
@@ -111,6 +116,8 @@ def main():
         missing = merged["vsi_target"].isna().sum()
         print(f"  indexed {len(idx)} samples in TACO; missing from index: {missing}")
         merged = merged.sort_values("sample_idx").reset_index(drop=True)
+        if LIMIT:
+            merged = merged.groupby("split", group_keys=False).head(LIMIT).reset_index(drop=True)
         merged.to_csv(os.path.join(OUT, f"samples_multiref_{sensor}.csv"), index=False)
 
         accum = {s: {"Xt": [], "R": [], "ok": [], "y": [], "sid": []} for s in SEEDS}

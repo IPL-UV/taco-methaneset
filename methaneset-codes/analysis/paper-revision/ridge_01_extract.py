@@ -9,7 +9,7 @@ For each sensor (s2 = 13 bands, l89 = 11 bands):
   - save one npz per seed with X (float32, raw DN/reflectance), y, sid
   - save a CSV with the sampled samples and their per-seed pixel counts
 
-Run: /data/users/julio/.conda/envs/deep/bin/python 01_extract.py
+Run: python ridge_01_extract.py   (env: METHANESET_DATA, METHANESET_WORK, METHANESET_LIMIT)
 """
 
 import glob
@@ -21,11 +21,16 @@ import numpy as np
 import pandas as pd
 import rasterio
 
+DATA = os.environ.get("METHANESET_DATA", "")
 BASES = {
-    "s2": "/data/databases/METHANESET_TACOS/methaneset-s2-finetune",
-    "l89": "/data/databases/METHANESET_TACOS/methaneset-l89-finetune",
+    "s2": os.path.join(DATA, "methaneset-s2-finetune"),
+    "l89": os.path.join(DATA, "methaneset-l89-finetune"),
 }
-OUT = "/tmp/opencode/ridge_bands"
+WORK = os.path.abspath(os.environ.get(
+    "METHANESET_WORK", os.path.join(os.path.dirname(os.path.abspath(__file__)), "work")))
+OUT = os.path.join(WORK, "ridge_bands")
+os.makedirs(OUT, exist_ok=True)
+LIMIT = int(os.environ.get("METHANESET_LIMIT", "0"))   # samples per split; 0 = all
 CAP_PER_SPLIT = 500          # max samples per split
 MAX_PER_CLASS = 1000         # max plume / background pixels per sample
 SEEDS = [0, 1, 2]
@@ -36,7 +41,11 @@ LEAVES = ["target", "bg0", "bg1", "bg2", "bg3", "ch4", "plume", "dem"]
 def build_index(base):
     """One row per sample: uuid, country, split, target/plume vsisubfile."""
     rows = []
-    for path in sorted(glob.glob(os.path.join(base, "*.tacozip"))):
+    paths = sorted(glob.glob(os.path.join(base, "*.tacozip")))
+    if not paths:
+        raise SystemExit(f"no .tacozip under {base!r}; set METHANESET_DATA to the folder that "
+                         f"holds methaneset-s2-finetune and methaneset-l89-finetune")
+    for path in paths:
         z = zipfile.ZipFile(path)
         l0 = pd.read_parquet(io.BytesIO(z.read("METADATA/level0.parquet")))
         l1 = pd.read_parquet(io.BytesIO(z.read("METADATA/level1.parquet")))
@@ -117,6 +126,8 @@ def main():
             selected.append(sel)
             print(f"  {split}: {len(sub)} available -> {take} selected")
         sel = pd.concat(selected).reset_index(drop=True)
+        if LIMIT:
+            sel = sel.groupby("split", group_keys=False).head(LIMIT).reset_index(drop=True)
 
         accum = {s: {"X": [], "y": [], "sid": []} for s in SEEDS}
         meta = []
