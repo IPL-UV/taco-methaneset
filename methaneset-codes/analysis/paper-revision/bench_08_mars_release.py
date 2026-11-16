@@ -63,9 +63,13 @@ def main():
     ap.add_argument("--sensors", type=str, default="s2,l89")
     ap.add_argument("--seeds", type=str, default="0,1,2")
     ap.add_argument("--tag", type=str, default="marsrelease")
+    ap.add_argument("--refs", type=str, default="1,4", help="reference sets to run (1,4)")
+    ap.add_argument("--band-sets", type=str, default="swir2,mars6,all")
     args = ap.parse_args()
     sensors = [s for s in args.sensors.split(",") if s]
     seeds = [int(s) for s in args.seeds.split(",") if s != ""]
+    refs_list = [int(r) for r in args.refs.split(",") if r != ""]
+    band_list = [b for b in args.band_sets.split(",") if b]
 
     rows, scene_rows = [], []
     t0 = time.time()
@@ -79,8 +83,9 @@ def main():
             y, sid = d["y"].astype(np.int8), d["sid"]
             pix_split = split_of[sid]
             tr_s, va_s, te_s = pix_split == "train", pix_split == "validation", pix_split == "test"
-            for refs in (1, 4):
-                for bname, band_cols in BAND_SETS[sensor].items():
+            for refs in refs_list:
+                for bname in band_list:
+                    band_cols = BAND_SETS[sensor][bname]
                     X, mask = b1.build_config(Xt, R, bg_ok, refs, band_cols)
                     Xn = b1.normalize(X, sid, n_samples, mask)
                     tr, va, te = tr_s & mask, va_s & mask, te_s & mask

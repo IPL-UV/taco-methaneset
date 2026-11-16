@@ -21,6 +21,9 @@ Dependencies are the `analysis` extra: `pip install -e ".[analysis]"`.
 
 ## Band contribution: from pixels to the paper numbers
 
+Point `METHANESET_DATA` at a folder that holds the released `methaneset-s2-finetune` and
+`methaneset-l89-finetune` subfolders. The numbers below were produced with version 1.4.0.
+
 ```bash
 # 1. sample pixels from the finetune TACOs (target + 4 backgrounds per sample)
 python ridge_01_extract.py                    # -> work/ridge_bands
@@ -64,13 +67,15 @@ here, so it is a library for the rest of the folder.
 ### Numbers in the paper
 
 Test split of the release, histogram gradient boosting, four references, three pixel seeds, AUC-ROC
-pooled over test pixels. These were measured on the finetune sets as they stood before the v1.4.0
-rebuild; re-running the two extraction steps above against v1.4.0 repeats them on the current files:
+pooled over test pixels, 500 scenes per split. Measured on the published v1.4.0 collections:
 
 | Sensor | Six release bands | All bands | Paired per-scene delta (95 % CI, by site) |
 |---|---:|---:|---|
-| Sentinel-2 | 0.7242 ± 0.0004 | 0.7567 ± 0.0007 | +0.0317 [+0.027, +0.036] |
-| Landsat 8/9 | 0.7655 ± 0.0004 | 0.7983 ± 0.0005 | +0.0341 [+0.027, +0.042] |
+| Sentinel-2 | 0.7066 ± 0.0013 | 0.7434 ± 0.0016 | +0.0330 [+0.0246, +0.0406] |
+| Landsat 8/9 | 0.7608 ± 0.0007 | 0.7983 ± 0.0003 | +0.0391 [+0.0296, +0.0492] |
+
+`bootstrap_mars6.py` rebuilds the per-scene delta and its interval from the table
+`bench_08_mars_release.py` leaves behind.
 
 ## Random-mask control for the per-band contrast
 
@@ -85,10 +90,9 @@ python summarize_snr_control.py               # real, control, ratio, paired sig
 ```
 
 `--limit N` keeps the first N samples, which is enough to check that the script runs. The numbers in
-the paper are medians over the 3,552 Sentinel-2 and 1,353 Landsat samples of the finetune sets as
-they stood when the control was computed, before the v1.4.0 rebuild added 70 samples: SWIR-2 reaches
-1.56 times its control in Sentinel-2 (B12) and 1.76 in Landsat 8/9 (B07), the Landsat thermal bands
-stay at 0.82, and every other band sits between 0.93 and 1.07.
+the paper are medians over the published 3,605 Sentinel-2 and 1,370 Landsat samples: SWIR-2 reaches
+1.63 times its control in Sentinel-2 (B12) and 1.86 in Landsat 8/9 (B07), the Landsat thermal bands
+stay at 0.86 and 0.82, and every other band sits between 0.96 and 1.01.
 
 ## Smoke test
 
