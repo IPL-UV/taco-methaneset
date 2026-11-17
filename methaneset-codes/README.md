@@ -40,6 +40,13 @@ methaneset/
 Modules are numbered and each one leaves the input of the next, so a run can be resumed at any
 step. Long runs go with `nohup` and write a `.log` next to the script.
 
+The EMIT granules carry four matched-filter retrievals. Three of them come from
+`pipeline/emit/14_generate_retrievals.py` (standard MF, albedo-corrected RMF and iterative mag1c,
+all over 2122-2488 nm). The fourth, `wwmf.tif`, comes from `pipeline/emit/14b_generate_wwmf.py`:
+the same engine over 1000-2500 nm excluding the two water-vapour windows whose stored radiance is
+quantised more coarsely. Against the IMEO masks it raises the per-granule AUC-ROC from 0.71 to 0.74
+and cuts the granules below 0.6 from 45 to 10.
+
 ## Reproducing
 
 Requirements: Python 3.11 or newer, GDAL, and the TACO tooling.
