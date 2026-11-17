@@ -1,4 +1,4 @@
-"""MODULE 19b: figure of the 10 layers of one TACO sample (new slide).
+"""MODULE 19b: figure of the 11 layers of one TACO sample (new slide).
 
 A real scene from the published dataset, 2x5 panel, one panel per file:
 radiance (RGB), latlon (lat), glt (glt_x), elevation, wind (u/v speed),
@@ -12,6 +12,7 @@ Usage:
   /data/users/julio/.conda/envs/deep/bin/python code/v2/19b_fig_sample_layers.py \
         > code/v2/19b_fig_sample_layers.log 2>&1
 """
+import os
 import pathlib
 import shutil
 import sys
@@ -116,7 +117,7 @@ def main():
         ax.set_title(title, fontsize=10)
         ax.set_xticks([])
         ax.set_yticks([])
-    fig.suptitle(f"{SCENE} · the 10 layers of one published sample", fontsize=13)
+    fig.suptitle(f"{SCENE} · the 11 layers of one published sample", fontsize=13)
     figstyle.save(fig, IMG / "sample-layers.png")
     shutil.copy2(IMG / "sample-layers.png", PUB / "sample-layers.png")
     print("figure -> sample-layers.png (images and slides/public)")
