@@ -31,16 +31,15 @@ import pandas as pd
 import rasterio
 import torch
 
-# The retrieval engine ships in this repo (methaneset-codes/injection/methanex.py).
-# METHANEX_SRC overrides it with another checkout of the same module.
+# The retrieval engine lives here, next to the scripts that apply it:
+# pipeline/emit/methanex.py. METHANEX_SRC overrides it with another checkout.
 _HERE = pathlib.Path(__file__).resolve()
-for _cand in (os.environ.get("METHANEX_SRC"), _HERE.parents[2] / "injection"):
+for _cand in (os.environ.get("METHANEX_SRC"), _HERE.parent):
     if _cand and (pathlib.Path(_cand) / "methanex.py").exists():
         sys.path.insert(0, str(pathlib.Path(_cand)))
         break
 else:
-    raise SystemExit("methanex.py not found: set METHANEX_SRC or keep injection/ beside pipeline/")
-from methanex import MethaneRetrieval, MFConfig, RMFConfig, MAG1CConfig  # noqa: E402
+    raise SystemExit(f"methanex.py not found beside {_HERE.name}; set METHANEX_SRC")
 
 DATA = pathlib.Path(__file__).resolve().parent.parent.parent / "assets" / "data"
 RAD_ROOTS = [

@@ -34,20 +34,19 @@ import sys
 
 import numpy as np
 
-# The retrieval engine ships in this repo (methaneset-codes/injection/methanex.py).
-# METHANEX_SRC overrides it with another checkout of the same module.
+# The retrieval engine lives here, next to the scripts that apply it:
+# pipeline/emit/methanex.py. METHANEX_SRC overrides it with another checkout.
 _HERE = pathlib.Path(__file__).resolve()
-for _cand in (os.environ.get("METHANEX_SRC"), _HERE.parents[2] / "injection"):
+for _cand in (os.environ.get("METHANEX_SRC"), _HERE.parent):
     if _cand and (pathlib.Path(_cand) / "methanex.py").exists():
         sys.path.insert(0, str(pathlib.Path(_cand)))
         break
 else:
-    raise SystemExit("methanex.py not found: set METHANEX_SRC or keep injection/ beside pipeline/")
-
+    raise SystemExit(f"methanex.py not found beside {_HERE.name}; set METHANEX_SRC")
 TACO = pathlib.Path(os.environ.get(
     "METHANESET_EMIT", "/data/databases/METHANESET_TACOS/methaneset-emit"))
 SAFETENSORS = pathlib.Path(os.environ.get("METHANEX_TEMPLATE")
-                            or _HERE.parents[2] / "injection" / "ch4_emit.safetensors")
+                            or _HERE.parent / "ch4_emit.safetensors")
 if not SAFETENSORS.exists():
     import urllib.request
     SAFETENSORS.parent.mkdir(parents=True, exist_ok=True)
