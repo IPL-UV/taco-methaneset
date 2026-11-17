@@ -90,7 +90,7 @@ nohup python pipeline/emit/00_cross_imeo_cm.py > pipeline/emit/00_cross_imeo_cm.
 @article{contreras2026methaneset,
   title   = {MethaneSET: Unified Multi-Sensor AI-Ready Datasets for
              Satellite-Based Methane Plume Detection},
-  author  = {Contreras, Julio and Giner, Carlos and Aybar, Cesar
+  author  = {Contreras, Julio and Giner-Llorens, Carlos and Aybar, Cesar
              and Mateo-Garcia, Gonzalo and Gorrono, Javier
              and Montero, David and Mahecha, Miguel D.
              and Guanter, Luis and Gomez-Chova, Luis},
