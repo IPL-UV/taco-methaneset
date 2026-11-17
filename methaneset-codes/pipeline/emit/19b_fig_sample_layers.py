@@ -73,6 +73,7 @@ def main():
     mf = read("mf")
     rmf = read("rmf")
     mag = read("mag1c")
+    wwm = read("wwmf")
     with rasterio.open(DATA / "plume_imeo.tif") as src:
         mi = src.read(1).astype("float32")
     with rasterio.open(DATA / "plume_cm.tif") as src:
@@ -87,11 +88,12 @@ def main():
         ("mf.tif · matched filter", np.clip(mf, 0, np.nanpercentile(mf, 99.5)), "magma", "ppm·m"),
         ("rmf.tif", np.clip(rmf, 0, np.nanpercentile(rmf, 99.5)), "magma", "ppm·m"),
         ("mag1c.tif", np.clip(mag, 0, np.nanpercentile(mag, 99.5)), "magma", "ppm·m"),
+        ("wwmf.tif · wide window", np.clip(wwm, 0, np.nanpercentile(wwm, 99.5)), "magma", "ppm·m"),
         ("plume_imeo.tif · instance codes", mi, None, None),
         ("plume_cm.tif · instance codes", mc, None, None),
     ]
 
-    fig, axes = plt.subplots(2, 5, figsize=(16, 7.4), constrained_layout=True)
+    fig, axes = plt.subplots(2, 6, figsize=(19, 7.4), constrained_layout=True)
     for ax, (title, a, cmap, cblab) in zip(axes.flat, panels):
         if a.ndim == 3:
             ax.imshow(a)

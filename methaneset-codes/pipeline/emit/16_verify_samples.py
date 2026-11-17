@@ -2,8 +2,8 @@
 
 Reads EVERY file of every scene COMPLETELY (no sampling) and checks:
   - readable from end to end (catches corruption like the latlon from 11)
-  - the 10 layers present, same (H, W) on sensor grid (glt aside)
-  - correct dtypes and nodata (radiance/mf/rmf/mag1c -9999, masks 0)
+  - the 11 layers present, same (H, W) on sensor grid (glt aside)
+  - correct dtypes and nodata (radiance/mf/rmf/mag1c/wwmf -9999, masks 0)
   - retrievals: valid fraction > 0 and no inf/NaN at valid pixels
   - masks: uint8, max <= 255, band 2 only codes that exist in band 1 or zero;
     frees completely empty
@@ -57,7 +57,7 @@ def verify_scene(scene):
                     r["rad_valid_pct"] = valid.size / arr.size * 100
                     if not np.isfinite(valid).all():
                         problems.append("radiance:inf")
-                elif ly in ("mf", "rmf", "mag1c"):
+                elif ly in ("mf", "rmf", "mag1c", "wwmf"):
                     valid = arr[arr > -9000]
                     r[f"{ly}_valid_pct"] = valid.size / arr.size * 100
                     if valid.size == 0:
