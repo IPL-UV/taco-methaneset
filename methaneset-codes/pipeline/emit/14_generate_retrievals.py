@@ -23,13 +23,23 @@ import re
 import sys
 import time
 
+import os
+
 import h5py
 import numpy as np
 import pandas as pd
 import rasterio
 import torch
 
-sys.path.insert(0, "/data/users/julio/methanset")
+# The retrieval engine ships in this repo (methaneset-codes/injection/methanex.py).
+# METHANEX_SRC overrides it with another checkout of the same module.
+_HERE = pathlib.Path(__file__).resolve()
+for _cand in (os.environ.get("METHANEX_SRC"), _HERE.parents[2] / "injection"):
+    if _cand and (pathlib.Path(_cand) / "methanex.py").exists():
+        sys.path.insert(0, str(pathlib.Path(_cand)))
+        break
+else:
+    raise SystemExit("methanex.py not found: set METHANEX_SRC or keep injection/ beside pipeline/")
 from methanex import MethaneRetrieval, MFConfig, RMFConfig, MAG1CConfig  # noqa: E402
 
 DATA = pathlib.Path(__file__).resolve().parent.parent.parent / "assets" / "data"

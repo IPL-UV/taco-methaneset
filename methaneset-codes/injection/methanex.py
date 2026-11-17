@@ -1,7 +1,5 @@
 """
-methanex.py
-
-Methane column enhancement retrieval from imaging spectrometer data.
+methanex — Methane column enhancement retrieval from imaging spectrometer data.
 
     eng = MethaneRetrieval(device="cuda")
 
@@ -18,11 +16,13 @@ The CH4 absorption template for EMIT is loaded automatically from:
     https://data.source.coop/taco/methaneset/ch4_emit.safetensors
 """
 
+import os
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
+from sympy import rad
 import torch
 import torch.nn.functional as F
 from pydantic import BaseModel, Field
@@ -33,7 +33,8 @@ from tqdm import tqdm
 # Constants --------------------
 
 SAFETENSORS_URL  = "https://data.source.coop/taco/methaneset/ch4_emit.safetensors"
-SAFETENSORS_PATH = Path(__file__).resolve().parent / "ch4_emit.safetensors"
+SAFETENSORS_PATH = Path(os.environ.get("METHANEX_TEMPLATE")
+                          or Path(__file__).resolve().parent / "ch4_emit.safetensors")
 WAVELENGTH_RANGE = (2122, 2488)
 EPSILON          = 1e-9
 NODATA           = -9999
@@ -91,7 +92,7 @@ class BaseRetrievalConfig(BaseModel):
 
     scaling: Annotated[float, Field(gt=0.0, description=(
         "Multiplicative factor applied to raw matched filter output. "
-        "Default 1e5 maps EMIT radiance-scale retrievals to ~ppm*m."
+        "Default 1e5 maps EMIT radiance-scale retrievals to ~ppm·m."
     ))] = 1e5
 
 
@@ -335,7 +336,7 @@ class MethaneRetrieval:
         N        = x.shape[1]
         t        = self.template.unsqueeze(0).unsqueeze(0)
 
-        # base covariance -- O(Ns^2), paid once
+        # base covariance — O(Ns²), paid once
         mu_src = x.mean(dim=1, keepdim=True)
         u      = x - mu_src
         C_u    = torch.bmm(u.transpose(1, 2), u) / N
@@ -353,7 +354,7 @@ class MethaneRetrieval:
             d_bar = d.mean(dim=1, keepdim=True)
             delta = d - d_bar
 
-            # rank-2 correction -- O(Ns) + O(s^2)
+            # rank-2 correction — O(Ns) + O(s²)
             tp   = target.squeeze(1)
             A    = torch.bmm(delta.transpose(1, 2), u).squeeze(1) / N
             beta = (delta * delta).sum(dim=1).squeeze(-1) / N
@@ -361,7 +362,7 @@ class MethaneRetrieval:
             C = self._outer_correction(C_u, A, tp, beta, N, outer_mode)
             C = self._regularize(C, alpha)
 
-            # mean update -- O(s), shift computed before target update
+            # mean update — O(s), shift computed before target update
             shift  = d_bar * target
             mu     = mu_src - shift
             target = t * mu
@@ -401,7 +402,7 @@ class MethaneRetrieval:
             config: MFConfig | RMFConfig | MAG1CConfig | MAG1CFastConfig.
 
         Returns:
-            RetrievalResult -- supports tuple unpacking: mf, albedo, meta.
+            RetrievalResult — supports tuple unpacking: mf, albedo, meta.
         """
         if not isinstance(rad, torch.Tensor):
             raise TypeError(f"rad must be a torch.Tensor, got {type(rad).__name__}")

@@ -34,12 +34,26 @@ import sys
 
 import numpy as np
 
-sys.path.insert(0, os.environ.get("METHANEX_SRC", "/data/users/julio/methanset"))
+# The retrieval engine ships in this repo (methaneset-codes/injection/methanex.py).
+# METHANEX_SRC overrides it with another checkout of the same module.
+_HERE = pathlib.Path(__file__).resolve()
+for _cand in (os.environ.get("METHANEX_SRC"), _HERE.parents[2] / "injection"):
+    if _cand and (pathlib.Path(_cand) / "methanex.py").exists():
+        sys.path.insert(0, str(pathlib.Path(_cand)))
+        break
+else:
+    raise SystemExit("methanex.py not found: set METHANEX_SRC or keep injection/ beside pipeline/")
 
 TACO = pathlib.Path(os.environ.get(
     "METHANESET_EMIT", "/data/databases/METHANESET_TACOS/methaneset-emit"))
-SAFETENSORS = pathlib.Path(os.environ.get("METHANEX_TEMPLATE",
-                                          "/data/users/julio/methanset/ch4_emit.safetensors"))
+SAFETENSORS = pathlib.Path(os.environ.get("METHANEX_TEMPLATE")
+                            or _HERE.parents[2] / "injection" / "ch4_emit.safetensors")
+if not SAFETENSORS.exists():
+    import urllib.request
+    SAFETENSORS.parent.mkdir(parents=True, exist_ok=True)
+    print(f"downloading {SAFETENSORS.name} ...")
+    urllib.request.urlretrieve(
+        "https://data.source.coop/taco/methaneset/ch4_emit.safetensors", SAFETENSORS)
 OUT = pathlib.Path(os.environ["OUT"]) if os.environ.get("OUT") else None
 LEAF = "wwmf.tif"
 WIDE = (1000, 2500)
