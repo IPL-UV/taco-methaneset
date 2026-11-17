@@ -22,7 +22,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from sympy import rad
 import torch
 import torch.nn.functional as F
 from pydantic import BaseModel, Field
