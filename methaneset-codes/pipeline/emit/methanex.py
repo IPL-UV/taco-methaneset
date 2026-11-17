@@ -100,6 +100,23 @@ class MFConfig(BaseRetrievalConfig):
     pass
 
 
+class WideWindowMFConfig(MFConfig):
+    """Matched filter over a wide window, leaving out water-vapour bands.
+
+    The filter is the same as MFConfig; what changes is which bands enter.
+    `window` is the wavelength range and `exclude` the bands stored with fewer
+    mantissa bits (their LSB are zeroed by the compression).
+    """
+
+    window: Annotated[tuple[float, float], Field(description=(
+        "Wavelength range in nm covered by the retrieval."
+    ))] = (1000.0, 2500.0)
+
+    exclude: Annotated[tuple[tuple[float, float], ...], Field(description=(
+        "Ranges in nm left out of the window, half-open as [lo, hi)."
+    ))] = ((1340.0, 1450.0), (1800.0, 1960.0))
+
+
 class RMFConfig(BaseRetrievalConfig):
     """Albedo-corrected single-pass matched filter."""
     pass
@@ -136,6 +153,7 @@ RetrievalConfig = MFConfig | RMFConfig | MAG1CConfig | MAG1CFastConfig
 
 _DISPATCH: dict[type, str] = {
     MFConfig:        "mf",
+    WideWindowMFConfig: "mf",
     RMFConfig:       "rmf",
     MAG1CConfig:     "mag1c",
     MAG1CFastConfig: "mag1c_fast",
@@ -143,6 +161,15 @@ _DISPATCH: dict[type, str] = {
 
 
 # Template helpers --------------------
+
+def wide_window_mask(centers, window=(1000.0, 2500.0),
+                     exclude=((1340.0, 1450.0), (1800.0, 1960.0))):
+    """Boolean mask of the bands inside `window`, minus the excluded ranges."""
+    mask = (centers >= window[0]) & (centers < window[1])
+    for lo, hi in exclude:
+        mask &= ~((centers >= lo) & (centers < hi))
+    return mask.cpu() if hasattr(mask, "cpu") else mask
+
 
 def _download_template(url: str, dest: Path) -> None:
     print(f"Downloading CH4 template to {dest} ...")
@@ -158,7 +185,7 @@ def _load_template(path, wavelength_range, device, dtype):
     centers   = tensors["centers"]
     template  = tensors["template"]
     band_mask = (centers >= wavelength_range[0]) & (centers <= wavelength_range[1])
-    return template[band_mask].to(dtype), band_mask.cpu()
+    return template[band_mask].to(dtype), band_mask.cpu(), template.to(dtype), centers.cpu()
 
 
 # NODATA helpers --------------------
@@ -208,7 +235,7 @@ class MethaneRetrieval:
         self.dtype    = dtype
         self.alpha    = alpha
         self.num_iter = num_iter
-        self.template, self.band_mask = _load_template(
+        self.template, self.band_mask, self.template_full, self.centers = _load_template(
             safetensor_path, wavelength_range, device, dtype
         )
 
@@ -409,8 +436,15 @@ class MethaneRetrieval:
         method_name = _DISPATCH[type(config)]
         method      = getattr(self, method_name)
 
-        base_keys     = set(BaseRetrievalConfig.model_fields)
+        base_keys     = set(BaseRetrievalConfig.model_fields) | {"window", "exclude"}
         method_kwargs = {k: v for k, v in config.model_dump().items() if k not in base_keys}
+
+        window = getattr(config, "window", None)
+        if window is not None:
+            keep = wide_window_mask(self.centers, window, config.exclude)
+            if int(keep.sum()) != rad.shape[-1]:
+                rad = rad[..., keep.to(rad.device)]
+            self.template, self.band_mask = self.template_full[keep].to(self.device), keep
         method_kwargs["scaling"] = config.scaling
 
         if config.batch_size is not None:

@@ -55,8 +55,8 @@ if not SAFETENSORS.exists():
         "https://data.source.coop/taco/methaneset/ch4_emit.safetensors", SAFETENSORS)
 OUT = pathlib.Path(os.environ["OUT"]) if os.environ.get("OUT") else None
 LEAF = "wwmf.tif"
-WIDE = (1000, 2500)
-WV = ((1340, 1450), (1800, 1960))   # zonas con LSB descartados: intervalo semiabierto, como 10b
+# La ventana vive en WideWindowMFConfig (methanex.py): 1000-2500 nm sin las dos
+# zonas donde la radiancia se guarda con menos bits.
 FILL = -9990.0                       # radiancia de relleno del producto
 NODATA = -9999.0
 LIMIT = int(os.environ.get("LIMIT", "0")) or None
@@ -68,23 +68,15 @@ _DEVICE = None
 
 
 def _engine():
-    """Motor por proceso, con la plantilla recortada a las bandas que se guardan sin perdida."""
+    """Motor por proceso y mascara de bandas de la ventana ancha."""
     import torch
-    from methanex import MethaneRetrieval
-    from safetensors.torch import load_file
+    from methanex import MethaneRetrieval, WideWindowMFConfig, wide_window_mask
 
     if _DEVICE in _ENGINE:
         return _ENGINE[_DEVICE]
-    t = load_file(str(SAFETENSORS))
-    centers, full = t["centers"], t["template"]
-    keep = ((centers >= WIDE[0]) & (centers < WIDE[1])).numpy()
-    for lo, hi in WV:
-        keep &= ~((centers >= lo) & (centers < hi)).numpy()
-    idx = np.flatnonzero(keep)
-    eng = MethaneRetrieval(device=_DEVICE, dtype=torch.float64,
-                           wavelength_range=(float(centers[idx[0]]), float(centers[idx[-1]])))
-    eng.template = full[keep].to(device=eng.device, dtype=torch.float64)
-    eng.band_mask = torch.as_tensor(keep)
+    cfg = WideWindowMFConfig()
+    eng = MethaneRetrieval(device=_DEVICE, dtype=torch.float64)
+    keep = wide_window_mask(eng.centers, cfg.window, cfg.exclude).numpy()
     _ENGINE[_DEVICE] = (keep, eng)
     return _ENGINE[_DEVICE]
 
@@ -92,7 +84,7 @@ def _engine():
 def worker(granule):
     import rasterio
     import torch
-    from methanex import MFConfig
+    from methanex import WideWindowMFConfig
 
     gran = pathlib.Path(granule)
     dst = (OUT / f"{gran.name}.tif") if OUT else (gran / LEAF)
@@ -109,7 +101,8 @@ def worker(granule):
         bad = rad[rad.shape[0] // 2] <= FILL   # (filas, columnas): rasterio da (bandas, filas, cols)
         x = np.ascontiguousarray(np.transpose(rad, (1, 2, 0))[:, :, keep])
         del rad
-        res = eng.retrieve(torch.from_numpy(x), MFConfig(batch_size=BATCH), display_pbar=False)
+        res = eng.retrieve(torch.from_numpy(x), WideWindowMFConfig(batch_size=BATCH),
+                           display_pbar=False)
         ch4 = res.mf.cpu().numpy().astype("float64")
         del x, res
         torch.cuda.empty_cache()
