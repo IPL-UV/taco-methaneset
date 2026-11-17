@@ -54,7 +54,7 @@ export const datasets: Dataset[] = [
     family: "EMIT",
     subset: "Single",
     samples: 721,
-    sizeGB: 1005,
+    sizeGB: 1169,
     icon: "hyper",
     abstract:
       "EMIT radiance hypercubes (285 bands, 60 m) with four matched-filter retrievals — standard, albedo-corrected, mag1c and a wide-window filter over 1000–2500 nm — plus two independent plume masks per granule from IMEO and Carbon Mapper.",

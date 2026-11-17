@@ -45,7 +45,7 @@ Paths come from the environment, so the same code runs on a server, a laptop or 
 | methaneset-s2-finetune | 3,605 | 6.16 GB | Sentinel-2 |
 | methaneset-l89-pretraining | 21,919 | 8.9 GB | Landsat 8/9 |
 | methaneset-l89-finetune | 1,370 | 1.71 GB | Landsat 8/9 |
-| methaneset-emit | 721 | 1.0 TB | EMIT |
+| methaneset-emit | 721 | 1.17 TB | EMIT |
 | methaneset-bank | 238,545 | 5.1 GB | synthetic |
 | methaneset-bank-les | 1,647 | 3.1 GB | synthetic |
 
