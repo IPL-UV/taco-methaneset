@@ -1,7 +1,7 @@
 """MODULE 18: assemble the definitive methaneset-emit TACO (FOLDER).
 
 A single module, three ingredients (all verified beforehand):
-  - samples: METHANESET_TACOS/emit/<granule>/ (721 x 10 layers)
+  - samples: METHANESET_TACOS/emit/<granule>/ (721 x 11 layers)
   - table:   cross/<date>/metadata_level0.parquet (721 x 59)
   - collection: the v2 identity defined here (includes the DESCRIPTIONS of
     all columns: it is the official documentation of the dataset)
@@ -43,7 +43,7 @@ DATA = pathlib.Path(__file__).resolve().parent.parent.parent / "assets" / "data"
 SRC = pathlib.Path("/data/databases/METHANESET_TACOS/methaneset-emit/DATA")
 OUT = "/data/databases/METHANESET_TACOS/methaneset-emit"
 LAYERS = ["radiance.tif", "latlon.tif", "glt.tif", "elevation.tif", "wind.tif",
-          "mf.tif", "rmf.tif", "mag1c.tif", "plume_imeo.tif", "plume_cm.tif"]
+          "mf.tif", "rmf.tif", "mag1c.tif", "wwmf.tif", "plume_imeo.tif", "plume_cm.tif"]
 
 
 def _link_or_copy(src, dst, **kw):
@@ -168,7 +168,7 @@ class NSExt(SampleExtension):
 COLLECTION = dict(
     id="methaneset-emit",
     title="MethaneSET-EMIT: Hyperspectral Methane Plume Detection from EMIT",
-    dataset_version="1.2.0",
+    dataset_version="1.3.0",
     extent=Extent(spatial=[-123.6228, -47.2043, 152.1961, 50.7347],
                   temporal=["2022-08-10T06:49:57Z", "2025-11-12T17:40:08Z"]),
     description=(
@@ -178,11 +178,11 @@ COLLECTION = dict(
         "CarbonMapper catalogs BOTH report a plume (consensus), with 0% onboard "
         "nodata and complete IMEO flux quantification, balanced across flux class "
         "(all 812 weak plumes under 1,000 kg/h retained), year, region and sector. "
-        "Each sample carries 10 sensor-geometry layers with 128x128 internal "
+        "Each sample carries 11 layers with 128x128 internal "
         "tiling: the full 285-band L1B radiance cube, per-pixel lat/lon, the GLT "
         "orthorectification lookup, Copernicus GLO-30 elevation, an ERA5-Land "
         "10 m wind field (u/v, time-interpolated to the acquisition minute), "
-        "three matched-filter retrievals (mf, rmf, mag1c), and dual instance-coded "
+        "four matched-filter retrievals (mf, rmf, mag1c, wwmf), and dual instance-coded "
         "plume masks from the IMEO portal and CarbonMapper analysts, where a "
         "matched pair shares the same code in both files. A leakage-free "
         "train/val/test split grouped by emitter is proposed; all metadata is "
