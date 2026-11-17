@@ -57,7 +57,7 @@ export const datasets: Dataset[] = [
     sizeGB: 1005,
     icon: "hyper",
     abstract:
-      "EMIT radiance hypercubes (285 bands, 60 m) with standard matched filter, mag1c, and two independent plume masks per granule from IMEO and Carbon Mapper.",
+      "EMIT radiance hypercubes (285 bands, 60 m) with four matched-filter retrievals — standard, albedo-corrected, mag1c and a wide-window filter over 1000–2500 nm — plus two independent plume masks per granule from IMEO and Carbon Mapper.",
   },
   {
     name: "methaneset-bank",
